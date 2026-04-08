@@ -220,7 +220,13 @@ export default function ProfilePage() {
             </p>
           </div>
           <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
-            {user?.role === 'user' ? 'Member' : user?.role}
+            {user?.role === 'user'
+              ? 'Member'
+              : user?.role === 'superadmin'
+                ? 'Platform operations'
+                : user?.role === 'admin'
+                  ? 'Admin'
+                  : user?.role}
           </p>
         </div>
       </header>

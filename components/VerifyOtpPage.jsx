@@ -87,7 +87,10 @@ export default function VerifyOtpPage() {
       }
       clearPendingRegister();
       login({ token: data.token, user: data.user });
-      router.push(data.user?.role === 'admin' ? '/dashboard' : '/dashboard/user');
+      const role = data.user?.role;
+      const dest =
+        role === 'superadmin' ? '/dashboard/superadmin' : role === 'admin' ? '/dashboard' : '/dashboard/user';
+      router.push(dest);
     } catch {
       setError('Something went wrong. Try again.');
     } finally {

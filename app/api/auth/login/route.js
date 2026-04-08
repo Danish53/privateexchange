@@ -25,6 +25,12 @@ export async function POST(request) {
     if (!user) {
       return NextResponse.json({ ok: false, error: 'Invalid email or password.' }, { status: 401 });
     }
+    if (user.deletedAt) {
+      return NextResponse.json(
+        { ok: false, error: 'This account is disabled. Contact support if you believe this is a mistake.' },
+        { status: 403 }
+      );
+    }
     if (!user.emailVerified) {
       return NextResponse.json(
         { ok: false, error: 'Please verify your email first.', code: 'UNVERIFIED' },

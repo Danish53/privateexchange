@@ -7,10 +7,13 @@
     "dev:turbo": "next dev --turbo",
     "dev:clean": "node scripts/clean-next.mjs && next dev",
     "build": "next build",
+    "build:alt": "node scripts/build-alt.mjs",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed:superadmin": "node scripts/seed-superadmin.mjs"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.20.5",
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
@@ -21,6 +24,7 @@
     "nodemailer": "^8.0.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "recharts": "^2.15.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7"
   },

@@ -15,6 +15,12 @@ export async function GET(request) {
     if (!user) {
       return NextResponse.json({ ok: false, error: 'User not found' }, { status: 401 });
     }
+    if (user.deletedAt) {
+      return NextResponse.json(
+        { ok: false, error: 'Account disabled', code: 'ACCOUNT_DISABLED' },
+        { status: 401 }
+      );
+    }
 
     return NextResponse.json({
       ok: true,

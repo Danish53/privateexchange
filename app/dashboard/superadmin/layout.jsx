@@ -4,9 +4,9 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-context';
 import UserDashboardSkeleton from '@/components/ui/UserDashboardSkeleton';
-import UserDashboardShell from '@/components/user-dashboard/UserDashboardShell';
+import SuperAdminDashboardShell from '@/components/superadmin-dashboard/SuperAdminDashboardShell';
 
-export default function UserDashboardLayout({ children }) {
+export default function SuperAdminLayout({ children }) {
   const { user, logout, ready } = useAuth();
   const router = useRouter();
 
@@ -16,12 +16,16 @@ export default function UserDashboardLayout({ children }) {
       router.replace('/login');
       return;
     }
-    if (user.role === 'superadmin') {
-      router.replace('/dashboard/superadmin');
+    if (user.role === 'user') {
+      router.replace('/dashboard/user');
       return;
     }
-    if (user.role !== 'user') {
+    if (user.role === 'admin') {
       router.replace('/dashboard');
+      return;
+    }
+    if (user.role !== 'superadmin') {
+      router.replace('/login');
     }
   }, [ready, user, router]);
 
@@ -29,9 +33,9 @@ export default function UserDashboardLayout({ children }) {
     return <UserDashboardSkeleton />;
   }
 
-  if (user.role !== 'user') {
+  if (user.role !== 'superadmin') {
     return null;
   }
 
-  return <UserDashboardShell user={user} onLogout={logout}>{children}</UserDashboardShell>;
+  return <SuperAdminDashboardShell user={user} onLogout={logout}>{children}</SuperAdminDashboardShell>;
 }
