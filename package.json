@@ -10,7 +10,8 @@
     "build:alt": "node scripts/build-alt.mjs",
     "start": "next start",
     "lint": "next lint",
-    "seed:superadmin": "node scripts/seed-superadmin.mjs"
+    "seed:superadmin": "node scripts/seed-superadmin.mjs",
+    "seed:ledger": "node scripts/seed-ledger-demo.mjs"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.20.5",

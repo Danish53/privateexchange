@@ -1,12 +1,7 @@
 'use client';
 
-import SuperAdminPageFrame from '@/components/superadmin-dashboard/SuperAdminPageFrame';
+import SuperAdminTransactionsPage from '@/components/superadmin-dashboard/pages/SuperAdminTransactionsPage';
 
-export default function SuperAdminTransactionsPage() {
-  return (
-    <SuperAdminPageFrame
-      title="Transactions"
-      description="Ledger-backed movements, transfers, and reconciliation views."
-    />
-  );
+export default function Page() {
+  return <SuperAdminTransactionsPage />;
 }

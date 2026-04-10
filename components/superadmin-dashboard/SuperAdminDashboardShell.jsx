@@ -116,7 +116,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-white/[0.06] bg-black/[0.12] px-2.5 pb-5 pt-4">
+        {/* <div className="shrink-0 border-t border-white/[0.06] bg-black/[0.12] px-2.5 pb-5 pt-4">
           <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-brand-subtle">
             Session
           </p>
@@ -138,7 +138,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
               </span>
             </span>
           </button>
-        </div>
+        </div> */}
       </>
     );
   }

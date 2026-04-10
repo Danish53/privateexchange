@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import User from '@/lib/models/User';
-import { requireSuperAdmin } from '@/lib/authHelpers';
+import { requireSuperAdmin, serializeUser } from '@/lib/authHelpers';
+import { provisionVerifiedUser } from '@/lib/superadminProvisionUser';
 
 export const runtime = 'nodejs';
 
@@ -92,5 +93,46 @@ export async function GET(request) {
   } catch (e) {
     console.error('superadmin/users', e);
     return NextResponse.json({ ok: false, error: 'Failed to load users.' }, { status: 500 });
+  }
+}
+
+/** Superadmin-only: create a verified member or admin (not superadmin). */
+export async function POST(request) {
+  try {
+    const auth = await requireSuperAdmin(request);
+    if ('error' in auth) return auth.error;
+
+    const body = await request.json().catch(() => ({}));
+    const roleRaw = String(body.role || 'user').toLowerCase();
+    const role = roleRaw === 'member' ? 'user' : roleRaw;
+
+    const result = await provisionVerifiedUser(request, {
+      email: body.email,
+      password: body.password,
+      name: body.name,
+      role,
+    });
+
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
+    }
+
+    const mailResult = result.credentialsEmailSent;
+    const isAdmin = result.user.role === 'admin';
+    return NextResponse.json({
+      ok: true,
+      user: serializeUser(result.user),
+      message: mailResult
+        ? isAdmin
+          ? 'Admin created. Login details were sent to their email.'
+          : 'Member created. Login details were sent to their email.'
+        : isAdmin
+          ? 'Admin created. Configure SMTP to email credentials automatically; they can still sign in with the password you set.'
+          : 'Member created. Configure SMTP to email credentials automatically; they can still sign in with the password you set.',
+      credentialsEmailSent: mailResult,
+    });
+  } catch (e) {
+    console.error('superadmin/users POST', e);
+    return NextResponse.json({ ok: false, error: 'Failed to create user.' }, { status: 500 });
   }
 }

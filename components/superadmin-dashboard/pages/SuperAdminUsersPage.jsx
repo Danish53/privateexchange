@@ -6,6 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import Link from 'next/link';
 import {
   Search,
   ChevronLeft,
@@ -20,6 +21,9 @@ import {
   ShieldAlert,
   Archive,
   RotateCcw,
+  UserPlus,
+  Pencil,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { emailInitials } from '@/components/user-dashboard/utils';
@@ -68,6 +72,9 @@ export default function SuperAdminUsersPage() {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [sorting, setSorting] = useState([{ id: 'createdAt', desc: true }]);
   const [busyId, setBusyId] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   useEffect(() => {
     const t = window.setTimeout(() => setSearch(searchInput.trim()), 400);
@@ -129,57 +136,112 @@ export default function SuperAdminUsersPage() {
     load();
   }, [ready, load]);
 
-  const archiveUser = async (id) => {
-    if (
-      !window.confirm(
-        'Archive this account? They will be signed out and cannot log in until you restore them.'
-      )
-    ) {
-      return;
-    }
-    if (!token) return;
-    setBusyId(id);
-    setError('');
-    try {
-      const res = await fetch(`/api/superadmin/users/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(json.error || 'Could not archive user.');
+  const archiveUser = useCallback(
+    async (id) => {
+      if (
+        !window.confirm(
+          'Archive this account? They will be signed out and cannot log in until you restore them.'
+        )
+      ) {
         return;
       }
-      await load();
-    } catch {
-      setError('Network error.');
-    } finally {
-      setBusyId(null);
-    }
-  };
+      if (!token) return;
+      setBusyId(id);
+      setError('');
+      try {
+        const res = await fetch(`/api/superadmin/users/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(json.error || 'Could not archive user.');
+          return;
+        }
+        await load();
+      } catch {
+        setError('Network error.');
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [token, load]
+  );
 
-  const restoreUser = async (id) => {
-    if (!window.confirm('Restore this account? They will be able to sign in again.')) return;
-    if (!token) return;
-    setBusyId(id);
-    setError('');
+  const openEdit = useCallback((u) => {
+    setEditError('');
+    setDraft({
+      id: u.id,
+      email: u.email,
+      name: u.name || '',
+      phone: u.phone || '',
+      country: u.country || '',
+      timezone: u.timezone || '',
+      role: u.role === 'admin' ? 'admin' : 'user',
+      emailVerified: !!u.emailVerified,
+    });
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    if (!token || !draft) return;
+    setEditSaving(true);
+    setEditError('');
     try {
-      const res = await fetch(`/api/superadmin/users/${id}/restore`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`/api/superadmin/users/${draft.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email: draft.email.trim().toLowerCase(),
+          name: draft.name,
+          phone: draft.phone,
+          country: draft.country,
+          timezone: draft.timezone,
+          role: draft.role,
+          emailVerified: draft.emailVerified,
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error || 'Could not restore user.');
+        setEditError(json.error || 'Could not save changes.');
         return;
       }
+      setDraft(null);
       await load();
     } catch {
-      setError('Network error.');
+      setEditError('Network error.');
     } finally {
-      setBusyId(null);
+      setEditSaving(false);
     }
-  };
+  }, [token, draft, load]);
+
+  const restoreUser = useCallback(
+    async (id) => {
+      if (!window.confirm('Restore this account? They will be able to sign in again.')) return;
+      if (!token) return;
+      setBusyId(id);
+      setError('');
+      try {
+        const res = await fetch(`/api/superadmin/users/${id}/restore`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(json.error || 'Could not restore user.');
+          return;
+        }
+        await load();
+      } catch {
+        setError('Network error.');
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [token, load]
+  );
 
   const myId = user?.id;
 
@@ -277,7 +339,16 @@ export default function SuperAdminUsersPage() {
           const isBusy = busyId === u.id;
           if (listView === 'active') {
             return (
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-1">
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => openEdit(u)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent/25 hover:bg-brand-accent/[0.08] hover:text-brand-heading disabled:opacity-40"
+                >
+                  <Pencil className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                  Edit
+                </button>
                 <button
                   type="button"
                   disabled={self || isBusy}
@@ -296,7 +367,16 @@ export default function SuperAdminUsersPage() {
             );
           }
           return (
-            <div className="flex justify-end">
+            <div className="flex flex-wrap justify-end gap-1">
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => openEdit(u)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent/25 hover:bg-brand-accent/[0.08] hover:text-brand-heading disabled:opacity-40"
+              >
+                <Pencil className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                Edit
+              </button>
               <button
                 type="button"
                 disabled={isBusy}
@@ -316,7 +396,7 @@ export default function SuperAdminUsersPage() {
         enableSorting: false,
       },
     ],
-    [listView, busyId, myId]
+    [listView, busyId, myId, openEdit, archiveUser, restoreUser]
   );
 
   const table = useReactTable({
@@ -357,12 +437,21 @@ export default function SuperAdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 border-b border-white/[0.06] pb-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Users</h1>
-          <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-            Operators and members (super admin accounts are not listed). Archive removes access until restored.
-          </p>
+      <div className="flex flex-col gap-4 border-b border-white/[0.06] pb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Users</h1>
+            <p className="mt-1 max-w-2xl text-sm text-brand-muted">
+              Operators and members (super admin accounts are not listed). Archive removes access until restored.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/superadmin/create-user"
+            className="btn-primary inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-brand-on-accent sm:self-start"
+          >
+            <UserPlus className="h-4 w-4" strokeWidth={2} aria-hidden />
+            Add user
+          </Link>
         </div>
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex rounded-xl border border-brand-border-muted bg-black/30 p-0.5">
@@ -441,7 +530,7 @@ export default function SuperAdminUsersPage() {
                             className={cn(
                               'whitespace-nowrap px-4 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle',
                               header.column.id === 'email' && 'pl-5',
-                              header.column.id === 'actions' && 'w-[120px] pr-5 text-right',
+                              header.column.id === 'actions' && 'min-w-[200px] pr-5 text-right',
                               canSort && 'cursor-pointer select-none hover:text-brand-heading'
                             )}
                             onClick={
@@ -595,6 +684,172 @@ export default function SuperAdminUsersPage() {
           </>
         )}
       </div>
+
+      {draft ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-user-title"
+        >
+          <div className="relative max-h-[min(90vh,720px)] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/[0.1] bg-[#0a0b0c] p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <h2 id="edit-user-title" className="text-lg font-semibold text-brand-heading">
+                Edit user
+              </h2>
+              <button
+                type="button"
+                onClick={() => setDraft(null)}
+                disabled={editSaving}
+                className="rounded-lg p-1.5 text-brand-muted transition hover:bg-white/[0.06] hover:text-brand-heading disabled:opacity-40"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" strokeWidth={2} aria-hidden />
+              </button>
+            </div>
+            {editError ? (
+              <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/[0.08] px-3 py-2 text-sm text-red-200/95">
+                {editError}
+              </div>
+            ) : null}
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="edit-email"
+                  className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
+                >
+                  Email
+                </label>
+                <input
+                  id="edit-email"
+                  type="email"
+                  value={draft.email}
+                  onChange={(e) => setDraft((d) => (d ? { ...d, email: e.target.value } : d))}
+                  className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-name"
+                  className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
+                >
+                  Display name
+                </label>
+                <input
+                  id="edit-name"
+                  type="text"
+                  value={draft.name}
+                  onChange={(e) => setDraft((d) => (d ? { ...d, name: e.target.value } : d))}
+                  className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="edit-phone"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
+                  >
+                    Phone
+                  </label>
+                  <input
+                    id="edit-phone"
+                    type="text"
+                    value={draft.phone}
+                    onChange={(e) => setDraft((d) => (d ? { ...d, phone: e.target.value } : d))}
+                    className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="edit-country"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
+                  >
+                    Country
+                  </label>
+                  <input
+                    id="edit-country"
+                    type="text"
+                    value={draft.country}
+                    onChange={(e) => setDraft((d) => (d ? { ...d, country: e.target.value } : d))}
+                    className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-tz"
+                  className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
+                >
+                  Timezone
+                </label>
+                <input
+                  id="edit-tz"
+                  type="text"
+                  value={draft.timezone}
+                  onChange={(e) => setDraft((d) => (d ? { ...d, timezone: e.target.value } : d))}
+                  placeholder="e.g. America/New_York"
+                  className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading placeholder:text-brand-subtle/60 focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-role"
+                  className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
+                >
+                  Role
+                </label>
+                <select
+                  id="edit-role"
+                  value={draft.role}
+                  onChange={(e) =>
+                    setDraft((d) => (d ? { ...d, role: e.target.value === 'admin' ? 'admin' : 'user' } : d))
+                  }
+                  className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+                >
+                  <option value="user">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-brand-muted">
+                <input
+                  type="checkbox"
+                  checked={draft.emailVerified}
+                  onChange={(e) =>
+                    setDraft((d) => (d ? { ...d, emailVerified: e.target.checked } : d))
+                  }
+                  className="h-4 w-4 rounded border-brand-border-muted bg-black/40 text-brand-accent focus:ring-brand-accent/30"
+                />
+                Email verified
+              </label>
+            </div>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDraft(null)}
+                disabled={editSaving}
+                className="rounded-xl border border-brand-border-muted px-4 py-2.5 text-sm font-semibold text-brand-heading transition hover:bg-white/[0.04] disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveEdit()}
+                disabled={editSaving}
+                className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-brand-on-accent disabled:opacity-60"
+              >
+                {editSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
+                    Saving…
+                  </>
+                ) : (
+                  'Save changes'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
