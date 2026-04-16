@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/db';
 import User from '@/lib/models/User';
+import { ensureWalletForMemberUser } from '@/lib/walletService';
 import { generateSixDigitOtp, hashOtp } from '@/lib/otp';
 import { sendVerificationOtp } from '@/lib/mail';
 
 export const runtime = 'nodejs';
 
 const OTP_MS = 10 * 60 * 1000;
-
-function allowAdminRegister() {
-  return process.env.ALLOW_ADMIN_REGISTER === 'true';
-}
 
 export async function POST(request) {
   try {
@@ -21,10 +18,8 @@ export async function POST(request) {
       .toLowerCase();
     const password = String(body.password || '');
     const name = String(body.name || '').trim();
-    let role = body.role === 'admin' ? 'admin' : 'user';
-    if (role === 'admin' && !allowAdminRegister()) {
-      role = 'user';
-    }
+    /** Public self-serve registration is members only; admins are provisioned by superadmin. */
+    const role = 'user';
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ ok: false, error: 'Valid email is required.' }, { status: 400 });
@@ -66,6 +61,10 @@ export async function POST(request) {
         verificationOtpHash: otpHash,
         verificationOtpExpires,
       });
+    }
+
+    if (user?.role === 'user') {
+      await ensureWalletForMemberUser(user._id);
     }
 
     await sendVerificationOtp(email, otp, name);

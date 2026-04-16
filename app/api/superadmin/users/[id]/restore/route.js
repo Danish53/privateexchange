@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import User from '@/lib/models/User';
-import { requireSuperAdmin } from '@/lib/authHelpers';
+import { requireUsersModule } from '@/lib/authHelpers';
 
 export const runtime = 'nodejs';
 
 /** Restore a soft-deleted user. */
 export async function POST(request, context) {
   try {
-    const auth = await requireSuperAdmin(request);
+    const auth = await requireUsersModule(request, 'edit');
     if ('error' in auth) return auth.error;
 
     const params = await Promise.resolve(context.params);
@@ -24,6 +24,12 @@ export async function POST(request, context) {
     }
     if (target.role === 'superadmin') {
       return NextResponse.json({ ok: false, error: 'Invalid target.' }, { status: 403 });
+    }
+    if (!auth.isSuperAdmin && target.role === 'admin') {
+      return NextResponse.json(
+        { ok: false, error: 'Only a super admin can restore administrator accounts.' },
+        { status: 403 }
+      );
     }
     if (!target.deletedAt) {
       return NextResponse.json({ ok: false, error: 'Account is not archived.' }, { status: 400 });

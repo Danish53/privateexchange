@@ -18,6 +18,7 @@ export async function POST(request) {
       password: body.password,
       name: body.name,
       role: 'admin',
+      adminPermissions: body.adminPermissions,
     });
 
     if (!result.ok) {

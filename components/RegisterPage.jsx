@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Wallet, ShieldCheck } from 'lucide-react';
 import AuthShell from '@/components/auth/AuthShell';
 import PasswordField from '@/components/auth/PasswordField';
 import Spinner from '@/components/ui/Spinner';
@@ -15,7 +14,6 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [role, setRole] = useState('user');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -35,14 +33,14 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, password, role }),
+        body: JSON.stringify({ email, name, password, role: 'user' }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || 'Registration failed.');
         return;
       }
-      setPendingRegister({ email, name, role });
+      setPendingRegister({ email, name, role: 'user' });
       router.push('/verify-otp');
     } catch {
       setError('Something went wrong. Try again.');
@@ -122,38 +120,10 @@ export default function RegisterPage() {
           autoComplete="new-password"
         />
 
-        <div>
-          <p className="auth-label">Account type</p>
-          <p className="auth-hint mb-2">
-            Admin signup only when the server sets ALLOW_ADMIN_REGISTER=true.
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setRole('user')}
-              className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-sm font-medium transition duration-200 ${
-                role === 'user'
-                  ? 'border-brand-accent/50 bg-brand-accent/10 text-brand-heading shadow-[0_0_0_1px_rgba(201,162,39,0.2)]'
-                  : 'border-brand-border-strong bg-black/25 text-brand-muted hover:border-brand-border hover:bg-[var(--brand-surface-hover)]'
-              }`}
-            >
-              <Wallet className="h-5 w-5 text-brand-accent" strokeWidth={1.5} />
-              User
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('admin')}
-              className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-sm font-medium transition duration-200 ${
-                role === 'admin'
-                  ? 'border-brand-accent/50 bg-brand-accent/10 text-brand-heading shadow-[0_0_0_1px_rgba(201,162,39,0.2)]'
-                  : 'border-brand-border-strong bg-black/25 text-brand-muted hover:border-brand-border hover:bg-[var(--brand-surface-hover)]'
-              }`}
-            >
-              <ShieldCheck className="h-5 w-5 text-brand-accent" strokeWidth={1.5} />
-              Admin
-            </button>
-          </div>
-        </div>
+        <p className="auth-hint text-center text-xs text-brand-muted">
+          Public sign-up creates a <span className="font-medium text-brand-subtle">member</span> account only.
+          Admin accounts are created by your platform super admin.
+        </p>
 
         <button
           type="submit"

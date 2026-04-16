@@ -5,43 +5,50 @@ import {
   Users,
   User,
   Home,
+  History,
 } from 'lucide-react';
 
 export const USER_NAV = [
   {
     href: '/dashboard/user',
     label: 'Overview',
-    description: 'Home & balances',
+    description: 'Balances',
     icon: Home,
   },
   {
     href: '/dashboard/user/wallet',
     label: 'Wallet',
-    description: 'Tokens & history',
+    description: 'Tokens',
     icon: Wallet,
+  },
+  {
+    href: '/dashboard/user/history',
+    label: 'History',
+    description: 'Ledger',
+    icon: History,
   },
   {
     href: '/dashboard/user/transfer',
     label: 'Transfer',
-    description: 'P2P send',
+    description: 'Send',
     icon: ArrowRightLeft,
   },
   {
     href: '/dashboard/user/drawings',
     label: 'Drawings',
-    description: 'Rewards',
+    description: 'Pools',
     icon: Gift,
   },
   {
     href: '/dashboard/user/membership',
     label: 'Membership',
-    description: 'Tier & benefits',
+    description: 'Tier',
     icon: Users,
   },
   {
     href: '/dashboard/user/profile',
     label: 'Profile',
-    description: 'Account & verification',
+    description: 'Account',
     icon: User,
   },
 ];

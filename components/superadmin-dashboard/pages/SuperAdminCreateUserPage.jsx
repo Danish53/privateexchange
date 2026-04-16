@@ -7,11 +7,30 @@ import { UserPlus, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import PasswordField from '@/components/auth/PasswordField';
 import { cn } from '@/lib/utils';
+import { DEFAULT_ADMIN_PERMISSIONS, mergeAdminPermissions } from '@/lib/adminPermissions';
+
+function PermToggle({ id, label, checked, onChange, disabled = false }) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-brand-border-muted bg-black/30 px-3 py-2.5 text-sm text-brand-muted transition hover:border-white/[0.08]">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
+        className="mt-0.5 h-4 w-4 rounded border-brand-border-muted bg-black/40 text-brand-accent focus:ring-brand-accent/30 disabled:opacity-40"
+      />
+      <span className="block font-medium text-brand-heading">{label}</span>
+    </label>
+  );
+}
 
 export default function SuperAdminCreateUserPage() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isSuperAdmin = user?.role === 'superadmin';
   const [role, setRole] = useState('user');
+  const [adminPermissions, setAdminPermissions] = useState(() => ({ ...DEFAULT_ADMIN_PERMISSIONS }));
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,7 +65,10 @@ export default function SuperAdminCreateUserPage() {
           email: email.trim().toLowerCase(),
           password,
           name: name.trim(),
-          role,
+          role: isSuperAdmin ? role : 'user',
+          ...(isSuperAdmin && role === 'admin'
+            ? { adminPermissions: mergeAdminPermissions(adminPermissions) }
+            : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -143,17 +165,101 @@ export default function SuperAdminCreateUserPage() {
               >
                 Role
               </label>
-              <select
-                id="sa-user-role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                disabled={loading}
-                className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-4 py-3 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 disabled:opacity-50"
-              >
-                <option value="user">Member</option>
-                <option value="admin">Admin</option>
-              </select>
+              {isSuperAdmin ? (
+                <select
+                  id="sa-user-role"
+                  value={role}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setRole(next);
+                    if (next !== 'admin') {
+                      setAdminPermissions({ ...DEFAULT_ADMIN_PERMISSIONS });
+                    }
+                  }}
+                  disabled={loading}
+                  className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-4 py-3 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 disabled:opacity-50"
+                >
+                  <option value="user">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
+              ) : (
+                <div className="rounded-xl border border-brand-border-muted bg-black/25 px-4 py-3 text-sm text-brand-muted">
+                  New accounts are created as <span className="font-medium text-brand-heading">members</span>{' '}
+                  only.
+                </div>
+              )}
             </div>
+            {isSuperAdmin && role === 'admin' ? (
+              <div className="space-y-2 rounded-xl border border-white/[0.06] bg-black/25 p-4">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                  Users module (delegated admin)
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <PermToggle
+                    id="new-ap-view"
+                    label="View list"
+                    checked={adminPermissions.usersView}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, usersView: v }))}
+                    disabled={loading}
+                  />
+                  <PermToggle
+                    id="new-ap-create"
+                    label="Create accounts"
+                    checked={adminPermissions.usersCreate}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, usersCreate: v }))}
+                    disabled={loading}
+                  />
+                  <PermToggle
+                    id="new-ap-edit"
+                    label="Edit members"
+                    checked={adminPermissions.usersEdit}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, usersEdit: v }))}
+                    disabled={loading}
+                  />
+                  <PermToggle
+                    id="new-ap-delete"
+                    label="Archive members"
+                    checked={adminPermissions.usersDelete}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, usersDelete: v }))}
+                    disabled={loading}
+                  />
+                </div>
+                <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                  Wallets module
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <PermToggle
+                    id="new-ap-wallets-view"
+                    label="View member wallets"
+                    checked={adminPermissions.walletsView}
+                    onChange={(v) =>
+                      setAdminPermissions((p) => ({
+                        ...p,
+                        walletsView: v,
+                        walletsAdjust: v ? p.walletsAdjust : false,
+                      }))
+                    }
+                    disabled={loading}
+                  />
+                  <PermToggle
+                    id="new-ap-wallets-adjust"
+                    label="Manage token balances"
+                    checked={adminPermissions.walletsAdjust}
+                    onChange={(v) =>
+                      setAdminPermissions((p) => ({
+                        ...p,
+                        walletsAdjust: v,
+                        walletsView: v ? true : p.walletsView,
+                      }))
+                    }
+                    disabled={loading}
+                  />
+                </div>
+                <p className="text-[0.65rem] leading-relaxed text-brand-muted">
+                  Adjust includes view. View-only shows balances in the table; adjust unlocks the Manage panel.
+                </p>
+              </div>
+            ) : null}
             <div>
               <label
                 htmlFor="sa-user-name"

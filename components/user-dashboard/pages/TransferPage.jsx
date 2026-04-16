@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRightLeft, ShieldCheck, Wallet, Sparkles, Info } from 'lucide-react';
+import { ArrowRightLeft, ShieldCheck, Wallet, Info } from 'lucide-react';
 import Panel from '@/components/user-dashboard/Panel';
-import { TOKENS, MEMBERSHIP } from '@/components/user-dashboard/constants';
+import { TOKEN_OPTIONS_FOR_FORMS, MEMBERSHIP } from '@/components/user-dashboard/constants';
 
 export default function TransferPage() {
   return (
@@ -18,11 +18,12 @@ export default function TransferPage() {
               Transfer
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Peer-to-peer send to email or username. Fees apply unless your tier qualifies (demo).
+              Send tokens to another member by email or username. Fees follow the schedule below; VIP members may have
+              the standard transfer fee waived under program rules.
             </p>
           </div>
           <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
-            Demo · no chain execution
+            In-app transfer (not on-chain)
           </p>
         </div>
       </header>
@@ -43,9 +44,10 @@ export default function TransferPage() {
                 <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-brand-heading">
                   $0.50
                 </p>
-                <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300/95">
-                  <Sparkles className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  Waived for {MEMBERSHIP.tier} — applied on this demo
+                <p className="mt-2 text-xs font-medium text-brand-muted">
+                  {MEMBERSHIP.tier === 'VIP'
+                    ? 'Your tier qualifies for a waived standard transfer fee when sending is enabled.'
+                    : 'Upgrade to VIP for a waived standard transfer fee where the program allows it.'}
                 </p>
               </div>
             </div>
@@ -84,11 +86,11 @@ export default function TransferPage() {
                 <select
                   id="tok"
                   className="auth-input appearance-none pr-10"
-                  defaultValue={TOKENS[0]?.symbol}
+                  defaultValue={TOKEN_OPTIONS_FOR_FORMS[0]?.symbol}
                 >
-                  {TOKENS.map((t) => (
+                  {TOKEN_OPTIONS_FOR_FORMS.map((t) => (
                     <option key={t.symbol} value={t.symbol}>
-                      {t.name} — {t.balance} available
+                      {t.name} ({t.symbol})
                     </option>
                   ))}
                 </select>
@@ -137,15 +139,21 @@ export default function TransferPage() {
                   <span className="text-brand-muted">VIP fee waiver</span>
                   <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300/95">
                     <ShieldCheck className="h-4 w-4" strokeWidth={2} aria-hidden />
-                    Applied
+                    {MEMBERSHIP.tier === 'VIP' ? 'Eligible' : 'Not eligible'}
                   </span>
                 </div>
                 <div className="border-t border-dashed border-white/[0.08] pt-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-brand-heading">You pay (demo)</span>
-                    <span className="text-lg font-semibold tabular-nums text-brand-accent">$0.00</span>
+                    <span className="text-sm font-medium text-brand-heading">Estimated total</span>
+                    <span className="text-lg font-semibold tabular-nums text-brand-accent">
+                      {MEMBERSHIP.tier === 'VIP' ? '$0.00' : '$0.50'}
+                    </span>
                   </div>
-                  <p className="mt-1 text-xs text-brand-subtle">Fee waived for {MEMBERSHIP.tier} — preview only</p>
+                  <p className="mt-1 text-xs text-brand-subtle">
+                    {MEMBERSHIP.tier === 'VIP'
+                      ? 'Standard transfer fee waived for VIP under current policy.'
+                      : 'Includes the standard transfer fee until VIP waiver applies.'}
+                  </p>
                 </div>
               </div>
             </div>

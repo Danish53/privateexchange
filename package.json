@@ -14,8 +14,9 @@
     "seed:ledger": "node scripts/seed-ledger-demo.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/source-sans-3": "^5.2.5",
+    "@fontsource-variable/source-sans-3": "^5.2.5",
     "@tanstack/react-table": "^8.20.5",
-    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "jsonwebtoken": "^9.0.3",

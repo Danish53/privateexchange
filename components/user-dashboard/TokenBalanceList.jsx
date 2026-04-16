@@ -1,5 +1,3 @@
-import { TOKENS } from '@/components/user-dashboard/constants';
-
 function tokenInitials(symbol) {
   const s = String(symbol || '').replace(/\s/g, '');
   if (s.length <= 3) return s.toUpperCase();
@@ -7,7 +5,15 @@ function tokenInitials(symbol) {
 }
 
 /** Same token table as Wallet — avatar chips, Amount + USD columns, mobile stack. */
-export default function TokenBalanceList({ tokens = TOKENS }) {
+export default function TokenBalanceList({ tokens = [] }) {
+  if (!tokens.length) {
+    return (
+      <div className="rounded-xl border border-white/[0.06] bg-black/[0.18] px-4 py-10 text-center text-sm text-brand-muted">
+        No balances to show yet.
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/[0.22]">
       <div className="hidden border-b border-white/[0.06] px-4 py-2.5 sm:block sm:px-5">
@@ -26,6 +32,7 @@ export default function TokenBalanceList({ tokens = TOKENS }) {
       </div>
       <ul className="divide-y divide-white/[0.04]">
         {tokens.map((token) => {
+          const rowKey = token.slug || token.symbol;
           const avatar = (
             <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.1] bg-gradient-to-br from-white/[0.08] to-black/55 text-[0.7rem] font-bold tracking-tight text-brand-heading shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] sm:h-[3.25rem] sm:w-[3.25rem] sm:text-xs">
               <span
@@ -37,7 +44,7 @@ export default function TokenBalanceList({ tokens = TOKENS }) {
           );
           return (
             <li
-              key={token.symbol}
+              key={rowKey}
               className="transition duration-200 hover:bg-[var(--brand-surface-hover)]/70"
             >
               <div className="px-4 py-4 sm:hidden">

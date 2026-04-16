@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, X, ChevronDown, LayoutDashboard, User } from 'lucide-react';
-import { SUPERADMIN_NAV_MAIN, SUPERADMIN_NAV_ACCOUNT } from '@/components/superadmin-dashboard/nav-config';
+import { getSuperadminNavSections } from '@/components/superadmin-dashboard/nav-config';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { isSuperAdminNavActive } from '@/components/superadmin-dashboard/utils';
 
@@ -13,6 +13,7 @@ const PROFILE_HREF = '/dashboard/superadmin/profile';
 export default function SuperAdminDashboardShell({ user, onLogout, children }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { main: navMain, account: navAccount } = getSuperadminNavSections(user);
   const [mobileNav, setMobileNav] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
@@ -42,37 +43,62 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
 
   function NavRow({ item, onNavigate }) {
     if (!item) return null;
-    const active = isSuperAdminNavActive(pathname, item.href);
+    const active = !item.disabled && isSuperAdminNavActive(pathname, item.href);
     const Icon = item.icon;
+    const disabled = Boolean(item.disabled);
+
+    const rowClass = `group flex items-start gap-3 rounded-lg border-l-[3px] py-2.5 pl-3 pr-2 text-left transition-[border-color,background-color,color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-page)] ${
+      disabled
+        ? 'cursor-not-allowed border-l-transparent opacity-[0.42] text-brand-muted'
+        : active
+          ? 'border-l-brand-accent bg-[var(--brand-accent-soft)]/85 text-brand-heading shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]'
+          : 'border-l-transparent text-brand-muted hover:bg-white/[0.045] hover:text-brand-heading'
+    }`;
+
+    const iconWrapClass = `mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors duration-200 ${
+      disabled
+        ? 'border-white/[0.04] bg-white/[0.02] text-brand-subtle/50'
+        : active
+          ? 'border-brand-accent/25 bg-black/40 text-brand-accent'
+          : 'border-white/[0.06] bg-white/[0.04] text-brand-subtle group-hover:border-white/[0.1] group-hover:bg-white/[0.07] group-hover:text-brand-heading'
+    }`;
+
+    const descClass = disabled
+      ? 'mt-0.5 block truncate text-[0.65rem] font-normal leading-snug text-brand-subtle/50'
+      : 'mt-0.5 block truncate text-[0.65rem] font-normal leading-snug text-brand-subtle/85 group-hover:text-brand-muted';
+
+    const inner = (
+      <>
+        <span className={iconWrapClass}>
+          <Icon className="h-[1.125rem] w-[1.125rem]" strokeWidth={2} aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.8125rem] font-medium leading-tight tracking-tight">{item.label}</span>
+          {item.description ? <span className={descClass}>{item.description}</span> : null}
+        </span>
+      </>
+    );
+
+    if (disabled) {
+      return (
+        <span
+          className={rowClass}
+          aria-disabled="true"
+          title="Your administrator has not granted access to this section."
+        >
+          {inner}
+        </span>
+      );
+    }
 
     return (
       <Link
         href={item.href}
         onClick={() => onNavigate?.()}
         aria-current={active ? 'page' : undefined}
-        className={`group flex items-start gap-3 rounded-lg border-l-[3px] py-2.5 pl-3 pr-2 text-left transition-[border-color,background-color,color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-page)] ${
-          active
-            ? 'border-l-brand-accent bg-[var(--brand-accent-soft)]/85 text-brand-heading shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]'
-            : 'border-l-transparent text-brand-muted hover:bg-white/[0.045] hover:text-brand-heading'
-        }`}
+        className={rowClass}
       >
-        <span
-          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors duration-200 ${
-            active
-              ? 'border-brand-accent/25 bg-black/40 text-brand-accent'
-              : 'border-white/[0.06] bg-white/[0.04] text-brand-subtle group-hover:border-white/[0.1] group-hover:bg-white/[0.07] group-hover:text-brand-heading'
-          }`}
-        >
-          <Icon className="h-[1.125rem] w-[1.125rem]" strokeWidth={2} aria-hidden />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[0.8125rem] font-medium leading-tight tracking-tight">{item.label}</span>
-          {item.description ? (
-            <span className="mt-0.5 block truncate text-[0.65rem] font-normal leading-snug text-brand-subtle/85 group-hover:text-brand-muted">
-              {item.description}
-            </span>
-          ) : null}
-        </span>
+        {inner}
       </Link>
     );
   }
@@ -99,7 +125,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
             Platform
           </p>
           <div className="flex flex-col gap-0.5">
-            {SUPERADMIN_NAV_MAIN.map((item) => (
+            {navMain.map((item) => (
               <NavRow key={item.href} item={item} onNavigate={onNavigate} />
             ))}
           </div>
@@ -110,7 +136,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
             Account
           </p>
           <div className="flex flex-col gap-0.5">
-            {SUPERADMIN_NAV_ACCOUNT.map((item) => (
+            {navAccount.map((item) => (
               <NavRow key={item.href} item={item} onNavigate={onNavigate} />
             ))}
           </div>
@@ -195,7 +221,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
                 {user.email}
               </p>
               <p className="text-[0.625rem] font-medium uppercase tracking-[0.14em] text-brand-subtle">
-                Platform operations
+                {user?.role === 'superadmin' ? 'Platform operations' : 'Delegated access'}
               </p>
             </div>
 

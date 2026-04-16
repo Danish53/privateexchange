@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import User from '@/lib/models/User';
-import { requireSuperAdmin } from '@/lib/authHelpers';
+import { requireSuperAdminOrAdmin } from '@/lib/authHelpers';
 
 export const runtime = 'nodejs';
 
@@ -18,7 +18,7 @@ function utcStartOfDay(d) {
 
 export async function GET(request) {
   try {
-    const auth = await requireSuperAdmin(request);
+    const auth = await requireSuperAdminOrAdmin(request);
     if ('error' in auth) return auth.error;
 
     const now = new Date();

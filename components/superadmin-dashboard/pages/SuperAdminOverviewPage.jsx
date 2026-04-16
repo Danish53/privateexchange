@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { Users, Wallet, ShieldCheck, UserPlus, ArrowUpRight, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { hasAnyUsersModulePermission } from '@/lib/adminPermissions';
 
 const ACCENT = '#c9a227';
 const ACCENT_FAINT = 'rgba(201, 162, 39, 0.12)';
@@ -86,7 +87,7 @@ function StatCard({ icon: Icon, label, value, hint, href, trend }) {
 }
 
 export default function SuperAdminOverviewPage() {
-  const { token, ready } = useAuth();
+  const { token, ready, user } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -139,23 +140,40 @@ export default function SuperAdminOverviewPage() {
             : null
       : null;
 
+  const isSuperAdmin = user?.role === 'superadmin';
+  const usersHref =
+    isSuperAdmin || hasAnyUsersModulePermission(user) ? '/dashboard/superadmin/users' : undefined;
+  const walletsHref = isSuperAdmin ? '/dashboard/superadmin/wallets' : undefined;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-3 border-b border-white/[0.06] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Overview</h1>
           <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-            Live counts from your database. Charts show registration cadence—useful for capacity and onboarding reviews.
+            {isSuperAdmin ? (
+              <>
+                Live counts from your database. Charts show registration cadence—useful for capacity and onboarding
+                reviews.
+              </>
+            ) : (
+              <>
+                Same live registration metrics as the control center. Charts reflect all non–super-admin accounts;
+                shortcuts below only link to sections your administrator enabled.
+              </>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard/superadmin/users"
-            className="inline-flex items-center gap-2 rounded-xl border border-brand-border-muted bg-black/30 px-4 py-2.5 text-sm font-medium text-brand-heading transition hover:border-brand-accent/25 hover:bg-[var(--brand-surface-hover)]"
-          >
-            Manage users
-            <ArrowUpRight className="h-4 w-4 text-brand-accent" strokeWidth={2} aria-hidden />
-          </Link>
+          {usersHref ? (
+            <Link
+              href={usersHref}
+              className="inline-flex items-center gap-2 rounded-xl border border-brand-border-muted bg-black/30 px-4 py-2.5 text-sm font-medium text-brand-heading transition hover:border-brand-accent/25 hover:bg-[var(--brand-surface-hover)]"
+            >
+              Manage users
+              <ArrowUpRight className="h-4 w-4 text-brand-accent" strokeWidth={2} aria-hidden />
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -175,14 +193,14 @@ export default function SuperAdminOverviewPage() {
               label="Total users"
               value={formatInt(stats?.totalUsers)}
               hint="All roles, including operators."
-              href="/dashboard/superadmin/users"
+              href={usersHref}
             />
             <StatCard
               icon={Wallet}
               label="Member wallets"
               value={formatInt(stats?.memberWallets)}
               hint="One custodial wallet per member account."
-              href="/dashboard/superadmin/wallets"
+              href={walletsHref}
             />
             <StatCard
               icon={ShieldCheck}

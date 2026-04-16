@@ -11,6 +11,7 @@ import {
   Settings,
   UserCircle,
 } from 'lucide-react';
+import { hasAnyUsersModulePermission, hasAnyWalletsPermission } from '@/lib/adminPermissions';
 
 /** Main operations — aligned with platform admin scope (proposal). */
 export const SUPERADMIN_NAV_MAIN = [
@@ -84,3 +85,48 @@ export const SUPERADMIN_NAV_ACCOUNT = [
     icon: UserCircle,
   },
 ];
+
+/**
+ * @typedef {typeof SUPERADMIN_NAV_MAIN[number] & { disabled?: boolean }} SuperadminNavItem
+ */
+
+function withDisabled(items, disabled) {
+  return items.map((item) => ({ ...item, disabled }));
+}
+
+/**
+ * Superadmin: full nav, all enabled. Admin: same items; disabled where no permission (Users uses adminPermissions; other modules until flags exist).
+ * @param {{ role?: string; adminPermissions?: Record<string, boolean> } | null | undefined} user
+ * @returns {{ main: SuperadminNavItem[]; account: SuperadminNavItem[] }}
+ */
+export function getSuperadminNavSections(user) {
+  if (!user || user.role === 'superadmin') {
+    return {
+      main: withDisabled(SUPERADMIN_NAV_MAIN, false),
+      account: withDisabled(SUPERADMIN_NAV_ACCOUNT, false),
+    };
+  }
+  if (user.role !== 'admin') {
+    return { main: [], account: withDisabled(SUPERADMIN_NAV_ACCOUNT, false) };
+  }
+  const usersNavEnabled = hasAnyUsersModulePermission(user);
+  const walletsNavEnabled = hasAnyWalletsPermission(user);
+
+  const main = SUPERADMIN_NAV_MAIN.map((item) => {
+    if (item.href === '/dashboard/superadmin') {
+      return { ...item, disabled: false };
+    }
+    if (item.href === '/dashboard/superadmin/users') {
+      return { ...item, disabled: !usersNavEnabled };
+    }
+    if (item.href === '/dashboard/superadmin/wallets') {
+      return { ...item, disabled: !walletsNavEnabled };
+    }
+    return { ...item, disabled: true };
+  });
+
+  return {
+    main,
+    account: withDisabled(SUPERADMIN_NAV_ACCOUNT, false),
+  };
+}

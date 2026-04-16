@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import User from '@/lib/models/User';
-import { requireSuperAdmin } from '@/lib/authHelpers';
+import { requireWalletsView } from '@/lib/authHelpers';
+import { getWalletSummaryForUserId } from '@/lib/walletService';
 
 export const runtime = 'nodejs';
 
@@ -18,12 +19,12 @@ const SORT_FIELDS = {
 };
 
 /**
- * Member custodial wallets: one logical wallet per active member (role user, not archived).
- * Balances come from ledger when integrated; for now placeholder.
+ * Member custodial wallets: one row per active member (role user, not archived).
+ * Per-token balances and USD aggregate from `WalletTokenBalance` + token rates.
  */
 export async function GET(request) {
   try {
-    const auth = await requireSuperAdmin(request);
+    const auth = await requireWalletsView(request);
     if ('error' in auth) return auth.error;
 
     const { searchParams } = new URL(request.url);
@@ -56,17 +57,34 @@ export async function GET(request) {
         .lean(),
     ]);
 
-    const wallets = rows.map((u) => ({
-      walletId: String(u._id),
-      memberEmail: u.email,
-      memberName: u.name || '',
-      emailVerified: !!u.emailVerified,
-      country: u.country || '',
-      avatarUrl: u.avatarUrl || '',
-      openedAt: u.createdAt ? new Date(u.createdAt).toISOString() : null,
-      /** Placeholder until multi-token balances are wired */
-      balanceDisplay: '—',
-    }));
+    const wallets = [];
+    for (const u of rows) {
+      const summary = await getWalletSummaryForUserId(u._id);
+      const base = {
+        walletId: String(u._id),
+        memberEmail: u.email,
+        memberName: u.name || '',
+        emailVerified: !!u.emailVerified,
+        country: u.country || '',
+        avatarUrl: u.avatarUrl || '',
+        openedAt: u.createdAt ? new Date(u.createdAt).toISOString() : null,
+      };
+      if (summary.ok) {
+        wallets.push({
+          ...base,
+          balanceDisplay: summary.totalUsdFormatted,
+          totalUsd: summary.totalUsd,
+          tokens: summary.tokens,
+        });
+      } else {
+        wallets.push({
+          ...base,
+          balanceDisplay: '—',
+          totalUsd: 0,
+          tokens: [],
+        });
+      }
+    }
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
 

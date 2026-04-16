@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import User from '@/lib/models/User';
-import { requireSuperAdmin, serializeUser } from '@/lib/authHelpers';
+import { requireAnyUsersModuleAccess, requireUsersModule, serializeUser } from '@/lib/authHelpers';
 import { provisionVerifiedUser } from '@/lib/superadminProvisionUser';
+import { mergeAdminPermissions } from '@/lib/adminPermissions';
 
 export const runtime = 'nodejs';
 
@@ -23,7 +24,7 @@ const SORT_FIELDS = {
 
 export async function GET(request) {
   try {
-    const auth = await requireSuperAdmin(request);
+    const auth = await requireAnyUsersModuleAccess(request);
     if ('error' in auth) return auth.error;
 
     const { searchParams } = new URL(request.url);
@@ -56,7 +57,7 @@ export async function GET(request) {
       User.countDocuments(filter),
       User.find(filter)
         .select(
-          'email name role emailVerified phone country timezone avatarUrl createdAt updatedAt deletedAt'
+          'email name role emailVerified phone country timezone avatarUrl createdAt updatedAt deletedAt adminPermissions'
         )
         .sort({ [sortBy]: sortOrder })
         .skip(skip)
@@ -77,6 +78,8 @@ export async function GET(request) {
       createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : null,
       updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : null,
       deletedAt: u.deletedAt ? new Date(u.deletedAt).toISOString() : null,
+      adminPermissions:
+        u.role === 'admin' ? mergeAdminPermissions(u.adminPermissions) : undefined,
     }));
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -96,21 +99,28 @@ export async function GET(request) {
   }
 }
 
-/** Superadmin-only: create a verified member or admin (not superadmin). */
+/** Superadmin or delegated admin (usersCreate): create a verified member or admin (not superadmin). */
 export async function POST(request) {
   try {
-    const auth = await requireSuperAdmin(request);
+    const auth = await requireUsersModule(request, 'create');
     if ('error' in auth) return auth.error;
 
     const body = await request.json().catch(() => ({}));
-    const roleRaw = String(body.role || 'user').toLowerCase();
-    const role = roleRaw === 'member' ? 'user' : roleRaw;
+    let roleRaw = String(body.role || 'user').toLowerCase();
+    let role = roleRaw === 'member' ? 'user' : roleRaw;
+    if (!auth.isSuperAdmin) {
+      role = 'user';
+    }
 
     const result = await provisionVerifiedUser(request, {
       email: body.email,
       password: body.password,
       name: body.name,
       role,
+      adminPermissions:
+        auth.isSuperAdmin && role === 'admin' && body.adminPermissions
+          ? body.adminPermissions
+          : undefined,
     });
 
     if (!result.ok) {

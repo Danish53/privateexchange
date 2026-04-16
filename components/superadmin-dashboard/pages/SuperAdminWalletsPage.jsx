@@ -20,10 +20,16 @@ import {
   Info,
   ShieldCheck,
   ShieldAlert,
+  X,
+  Plus,
+  Minus,
+  History,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { cn } from '@/lib/utils';
+import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
+import { mergeAdminPermissions } from '@/lib/adminPermissions';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -41,8 +47,28 @@ function shortId(id) {
   return `${id.slice(0, 6)}…${id.slice(-4)}`;
 }
 
+function formatDateTime(iso) {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
+}
+
+function tokenBalanceFromRow(row, symbolUpper) {
+  const sym = String(symbolUpper).toUpperCase();
+  const t = row?.tokens?.find((x) => String(x.symbol).toUpperCase() === sym);
+  return t?.balance ?? '—';
+}
+
 export default function SuperAdminWalletsPage() {
-  const { token, ready } = useAuth();
+  const { token, ready, user } = useAuth();
+  const canAdjustWallets =
+    user?.role === 'superadmin' || mergeAdminPermissions(user?.adminPermissions).walletsAdjust;
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -52,6 +78,58 @@ export default function SuperAdminWalletsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [sorting, setSorting] = useState([{ id: 'createdAt', desc: true }]);
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustRow, setAdjustRow] = useState(null);
+  const [adjustToken, setAdjustToken] = useState('');
+  const [adjustAmount, setAdjustAmount] = useState('');
+  const [adjustDirection, setAdjustDirection] = useState('credit');
+  const [adjustNote, setAdjustNote] = useState('');
+  const [adjustSaving, setAdjustSaving] = useState(false);
+  const [adjustErr, setAdjustErr] = useState('');
+  const [memberHistory, setMemberHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [adjustSuccess, setAdjustSuccess] = useState('');
+
+  const loadMemberHistory = useCallback(async (userId) => {
+    if (!token || !userId) return;
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(
+        `/api/superadmin/wallets/member-history?userId=${encodeURIComponent(userId)}&limit=50`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.ok) {
+        setMemberHistory(json.entries ?? []);
+      } else {
+        setMemberHistory([]);
+      }
+    } catch {
+      setMemberHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [token]);
+
+  const openAdjust = useCallback((row) => {
+    setAdjustRow(row);
+    const first = row.tokens?.[0]?.symbol;
+    setAdjustToken(String(first || PLATFORM_TOKEN_SEED[0].symbol).toUpperCase());
+    setAdjustAmount('');
+    setAdjustDirection('credit');
+    setAdjustNote('');
+    setAdjustErr('');
+    setAdjustSuccess('');
+    setMemberHistory([]);
+    setAdjustOpen(true);
+  }, []);
+
+  const closeAdjust = useCallback(() => {
+    setAdjustOpen(false);
+    setAdjustRow(null);
+    setAdjustErr('');
+    setAdjustSaving(false);
+  }, []);
 
   useEffect(() => {
     const t = window.setTimeout(() => setSearch(searchInput.trim()), 400);
@@ -105,8 +183,86 @@ export default function SuperAdminWalletsPage() {
     load();
   }, [ready, load]);
 
-  const columns = useMemo(
-    () => [
+  useEffect(() => {
+    if (!adjustOpen) return;
+    function onKey(e) {
+      if (e.key === 'Escape') closeAdjust();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [adjustOpen, closeAdjust]);
+
+  useEffect(() => {
+    if (!adjustOpen || !adjustRow?.walletId) return;
+    loadMemberHistory(adjustRow.walletId);
+  }, [adjustOpen, adjustRow?.walletId, loadMemberHistory]);
+
+  const submitAdjust = useCallback(async () => {
+    if (!token || !adjustRow || !adjustToken) return;
+    const amt = Number(String(adjustAmount).replace(/,/g, ''));
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setAdjustErr('Enter a valid positive amount.');
+      return;
+    }
+    setAdjustErr('');
+    setAdjustSaving(true);
+    try {
+      const res = await fetch('/api/superadmin/wallets/adjust', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: adjustRow.walletId,
+          token: adjustToken,
+          direction: adjustDirection,
+          amount: amt,
+          note: adjustNote.trim(),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        setAdjustErr(json.error || 'Could not apply adjustment.');
+        return;
+      }
+      if (json.summary && adjustRow) {
+        setAdjustRow((prev) =>
+          prev
+            ? {
+                ...prev,
+                balanceDisplay: json.summary.totalUsdFormatted,
+                totalUsd: json.summary.totalUsd,
+                tokens: json.summary.tokens,
+              }
+            : prev
+        );
+      }
+      setAdjustAmount('');
+      setAdjustNote('');
+      setAdjustErr('');
+      setAdjustSuccess('Adjustment saved. Balances and history are updated.');
+      window.setTimeout(() => setAdjustSuccess(''), 5000);
+      await loadMemberHistory(adjustRow.walletId);
+      await load();
+    } catch {
+      setAdjustErr('Network error.');
+    } finally {
+      setAdjustSaving(false);
+    }
+  }, [
+    token,
+    adjustRow,
+    adjustToken,
+    adjustAmount,
+    adjustDirection,
+    adjustNote,
+    load,
+    loadMemberHistory,
+  ]);
+
+  const columns = useMemo(() => {
+    const base = [
       {
         id: 'memberEmail',
         accessorKey: 'memberEmail',
@@ -165,13 +321,31 @@ export default function SuperAdminWalletsPage() {
       {
         id: 'balanceDisplay',
         accessorKey: 'balanceDisplay',
-        header: 'Balance (USD eq.)',
+        header: 'Total (USD eq.)',
         cell: ({ row }) => (
           <span className="font-medium tabular-nums text-brand-heading">{row.original.balanceDisplay}</span>
         ),
         enableSorting: false,
       },
-      {
+    ];
+    if (canAdjustWallets) {
+      base.push({
+        id: 'actions',
+        header: 'Adjust',
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => openAdjust(row.original)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-accent/35 bg-[var(--brand-accent-soft)]/25 px-3 py-2 text-xs font-semibold text-brand-accent transition hover:bg-[var(--brand-accent-soft)]/40"
+          >
+            <Wallet className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+            Manage
+          </button>
+        ),
+        enableSorting: false,
+      });
+    }
+    base.push({
         id: 'country',
         accessorKey: 'country',
         header: 'Region',
@@ -189,10 +363,10 @@ export default function SuperAdminWalletsPage() {
             {formatDate(row.original.openedAt)}
           </span>
         ),
-      },
-    ],
-    []
-  );
+      }
+    );
+    return base;
+  }, [openAdjust, canAdjustWallets]);
 
   const table = useReactTable({
     data: rows,
@@ -231,10 +405,9 @@ export default function SuperAdminWalletsPage() {
       <div className="flex flex-col gap-4 border-b border-white/[0.06] pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Wallets</h1>
-          <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-            Each active member account has one custodial wallet in the 759 stack. Super Admin sees every member wallet
-            here; token balances will populate when the ledger is connected.
-          </p>
+          {/* <p className="mt-1 max-w-2xl text-sm text-brand-muted">
+            Wallet
+          </p> */}
         </div>
         <div className="relative w-full lg:max-w-sm">
           <Search
@@ -253,7 +426,7 @@ export default function SuperAdminWalletsPage() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border border-brand-accent/15 bg-gradient-to-br from-[var(--brand-accent-soft)]/25 via-black/20 to-[#060708] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] sm:p-6">
+      {/* <div className="relative overflow-hidden rounded-2xl border border-brand-accent/15 bg-gradient-to-br from-[var(--brand-accent-soft)]/25 via-black/20 to-[#060708] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] sm:p-6">
         <div className="flex gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-accent/25 bg-black/30 text-brand-accent">
             <Info className="h-5 w-5" strokeWidth={2} aria-hidden />
@@ -268,7 +441,7 @@ export default function SuperAdminWalletsPage() {
             </p>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-white/[0.08] bg-black/[0.28] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
@@ -281,7 +454,8 @@ export default function SuperAdminWalletsPage() {
         <div className="rounded-2xl border border-white/[0.08] bg-black/[0.28] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
           <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">Balances</div>
           <p className="mt-2 text-sm text-brand-muted">
-            USD equivalent and per-token breakdown will appear after ledger integration.
+            Per-token amounts come from the database; credits and debits write ledger lines the member can see in
+            wallet history.
           </p>
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-black/[0.28] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
@@ -311,7 +485,7 @@ export default function SuperAdminWalletsPage() {
         ) : (
           <>
             <div className="relative overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
                 <thead>
                   {table.getHeaderGroups().map((hg) => (
                     <tr key={hg.id} className="border-b border-white/[0.08] bg-black/40">
@@ -467,6 +641,314 @@ export default function SuperAdminWalletsPage() {
           </>
         )}
       </div>
+
+      {adjustOpen && adjustRow ? (
+        <div className="fixed inset-0 z-[100]">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+            aria-label="Close wallet panel"
+            onClick={closeAdjust}
+          />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="wallet-adjust-title"
+            className="absolute inset-y-0 right-0 z-[101] flex w-full max-w-md flex-col border-l border-white/[0.1] bg-[var(--brand-page)] shadow-[-16px_0_48px_rgba(0,0,0,0.55)] sm:max-w-lg"
+          >
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-white/[0.08] bg-black/20 px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-subtle">
+                  Member wallet
+                </p>
+                <h2 id="wallet-adjust-title" className="mt-2 text-lg font-semibold tracking-tight text-brand-heading">
+                  Manage balances
+                </h2>
+                <p className="mt-1 truncate text-sm text-brand-muted">{adjustRow.memberEmail}</p>
+                {/* <p className="mt-2 text-xs leading-relaxed text-brand-subtle">
+                  This side panel keeps the workflow in one place — pick a token card, choose credit or debit, then
+                  amount. Scroll inside the panel only if you need history.
+                </p> */}
+              </div>
+              <button
+                type="button"
+                onClick={closeAdjust}
+                className="rounded-lg p-2 text-brand-muted transition hover:bg-white/[0.06] hover:text-brand-heading"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" strokeWidth={2} />
+              </button>
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              {adjustSuccess ? (
+                <div className="mx-5 mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.1] px-3 py-2.5 text-sm text-emerald-100/95">
+                  {adjustSuccess}
+                </div>
+              ) : null}
+
+              <div className="mx-5 mt-4 flex flex-wrap gap-2 rounded-xl border border-white/[0.06] bg-black/25 px-3 py-2.5">
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                  <span className="tabular-nums text-brand-accent">1</span> Token
+                </span>
+                <span className="text-brand-subtle/50">→</span>
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                  <span className="tabular-nums text-brand-accent">2</span> Add / remove
+                </span>
+                <span className="text-brand-subtle/50">→</span>
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                  <span className="tabular-nums text-brand-accent">3</span> Amount
+                </span>
+              </div>
+
+              <section className="px-5 pt-5">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-subtle">
+                  Step 1 — Select token
+                </h3>
+                {/* <p className="mt-1.5 text-xs leading-relaxed text-brand-muted">
+                  <span className="font-medium text-brand-heading">Click one card</span> below. The amount you enter in
+                  step 3 applies only to that token. Balance shown is live for this member.
+                </p> */}
+                <div className="mt-3 grid grid-cols-2 gap-2.5">
+                  {PLATFORM_TOKEN_SEED.map((t) => {
+                    const sym = String(t.symbol).toUpperCase();
+                    const selected = adjustToken === sym;
+                    const bal = tokenBalanceFromRow(adjustRow, sym);
+                    return (
+                      <button
+                        key={t.slug}
+                        type="button"
+                        onClick={() => {
+                          setAdjustToken(sym);
+                          setAdjustErr('');
+                          setAdjustSuccess('');
+                        }}
+                        className={cn(
+                          'relative flex flex-col rounded-xl border px-3 py-3.5 text-left transition-colors',
+                          selected
+                            ? 'border-brand-accent bg-[var(--brand-accent-soft)]/20 ring-2 ring-brand-accent/35'
+                            : 'border-white/[0.08] bg-black/25 hover:border-white/[0.14] hover:bg-black/35'
+                        )}
+                      >
+                        <span
+                          className={cn('pointer-events-none absolute left-2 top-2.5 bottom-2.5 w-1 rounded-full', t.bar)}
+                          aria-hidden
+                        />
+                        <span className="pl-3 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                          {t.symbol}
+                        </span>
+                        <span className="pl-3 mt-0.5 text-sm font-semibold leading-tight text-brand-heading">
+                          {t.name}
+                        </span>
+                        <span className="pl-3 mt-2 border-t border-white/[0.06] pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-brand-subtle">
+                          Balance
+                        </span>
+                        <span className="pl-3 mt-0.5 font-mono text-sm font-semibold tabular-nums text-brand-heading">
+                          {bal}
+                        </span>
+                        {selected ? (
+                          <span className="pl-3 mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-brand-accent">
+                            Selected
+                          </span>
+                        ) : (
+                          <span className="pl-3 mt-1 text-[0.6rem] text-brand-subtle">Tap to select</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="px-5 pt-6">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-subtle">
+                  Step 2 — Manage balances for selected token
+                </h3>
+                {/* <p className="mt-1 text-xs text-brand-muted">Credit increases balance; debit decreases it (cannot go below zero).</p> */}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdjustDirection('credit');
+                      setAdjustErr('');
+                      setAdjustSuccess('');
+                    }}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-center text-sm font-semibold transition-colors',
+                      adjustDirection === 'credit'
+                        ? 'border-emerald-500/40 bg-emerald-500/[0.12] text-emerald-100'
+                        : 'border-white/[0.08] bg-black/25 text-brand-muted hover:border-white/[0.12]'
+                    )}
+                  >
+                    <Plus className="h-5 w-5" strokeWidth={2} aria-hidden />
+                    Credit
+                    <span className="text-[0.65rem] font-normal text-brand-subtle">Add to wallet</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdjustDirection('debit');
+                      setAdjustErr('');
+                      setAdjustSuccess('');
+                    }}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-center text-sm font-semibold transition-colors',
+                      adjustDirection === 'debit'
+                        ? 'border-rose-500/40 bg-rose-500/[0.12] text-rose-100'
+                        : 'border-white/[0.08] bg-black/25 text-brand-muted hover:border-white/[0.12]'
+                    )}
+                  >
+                    <Minus className="h-5 w-5" strokeWidth={2} aria-hidden />
+                    Debit
+                    <span className="text-[0.65rem] font-normal text-brand-subtle">Subtract</span>
+                  </button>
+                </div>
+              </section>
+
+              <section className="px-5 pt-6">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-subtle">
+                  Step 3 — Amount & note
+                </h3>
+                <p className="mt-1 text-xs text-brand-muted">
+                  Applies to <span className="font-semibold text-brand-heading">{adjustToken}</span>
+                </p>
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label className="auth-label text-xs" htmlFor="adj-amt">
+                      Amount
+                    </label>
+                    <input
+                      id="adj-amt"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="any"
+                      value={adjustAmount}
+                      onChange={(e) => setAdjustAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="auth-input mt-1.5 tabular-nums"
+                    />
+                  </div>
+                  <div>
+                    <label className="auth-label text-xs" htmlFor="adj-note">
+                      Note (optional)
+                    </label>
+                    <input
+                      id="adj-note"
+                      type="text"
+                      value={adjustNote}
+                      onChange={(e) => setAdjustNote(e.target.value)}
+                      placeholder="Shown on ledger / member history"
+                      className="auth-input mt-1.5"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {adjustErr ? (
+                <div className="mx-5 mt-4 rounded-xl border border-red-500/25 bg-red-500/[0.08] px-3 py-2.5 text-sm text-red-200/95">
+                  {adjustErr}
+                </div>
+              ) : null}
+
+              <section className="mt-6 border-t border-white/[0.08] bg-black/[0.22] px-5 py-5">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-brand-accent/25 bg-[var(--brand-accent-soft)]/30 text-brand-accent">
+                    <History className="h-4 w-4" strokeWidth={2} aria-hidden />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-brand-heading">Admin adjustment history</h3>
+                    <p className="text-xs text-brand-muted">
+                      Credits and debits for this member (token, amount, balance after each change).
+                    </p>
+                  </div>
+                </div>
+
+                {historyLoading ? (
+                  <div className="mt-4 flex justify-center py-8">
+                    <Loader2 className="h-7 w-7 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+                  </div>
+                ) : memberHistory.length === 0 ? (
+                  <p className="mt-4 rounded-xl border border-dashed border-white/[0.1] bg-black/20 px-3 py-4 text-center text-sm text-brand-muted">
+                    No admin adjustments yet for this account.
+                  </p>
+                ) : (
+                  <ul className="mt-4 max-h-[min(40vh,22rem)] space-y-2 overflow-y-auto pr-1">
+                    {memberHistory.map((h) => (
+                      <li
+                        key={h.id}
+                        className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <time className="text-xs tabular-nums text-brand-subtle" dateTime={h.createdAt}>
+                            {formatDateTime(h.createdAt)}
+                          </time>
+                          <span
+                            className={cn(
+                              'rounded-md px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide',
+                              h.direction === 'credit'
+                                ? 'bg-emerald-500/15 text-emerald-200/95'
+                                : 'bg-rose-500/15 text-rose-200/95'
+                            )}
+                          >
+                            {h.direction === 'credit' ? 'Credit' : 'Debit'}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="text-sm font-semibold text-brand-heading">{h.token}</span>
+                          <span
+                            className={cn(
+                              'font-mono text-sm font-semibold tabular-nums',
+                              h.direction === 'credit' ? 'text-emerald-300/95' : 'text-rose-200/95'
+                            )}
+                          >
+                            {h.signedLabel}
+                          </span>
+                        </div>
+                        {h.balanceAfterFormatted ? (
+                          <p className="mt-1.5 text-xs text-brand-muted">
+                            Balance after ·{' '}
+                            <span className="font-mono font-medium text-brand-heading">
+                              {h.balanceAfterFormatted} {h.token}
+                            </span>
+                          </p>
+                        ) : null}
+                        {h.note ? (
+                          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-brand-subtle">{h.note}</p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+
+            <footer className="flex shrink-0 gap-2 border-t border-white/[0.08] bg-black/30 px-4 py-4">
+              <button
+                type="button"
+                onClick={closeAdjust}
+                className="rounded-xl border border-brand-border-muted px-4 py-3 text-sm font-medium text-brand-heading transition hover:bg-white/[0.04] sm:min-w-[7rem]"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={submitAdjust}
+                disabled={adjustSaving}
+                className="btn-primary flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold disabled:opacity-50"
+              >
+                {adjustSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
+                    Applying…
+                  </>
+                ) : (
+                  <>Apply to {adjustToken}</>
+                )}
+              </button>
+            </footer>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

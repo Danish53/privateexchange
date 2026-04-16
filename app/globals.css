@@ -5,8 +5,8 @@
 @layer base {
   :root {
     /* Self-hosted via @fontsource-variable (no Google Fonts fetch at build time) */
-    --font-sans: 'Plus Jakarta Sans Variable', system-ui, -apple-system, BlinkMacSystemFont,
-      'Segoe UI', Roboto, sans-serif;
+    --font-sans: 'Source Sans 3 Variable', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      sans-serif;
 
     /* 759 Private Exchange — single source for landing / app chrome */
     --brand-page: #07080b;

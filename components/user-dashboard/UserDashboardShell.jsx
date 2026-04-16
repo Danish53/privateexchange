@@ -153,7 +153,7 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                   Private Exchange
                 </span>
                 <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-brand-subtle">
-                  User workspace
+                  Member account
                 </span>
               </span>
             </Link>
@@ -255,7 +255,7 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                   </span>
                   <span>
                     <span className="block font-medium text-red-200/95">Sign out</span>
-                    <span className="text-xs text-brand-subtle">End session securely</span>
+                    <span className="text-xs text-brand-subtle">Closes this session</span>
                   </span>
                 </button>
               </div>

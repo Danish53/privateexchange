@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import User from '@/lib/models/User';
 import { serializeUser } from '@/lib/authHelpers';
+import { ensureWalletForMemberUser } from '@/lib/walletService';
 import { compareOtp } from '@/lib/otp';
 import { signAuthToken } from '@/lib/token';
 
@@ -43,6 +44,10 @@ export async function POST(request) {
     user.verificationOtpHash = null;
     user.verificationOtpExpires = null;
     await user.save();
+
+    if (user.role === 'user') {
+      await ensureWalletForMemberUser(user._id);
+    }
 
     const token = signAuthToken({ userId: user._id.toString(), email: user.email, role: user.role });
 

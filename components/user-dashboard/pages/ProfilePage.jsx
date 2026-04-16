@@ -10,7 +10,6 @@ import {
   Shield,
   CheckCircle2,
   Lock,
-  Sparkles,
   Camera,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
@@ -418,7 +417,7 @@ export default function ProfilePage() {
 
             {saved ? (
               <div className="flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-3 text-sm text-emerald-200/95">
-                <Sparkles className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
                 Profile saved.
               </div>
             ) : null}
@@ -438,7 +437,7 @@ export default function ProfilePage() {
         </Panel>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Panel title="Verification" subtitle="Identity checks for higher limits (demo).">
+          <Panel title="Verification" subtitle="Identity checks for higher limits when KYC is required.">
             <ul className="space-y-3">
               <li className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/[0.2] px-4 py-3">
                 <span className="flex items-center gap-2 text-sm text-brand-heading">

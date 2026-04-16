@@ -20,7 +20,7 @@ export default function DashboardPage() {
       router.replace('/dashboard/user');
       return;
     }
-    if (user.role === 'superadmin') {
+    if (user.role === 'superadmin' || user.role === 'admin') {
       router.replace('/dashboard/superadmin');
     }
   }, [ready, user, router]);
@@ -29,7 +29,7 @@ export default function DashboardPage() {
     return <UserDashboardSkeleton />;
   }
 
-  if (user.role === 'user' || user.role === 'superadmin') {
+  if (user.role === 'user' || user.role === 'superadmin' || user.role === 'admin') {
     return <div className="min-h-screen bg-brand-page" />; // redirect
   }
 

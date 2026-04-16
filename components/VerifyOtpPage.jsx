@@ -89,7 +89,9 @@ export default function VerifyOtpPage() {
       login({ token: data.token, user: data.user });
       const role = data.user?.role;
       const dest =
-        role === 'superadmin' ? '/dashboard/superadmin' : role === 'admin' ? '/dashboard' : '/dashboard/user';
+        role === 'superadmin' || role === 'admin'
+          ? '/dashboard/superadmin'
+          : '/dashboard/user';
       router.push(dest);
     } catch {
       setError('Something went wrong. Try again.');

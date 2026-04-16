@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import {
   ArrowDown,
@@ -9,10 +11,13 @@ import {
   Banknote,
   ArrowRightLeft,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import Panel from '@/components/user-dashboard/Panel';
 import TokenBalanceList from '@/components/user-dashboard/TokenBalanceList';
-import { TOKENS, TRANSACTIONS, TOTAL_BALANCE } from '@/components/user-dashboard/constants';
+import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
+import { useUserWalletHistory } from '@/components/user-dashboard/useUserWalletHistory';
+import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
 
 const DEPOSIT_METHODS = [
   {
@@ -41,7 +46,16 @@ const DEPOSIT_METHODS = [
   },
 ];
 
+function historyIcon(type) {
+  if (type === 'fee') return 'fee';
+  if (type === 'deposit' || type === 'admin_credit') return 'in';
+  return 'out';
+}
+
 export default function WalletPage() {
+  const { loading, error, tokens, totalUsdFormatted } = useUserWallet();
+  const hist = useUserWalletHistory({ limit: 100, enableTokenFilter: true });
+
   return (
     <>
       <header className="mb-8 sm:mb-10">
@@ -54,12 +68,13 @@ export default function WalletPage() {
               Balances & deposits
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Token ledger, funding rails, and recent movements (demo data).
+              Balances load from your custodial wallet (one row per token). Deposits and ledger history will tie in here
+              as payments go live.
             </p>
           </div>
-          <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
-            Read-only preview
-          </p>
+          {/* <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
+            {tokens.length} tokens · live data
+          </p> */}
         </div>
       </header>
 
@@ -73,10 +88,16 @@ export default function WalletPage() {
             <div>
               <p className="text-sm font-medium text-brand-muted">Total wallet value (USD eq.)</p>
               <p className="mt-2 text-3xl font-semibold tabular-nums tracking-[-0.04em] text-brand-heading sm:text-[2.125rem]">
-                {TOTAL_BALANCE}
+                {loading ? (
+                  <span className="inline-flex items-center gap-2 text-brand-muted">
+                    <Loader2 className="h-7 w-7 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+                  </span>
+                ) : (
+                  totalUsdFormatted
+                )}
               </p>
               <p className="mt-2 text-xs text-brand-subtle">
-                {TOKENS.length} tokens · aggregated for display
+                {tokens.length} tokens · USD aggregate (reference rates)
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
@@ -98,7 +119,7 @@ export default function WalletPage() {
           </div>
         </section>
 
-        <Panel title="Deposit rails" subtitle="Choose how you add funds — availability is indicative (demo).">
+        <Panel title="Deposit methods" subtitle="How you can add funds when each channel is enabled for your account.">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {DEPOSIT_METHODS.map((m) => {
               const Icon = m.icon;
@@ -140,66 +161,129 @@ export default function WalletPage() {
           </div>
         </Panel>
 
-        <Panel title="Token balances" subtitle="Per-asset holdings · USD shown for reference">
-          <TokenBalanceList />
+        <Panel title="Token balances" subtitle="One balance per token · all amounts from your wallet record">
+          {error ? (
+            <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
+              {error}
+            </div>
+          ) : loading ? (
+            <div className="flex min-h-[160px] items-center justify-center rounded-xl border border-brand-border-muted bg-black/20">
+              <Loader2 className="h-8 w-8 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+            </div>
+          ) : (
+            <TokenBalanceList tokens={tokens} />
+          )}
         </Panel>
 
-        <Panel title="Transaction history" subtitle="Deposits, transfers, and fees">
-          <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/[0.2]">
-            <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-white/[0.06] px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] sm:px-5">
-              <span>Type / asset</span>
-              <span className="hidden sm:block">Date</span>
-              <span className="hidden text-right sm:block">Status</span>
-              <span className="text-right">Amount</span>
-            </div>
-            <ul className="divide-y divide-white/[0.04]">
-              {TRANSACTIONS.map((tx, i) => (
-                <li
-                  key={`${tx.date}-${tx.type}-${i}`}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 transition duration-150 hover:bg-[var(--brand-surface-hover)]/60 sm:px-5"
+        {hist.totalForUser > 0 ? (
+          <Panel
+            title="Transaction history"
+            subtitle="Ledger: deposits, transfers, fees, and admin adjustments · filter by token or view all"
+          >
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <label className="flex flex-col gap-1.5 text-xs sm:flex-row sm:items-center sm:gap-3">
+                <span className="font-semibold uppercase tracking-[0.1em] text-brand-subtle">Token</span>
+                <select
+                  value={hist.tokenFilter}
+                  onChange={(e) => hist.setTokenFilter(e.target.value)}
+                  className="w-full max-w-xs rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 sm:w-auto"
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-3 sm:min-w-[12rem]">
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${
-                        tx.type === 'deposit'
-                          ? 'bg-emerald-500/12 text-emerald-300'
-                          : tx.type === 'fee'
-                            ? 'bg-red-500/12 text-red-300/95'
-                            : 'bg-sky-500/10 text-sky-200/95'
-                      }`}
-                    >
-                      {tx.type === 'deposit' ? (
-                        <ArrowDown className="h-4 w-4" strokeWidth={2} aria-hidden />
-                      ) : tx.type === 'fee' ? (
-                        <Activity className="h-4 w-4" strokeWidth={2} aria-hidden />
-                      ) : (
-                        <ArrowUp className="h-4 w-4" strokeWidth={2} aria-hidden />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium capitalize text-brand-heading">{tx.type}</p>
-                      <p className="text-xs text-brand-subtle">{tx.token}</p>
-                    </div>
-                  </div>
-                  <div className="hidden min-w-0 flex-1 text-sm text-brand-muted sm:block">{tx.date}</div>
-                  <div className="hidden items-center justify-end sm:flex">
-                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/[0.08] px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-200/90">
-                      <CheckCircle2 className="h-3 w-3" strokeWidth={2} aria-hidden />
-                      {tx.status}
-                    </span>
-                  </div>
-                  <span
-                    className={`shrink-0 font-semibold tabular-nums ${
-                      tx.amount.startsWith('+') ? 'text-emerald-300/95' : 'text-red-300/90'
-                    }`}
-                  >
-                    {tx.amount}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Panel>
+                  <option value="all">All tokens</option>
+                  {PLATFORM_TOKEN_SEED.map((t) => (
+                    <option key={t.slug} value={t.symbol}>
+                      {t.name} ({t.symbol})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Link
+                href="/dashboard/user/history"
+                className="text-xs font-medium text-brand-accent transition hover:text-brand-accent-hover"
+              >
+                Open full history page
+              </Link>
+            </div>
+
+            {hist.error ? (
+              <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
+                {hist.error}
+              </div>
+            ) : hist.loading ? (
+              <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-brand-border-muted bg-black/20">
+                <Loader2 className="h-8 w-8 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/[0.2]">
+                <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-white/[0.06] px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] sm:px-5">
+                  <span>Type / asset</span>
+                  <span className="hidden sm:block">Date</span>
+                  <span className="hidden text-right sm:block">Status</span>
+                  <span className="text-right">Amount</span>
+                </div>
+                {hist.entries.length === 0 ? (
+                  <p className="px-4 py-8 text-center text-sm text-brand-muted sm:px-5">
+                    No ledger lines for this token yet.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-white/[0.04]">
+                    {hist.entries.map((tx) => {
+                      const icon = historyIcon(tx.type);
+                      return (
+                        <li
+                          key={tx.id}
+                          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 transition duration-150 hover:bg-[var(--brand-surface-hover)]/60 sm:px-5"
+                        >
+                          <div className="flex min-w-0 flex-1 items-center gap-3 sm:min-w-[12rem]">
+                            <div
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${
+                                icon === 'in'
+                                  ? 'bg-emerald-500/12 text-emerald-300'
+                                  : icon === 'fee'
+                                    ? 'bg-amber-500/12 text-amber-200/95'
+                                    : 'bg-sky-500/10 text-sky-200/95'
+                              }`}
+                            >
+                              {icon === 'in' ? (
+                                <ArrowDown className="h-4 w-4" strokeWidth={2} aria-hidden />
+                              ) : icon === 'fee' ? (
+                                <Activity className="h-4 w-4" strokeWidth={2} aria-hidden />
+                              ) : (
+                                <ArrowUp className="h-4 w-4" strokeWidth={2} aria-hidden />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-brand-heading">{tx.typeLabel}</p>
+                              <p className="text-xs text-brand-subtle">
+                                {tx.token}
+                                {tx.note ? ` · ${tx.note}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="hidden min-w-0 flex-1 text-sm text-brand-muted sm:block">
+                            {tx.dateDisplay}
+                          </div>
+                          <div className="hidden items-center justify-end sm:flex">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/[0.08] px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-200/90">
+                              <CheckCircle2 className="h-3 w-3" strokeWidth={2} aria-hidden />
+                              {tx.status}
+                            </span>
+                          </div>
+                          <span
+                            className={`shrink-0 font-semibold tabular-nums ${
+                              tx.isCredit ? 'text-emerald-300/95' : 'text-red-300/90'
+                            }`}
+                          >
+                            {tx.amountSigned}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+          </Panel>
+        ) : null}
       </div>
     </>
   );

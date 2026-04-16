@@ -1,4 +1,4 @@
-import '@fontsource-variable/plus-jakarta-sans';
+import '@fontsource-variable/source-sans-3';
 import { AuthProvider } from '@/components/auth-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import './globals.css';
