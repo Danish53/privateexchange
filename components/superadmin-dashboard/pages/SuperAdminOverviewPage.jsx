@@ -197,9 +197,9 @@ export default function SuperAdminOverviewPage() {
             />
             <StatCard
               icon={Wallet}
-              label="Member wallets"
+              label="User wallets"
               value={formatInt(stats?.memberWallets)}
-              hint="One custodial wallet per member account."
+              hint="One custodial wallet per user account."
               href={walletsHref}
             />
             <StatCard

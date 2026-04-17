@@ -11,6 +11,10 @@ export default function AuthShell({
   backHref = '/',
   backLabel = 'Back to home',
   badge,
+  /** Outer column max width (Tailwind classes), e.g. register uses a wider card on desktop. */
+  contentMaxWidth = 'max-w-lg',
+  /** Subtitle line length under the title */
+  subtitleMaxWidthClass = 'max-w-sm',
 }) {
   return (
     <div className="relative min-h-screen bg-brand-page font-sans text-brand-foreground">
@@ -40,7 +44,9 @@ export default function AuthShell({
         aria-hidden
       />
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-12 sm:px-6">
+      <div
+        className={`relative z-10 mx-auto flex min-h-screen w-full flex-col justify-center px-4 py-12 sm:px-6 ${contentMaxWidth}`}
+      >
         <Link
           href={backHref}
           className="auth-link group mb-8 inline-flex flex-shrink-0 items-center gap-2 text-sm"
@@ -75,7 +81,9 @@ export default function AuthShell({
               {title}
             </h1>
             {subtitle ? (
-              <p className="prose-landing mx-auto mt-2 max-w-sm text-sm leading-relaxed text-brand-muted">
+              <p
+                className={`prose-landing mx-auto mt-2 text-sm leading-relaxed text-brand-muted ${subtitleMaxWidthClass}`}
+              >
                 {subtitle}
               </p>
             ) : null}
@@ -87,7 +95,7 @@ export default function AuthShell({
         {footer ? <div className="mt-8 text-center text-sm">{footer}</div> : null}
 
         <p className="mt-4 text-center text-[0.6875rem] leading-relaxed text-brand-subtle">
-          Utility platform · Not investment advice · For eligible members only
+          Utility platform · Not investment advice · For eligible users only
         </p>
       </div>
     </div>

@@ -101,7 +101,7 @@ export default function SuperAdminCreateUserPage() {
         </button>
         <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Add user</h1>
         <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-          Create a <strong className="font-medium text-brand-subtle">member</strong> or{' '}
+          Create a <strong className="font-medium text-brand-subtle">user</strong> or{' '}
           <strong className="font-medium text-brand-subtle">admin</strong> account. They are email-verified
           immediately and can sign in at{' '}
           <Link href="/login" className="text-brand-accent underline-offset-2 hover:underline">
@@ -126,7 +126,7 @@ export default function SuperAdminCreateUserPage() {
             </span>
             <div>
               <p className="text-sm font-semibold text-brand-heading">Account type</p>
-              <p className="text-xs text-brand-muted">Member or admin only · not superadmin</p>
+              <p className="text-xs text-brand-muted">User or admin only · not superadmin</p>
             </div>
           </div>
 
@@ -179,12 +179,12 @@ export default function SuperAdminCreateUserPage() {
                   disabled={loading}
                   className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-4 py-3 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 disabled:opacity-50"
                 >
-                  <option value="user">Member</option>
+                  <option value="user">User</option>
                   <option value="admin">Admin</option>
                 </select>
               ) : (
                 <div className="rounded-xl border border-brand-border-muted bg-black/25 px-4 py-3 text-sm text-brand-muted">
-                  New accounts are created as <span className="font-medium text-brand-heading">members</span>{' '}
+                  New accounts are created as <span className="font-medium text-brand-heading">users</span>{' '}
                   only.
                 </div>
               )}
@@ -211,14 +211,14 @@ export default function SuperAdminCreateUserPage() {
                   />
                   <PermToggle
                     id="new-ap-edit"
-                    label="Edit members"
+                    label="Edit users"
                     checked={adminPermissions.usersEdit}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, usersEdit: v }))}
                     disabled={loading}
                   />
                   <PermToggle
                     id="new-ap-delete"
-                    label="Archive members"
+                    label="Archive users"
                     checked={adminPermissions.usersDelete}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, usersDelete: v }))}
                     disabled={loading}
@@ -230,7 +230,7 @@ export default function SuperAdminCreateUserPage() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <PermToggle
                     id="new-ap-wallets-view"
-                    label="View member wallets"
+                    label="View user wallets"
                     checked={adminPermissions.walletsView}
                     onChange={(v) =>
                       setAdminPermissions((p) => ({

@@ -135,10 +135,10 @@ export async function POST(request) {
       message: mailResult
         ? isAdmin
           ? 'Admin created. Login details were sent to their email.'
-          : 'Member created. Login details were sent to their email.'
+          : 'User created. Login details were sent to their email.'
         : isAdmin
           ? 'Admin created. Configure SMTP to email credentials automatically; they can still sign in with the password you set.'
-          : 'Member created. Configure SMTP to email credentials automatically; they can still sign in with the password you set.',
+          : 'User created. Configure SMTP to email credentials automatically; they can still sign in with the password you set.',
       credentialsEmailSent: mailResult,
     });
   } catch (e) {

@@ -322,7 +322,7 @@ export default function SuperAdminTransactionsPage() {
         </p>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border border-brand-accent/15 bg-gradient-to-br from-[var(--brand-accent-soft)]/20 via-black/20 to-[#060708] p-5 sm:p-6">
+      {/* <div className="relative overflow-hidden rounded-2xl border border-brand-accent/15 bg-gradient-to-br from-[var(--brand-accent-soft)]/20 via-black/20 to-[#060708] p-5 sm:p-6">
         <div className="flex gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-accent/25 bg-black/30 text-brand-accent">
             <BookOpen className="h-5 w-5" strokeWidth={2} aria-hidden />
@@ -336,7 +336,7 @@ export default function SuperAdminTransactionsPage() {
             </p>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard

@@ -17,6 +17,7 @@ import PasswordField from '@/components/auth/PasswordField';
 import Spinner from '@/components/ui/Spinner';
 import Panel from '@/components/user-dashboard/Panel';
 import { emailInitials } from '@/components/user-dashboard/utils';
+import { avatarSrc } from '@/lib/avatarUrl';
 
 const TIMEZONES = [
   { value: '', label: 'Select timezone' },
@@ -46,7 +47,12 @@ export default function ProfilePage() {
   const [pwLoading, setPwLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const avatarInputRef = useRef(/** @type {HTMLInputElement | null} */ (null));
+
+  useEffect(() => {
+    setAvatarBroken(false);
+  }, [user?.avatarUrl]);
 
   useEffect(() => {
     if (!user) return;
@@ -220,7 +226,7 @@ export default function ProfilePage() {
           </div>
           <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
             {user?.role === 'user'
-              ? 'Member'
+              ? 'User'
               : user?.role === 'superadmin'
                 ? 'Platform operations'
                 : user?.role === 'admin'
@@ -254,13 +260,14 @@ export default function ProfilePage() {
                   disabled={avatarUploading || !token}
                   className="group relative flex h-20 w-20 overflow-hidden rounded-2xl border border-brand-accent/25 bg-gradient-to-br from-[#2a2418] to-[#0f0e0c] shadow-[0_0_32px_-8px_rgba(201,162,39,0.35)] sm:h-[5.5rem] sm:w-[5.5rem] disabled:opacity-60"
                 >
-                  {user?.avatarUrl ? (
+                  {user?.avatarUrl && !avatarBroken ? (
                     // eslint-disable-next-line @next/next/no-img-element -- user-uploaded dynamic URL
                     <img
                       key={user.avatarUrl}
-                      src={user.avatarUrl}
+                      src={avatarSrc(user.avatarUrl)}
                       alt=""
                       className="h-full w-full object-cover"
+                      onError={() => setAvatarBroken(true)}
                     />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center text-xl font-bold tracking-tight text-brand-accent sm:text-2xl">
@@ -282,7 +289,7 @@ export default function ProfilePage() {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-lg font-semibold text-brand-heading sm:text-xl">
-                  {displayName?.trim() || user?.email?.split('@')[0] || 'Member'}
+                  {displayName?.trim() || user?.email?.split('@')[0] || 'User'}
                 </p>
                 <p className="mt-1 truncate text-sm text-brand-muted">{user?.email}</p>
                 {avatarError ? (
@@ -304,7 +311,7 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="rounded-xl border border-white/[0.08] bg-black/35 px-4 py-3 text-sm text-brand-muted shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] sm:max-w-xs sm:text-right">
-              <p className="font-medium text-brand-heading">Member since</p>
+              <p className="font-medium text-brand-heading">Account since</p>
               <p className="mt-1 text-xs">{memberSince || '—'}</p>
             </div>
           </div>

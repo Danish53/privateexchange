@@ -29,6 +29,7 @@ import { useAuth } from '@/components/auth-context';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { cn } from '@/lib/utils';
 import { mergeAdminPermissions } from '@/lib/adminPermissions';
+import { avatarSrc } from '@/lib/avatarUrl';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -44,7 +45,7 @@ function formatDate(iso) {
 
 function RoleBadge({ role }) {
   const map = {
-    user: { label: 'Member', className: 'border-slate-500/30 bg-slate-500/10 text-slate-200' },
+    user: { label: 'User', className: 'border-slate-500/30 bg-slate-500/10 text-slate-200' },
     admin: { label: 'Admin', className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
   };
   const m = map[role] || { label: role, className: 'border-white/10 bg-white/5 text-brand-muted' };
@@ -257,7 +258,7 @@ export default function SuperAdminUsersPage() {
       if (isSuperAdmin) {
         payload.role = d.role;
         // Always send merged permissions for admins so PATCH touches `adminPermissions`
-        // and the API runs `$set` (omit when member or super would reject + wallet flags never persist).
+        // and the API runs `$set` (omit when role is user/super would reject + wallet flags never persist).
         if (d.role === 'admin') {
           payload.adminPermissions = mergeAdminPermissions(d.adminPermissions);
         }
@@ -332,7 +333,7 @@ export default function SuperAdminUsersPage() {
               <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/[0.1] bg-gradient-to-br from-[#2a2418] to-[#0f0e0c] text-[0.65rem] font-bold text-brand-accent">
                 {u.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={u.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  <img src={avatarSrc(u.avatarUrl)} alt="" className="h-full w-full object-cover" />
                 ) : (
                   initials
                 )}
@@ -535,7 +536,7 @@ export default function SuperAdminUsersPage() {
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Users</h1>
             <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-              Operators and members (super admin accounts are not listed). Archive removes access until restored.
+              Operators and users (super admin accounts are not listed). Archive removes access until restored.
             </p>
           </div>
           {canUsersCreate ? (
@@ -916,7 +917,7 @@ export default function SuperAdminUsersPage() {
                     }}
                     className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
                   >
-                    <option value="user">Member</option>
+                    <option value="user">User</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
@@ -924,7 +925,7 @@ export default function SuperAdminUsersPage() {
                 <div className="rounded-xl border border-brand-border-muted bg-black/25 px-3 py-2.5">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-brand-subtle">Role</p>
                   <p className="mt-1 text-sm font-medium text-brand-heading">
-                    {draft.role === 'admin' ? 'Admin' : 'Member'}
+                    {draft.role === 'admin' ? 'Admin' : 'User'}
                   </p>
                 </div>
               )}
@@ -950,14 +951,14 @@ export default function SuperAdminUsersPage() {
                     />
                     <PermToggle
                       id="edit-ap-edit"
-                      label="Edit members"
+                      label="Edit users"
                       checked={mergeAdminPermissions(draft.adminPermissions).usersEdit}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { usersEdit: v }))}
                       disabled={editSaving}
                     />
                     <PermToggle
                       id="edit-ap-delete"
-                      label="Archive members"
+                      label="Archive users"
                       checked={mergeAdminPermissions(draft.adminPermissions).usersDelete}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { usersDelete: v }))}
                       disabled={editSaving}
@@ -969,7 +970,7 @@ export default function SuperAdminUsersPage() {
                   <div className="grid gap-2 sm:grid-cols-2">
                     <PermToggle
                       id="edit-ap-wallets-view"
-                      label="View member wallets"
+                      label="View user wallets"
                       checked={mergeAdminPermissions(draft.adminPermissions).walletsView}
                       onChange={(v) =>
                         setDraft((d) =>

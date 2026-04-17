@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, User, Menu, X, ChevronDown, Plus } from 'lucide-react';
 import { USER_NAV } from '@/components/user-dashboard/nav-config';
 import { emailInitials, isUserNavActive } from '@/components/user-dashboard/utils';
+import { avatarSrc } from '@/lib/avatarUrl';
 
 export default function UserDashboardShell({ user, onLogout, children }) {
   const pathname = usePathname();
@@ -153,7 +154,7 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                   Private Exchange
                 </span>
                 <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-brand-subtle">
-                  Member account
+                  User account
                 </span>
               </span>
             </Link>
@@ -165,7 +166,7 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                 {user.email}
               </p>
               <p className="text-[0.625rem] font-medium uppercase tracking-[0.14em] text-brand-subtle">
-                Member
+                User
               </p>
             </div>
 
@@ -186,9 +187,9 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                   aria-hidden
                 />
                 {user?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- user avatar from /public/uploads
+                  // eslint-disable-next-line @next/next/no-img-element -- user avatar (local or blob URL)
                   <img
-                    src={user.avatarUrl}
+                    src={avatarSrc(user.avatarUrl)}
                     alt=""
                     className="relative z-[1] h-full w-full rounded-full object-cover"
                   />

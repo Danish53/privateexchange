@@ -54,6 +54,8 @@ export default function RegisterPage() {
       title="Create your account"
       subtitle="Register to access the workspace. You will verify your email with a one-time code."
       badge="Register"
+      contentMaxWidth="max-w-xl sm:max-w-2xl"
+      subtitleMaxWidthClass="max-w-md sm:max-w-xl"
       footer={
         <span className="text-brand-muted">
           Already registered?{' '}
@@ -121,7 +123,7 @@ export default function RegisterPage() {
         />
 
         <p className="auth-hint text-center text-xs text-brand-muted">
-          Public sign-up creates a <span className="font-medium text-brand-subtle">member</span> account only.
+          Public sign-up creates a <span className="font-medium text-brand-subtle">user</span> account only.
           Admin accounts are created by your platform super admin.
         </p>
 

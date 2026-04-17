@@ -18,7 +18,7 @@ export default function TransferPage() {
               Transfer
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Send tokens to another member by email or username. Fees follow the schedule below; VIP members may have
+              Send tokens to another user by email or username. Fees follow the schedule below; VIP members may have
               the standard transfer fee waived under program rules.
             </p>
           </div>

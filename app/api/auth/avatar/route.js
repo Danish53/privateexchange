@@ -15,6 +15,23 @@ const MIME_TO_EXT = {
   'image/gif': 'gif',
 };
 
+function isVercelBlobUrl(url) {
+  return typeof url === 'string' && url.includes('.public.blob.vercel-storage.com');
+}
+
+async function removePreviousAvatar(prev) {
+  if (!prev || typeof prev !== 'string') return;
+  if (prev.startsWith('/uploads/avatars/')) {
+    const oldFile = path.join(process.cwd(), 'public', prev.replace(/^\//, ''));
+    await unlink(oldFile).catch(() => {});
+    return;
+  }
+  if (isVercelBlobUrl(prev) && process.env.BLOB_READ_WRITE_TOKEN) {
+    const { del } = await import('@vercel/blob');
+    await del(prev, { token: process.env.BLOB_READ_WRITE_TOKEN }).catch(() => {});
+  }
+}
+
 export async function POST(request) {
   try {
     const auth = requireAuthUser(request);
@@ -39,28 +56,59 @@ export async function POST(request) {
     }
 
     const buf = Buffer.from(await file.arrayBuffer());
-    const dir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
-    await mkdir(dir, { recursive: true });
-
     const filename = `${auth.userId}-${Date.now()}.${ext}`;
-    const filepath = path.join(dir, filename);
-    await writeFile(filepath, buf);
+
+    const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+    const onVercel = process.env.VERCEL === '1';
+
+    if (onVercel && !useBlob) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            'Avatar storage is not configured for this server. In Vercel: enable Blob (Storage) and set BLOB_READ_WRITE_TOKEN, then redeploy.',
+        },
+        { status: 503 }
+      );
+    }
+
+    let publicUrl;
+    /** Local disk path when not using Blob (for rollback if user missing). */
+    let localDiskPath = null;
+
+    if (useBlob) {
+      const { put } = await import('@vercel/blob');
+      const blob = await put(`avatars/${filename}`, buf, {
+        access: 'public',
+        contentType: mime,
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+        addRandomSuffix: false,
+      });
+      publicUrl = blob.url;
+    } else {
+      const dir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
+      await mkdir(dir, { recursive: true });
+      localDiskPath = path.join(dir, filename);
+      await writeFile(localDiskPath, buf);
+      publicUrl = `/uploads/avatars/${filename}`;
+    }
 
     await connectDB();
     const user = await User.findById(auth.userId);
     if (!user) {
-      await unlink(filepath).catch(() => {});
+      if (useBlob && isVercelBlobUrl(publicUrl)) {
+        const { del } = await import('@vercel/blob');
+        await del(publicUrl, { token: process.env.BLOB_READ_WRITE_TOKEN }).catch(() => {});
+      } else if (localDiskPath) {
+        await unlink(localDiskPath).catch(() => {});
+      }
       return NextResponse.json({ ok: false, error: 'User not found.' }, { status: 404 });
     }
 
     const prev = user.avatarUrl;
-    if (prev && typeof prev === 'string' && prev.startsWith('/uploads/avatars/')) {
-      const oldFile = path.join(process.cwd(), 'public', prev.replace(/^\//, ''));
-      await unlink(oldFile).catch(() => {});
-    }
+    await removePreviousAvatar(prev);
 
-    const publicPath = `/uploads/avatars/${filename}`;
-    user.avatarUrl = publicPath;
+    user.avatarUrl = publicUrl;
     await user.save();
 
     return NextResponse.json({ ok: true, user: serializeUser(user) });

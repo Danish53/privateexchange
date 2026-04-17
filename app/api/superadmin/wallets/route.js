@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
 import User from '@/lib/models/User';
 import { requireWalletsView } from '@/lib/authHelpers';
@@ -28,6 +29,45 @@ export async function GET(request) {
     if ('error' in auth) return auth.error;
 
     const { searchParams } = new URL(request.url);
+
+    const forUser = String(searchParams.get('forUser') || '').trim();
+    if (forUser) {
+      if (!mongoose.isValidObjectId(forUser)) {
+        return NextResponse.json({ ok: false, error: 'Invalid user id.' }, { status: 400 });
+      }
+      const u = await User.findOne({ _id: forUser, role: 'user', deletedAt: null })
+        .select('email name emailVerified country avatarUrl createdAt')
+        .lean();
+      if (!u) {
+        return NextResponse.json({ ok: false, error: 'Wallet not found.' }, { status: 404 });
+      }
+      const summary = await getWalletSummaryForUserId(u._id);
+      const base = {
+        walletId: String(u._id),
+        memberEmail: u.email,
+        memberName: u.name || '',
+        emailVerified: !!u.emailVerified,
+        country: u.country || '',
+        avatarUrl: u.avatarUrl || '',
+        openedAt: u.createdAt ? new Date(u.createdAt).toISOString() : null,
+      };
+      if (summary.ok) {
+        return NextResponse.json({
+          ok: true,
+          wallet: {
+            ...base,
+            balanceDisplay: summary.totalUsdFormatted,
+            totalUsd: summary.totalUsd,
+            tokens: summary.tokens,
+          },
+        });
+      }
+      return NextResponse.json({
+        ok: true,
+        wallet: { ...base, balanceDisplay: '—', totalUsd: 0, tokens: [] },
+      });
+    }
+
     const page = Math.max(1, parseInt(String(searchParams.get('page') || '1'), 10) || 1);
     const limitRaw = parseInt(String(searchParams.get('limit') || String(DEFAULT_LIMIT)), 10) || DEFAULT_LIMIT;
     const limit = Math.min(Math.max(1, limitRaw), MAX_LIMIT);

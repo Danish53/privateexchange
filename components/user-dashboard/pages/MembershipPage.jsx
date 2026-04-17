@@ -6,7 +6,7 @@ import { MEMBERSHIP } from '@/components/user-dashboard/constants';
 const BENEFITS = [
   {
     title: 'Transfers',
-    description: 'Send tokens to other members by email or username when transfers are enabled.',
+    description: 'Send tokens to other users by email or username when transfers are enabled.',
     icon: ArrowRightLeft,
   },
   {

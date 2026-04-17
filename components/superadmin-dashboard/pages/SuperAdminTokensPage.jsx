@@ -114,7 +114,7 @@ export default function SuperAdminTokensPage() {
         </p>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border border-brand-accent/15 bg-gradient-to-br from-[var(--brand-accent-soft)]/22 via-black/20 to-[#060708] p-5 sm:p-6">
+      {/* <div className="relative overflow-hidden rounded-2xl border border-brand-accent/15 bg-gradient-to-br from-[var(--brand-accent-soft)]/22 via-black/20 to-[#060708] p-5 sm:p-6">
         <div className="flex gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-accent/25 bg-black/30 text-brand-accent">
             <Info className="h-5 w-5" strokeWidth={2} aria-hidden />
@@ -129,7 +129,7 @@ export default function SuperAdminTokensPage() {
             </p>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatChip icon={Coins} label="Ecosystem tokens" value="5 configured" />

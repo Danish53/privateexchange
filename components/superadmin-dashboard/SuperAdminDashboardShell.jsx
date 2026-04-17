@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, X, ChevronDown, LayoutDashboard, User } from 'lucide-react';
 import { getSuperadminNavSections } from '@/components/superadmin-dashboard/nav-config';
 import { emailInitials } from '@/components/user-dashboard/utils';
+import { avatarSrc } from '@/lib/avatarUrl';
 import { isSuperAdminNavActive } from '@/components/superadmin-dashboard/utils';
 
 const PROFILE_HREF = '/dashboard/superadmin/profile';
@@ -242,9 +243,9 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
                   aria-hidden
                 />
                 {user?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- user avatar from /public/uploads
+                  // eslint-disable-next-line @next/next/no-img-element -- user avatar (local or blob URL)
                   <img
-                    src={user.avatarUrl}
+                    src={avatarSrc(user.avatarUrl)}
                     alt=""
                     className="relative z-[1] h-full w-full rounded-full object-cover"
                   />
