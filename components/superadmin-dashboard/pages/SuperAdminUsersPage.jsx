@@ -24,11 +24,12 @@ import {
   UserPlus,
   Pencil,
   X,
+  Wallet,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { cn } from '@/lib/utils';
-import { mergeAdminPermissions } from '@/lib/adminPermissions';
+import { mergeAdminPermissions, hasAnyWalletsPermission } from '@/lib/adminPermissions';
 import { avatarSrc } from '@/lib/avatarUrl';
 
 function formatDate(iso) {
@@ -105,6 +106,7 @@ export default function SuperAdminUsersPage() {
   const canUsersCreate = isSuperAdmin || usersPerm.usersCreate;
   const canUsersEdit = isSuperAdmin || usersPerm.usersEdit;
   const canUsersDelete = isSuperAdmin || usersPerm.usersDelete;
+  const canViewWallets = isSuperAdmin || hasAnyWalletsPermission(user);
   const [listView, setListView] = useState('active');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -416,6 +418,15 @@ export default function SuperAdminUsersPage() {
           if (listView === 'active') {
             return (
               <div className="flex flex-wrap justify-end gap-1">
+                {canViewWallets ? (
+                  <Link
+                    href={`/dashboard/superadmin/users/${encodeURIComponent(u.id)}/wallet`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent/25 hover:bg-brand-accent/[0.08] hover:text-brand-heading"
+                  >
+                    <Wallet className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                    Wallet
+                  </Link>
+                ) : null}
                 {canUsersEdit && canMutateRow ? (
                   <button
                     type="button"
@@ -448,6 +459,15 @@ export default function SuperAdminUsersPage() {
           }
           return (
             <div className="flex flex-wrap justify-end gap-1">
+              {canViewWallets ? (
+                <Link
+                  href={`/dashboard/superadmin/users/${encodeURIComponent(u.id)}/wallet`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent/25 hover:bg-brand-accent/[0.08] hover:text-brand-heading"
+                >
+                  <Wallet className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                  Wallet
+                </Link>
+              ) : null}
               {canUsersEdit && canMutateRow ? (
                 <button
                   type="button"
@@ -490,6 +510,7 @@ export default function SuperAdminUsersPage() {
       isSuperAdmin,
       canUsersEdit,
       canUsersDelete,
+      canViewWallets,
     ]
   );
 

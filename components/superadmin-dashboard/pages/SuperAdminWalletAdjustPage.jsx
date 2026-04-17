@@ -59,8 +59,22 @@ export default function SuperAdminWalletAdjustPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json.ok || !json.wallet) {
+      if (!res.ok || !json.ok) {
         setLoadErr(json.error || 'Could not load wallet.');
+        setAdjustRow(null);
+        return;
+      }
+      if (json.memberWallet === false) {
+        setLoadErr(
+          json.archived
+            ? 'This user is archived; there is no member wallet to adjust.'
+            : 'This account is not a member wallet (for example admin accounts).'
+        );
+        setAdjustRow(null);
+        return;
+      }
+      if (!json.wallet) {
+        setLoadErr('Could not load wallet.');
         setAdjustRow(null);
         return;
       }

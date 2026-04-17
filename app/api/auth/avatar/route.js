@@ -19,16 +19,28 @@ function isVercelBlobUrl(url) {
   return typeof url === 'string' && url.includes('.public.blob.vercel-storage.com');
 }
 
-async function removePreviousAvatar(prev) {
+/** Vercel sets VERCEL=1 or VERCEL=true on their build/runtime. */
+function isVercelRuntime() {
+  const v = process.env.VERCEL;
+  return v === '1' || String(v).toLowerCase() === 'true';
+}
+
+function getBlobReadWriteToken() {
+  const t = process.env.BLOB_READ_WRITE_TOKEN;
+  return typeof t === 'string' ? t.trim() : '';
+}
+
+async function removePreviousAvatar(prev, blobToken) {
   if (!prev || typeof prev !== 'string') return;
   if (prev.startsWith('/uploads/avatars/')) {
     const oldFile = path.join(process.cwd(), 'public', prev.replace(/^\//, ''));
     await unlink(oldFile).catch(() => {});
     return;
   }
-  if (isVercelBlobUrl(prev) && process.env.BLOB_READ_WRITE_TOKEN) {
+  if (isVercelBlobUrl(prev)) {
     const { del } = await import('@vercel/blob');
-    await del(prev, { token: process.env.BLOB_READ_WRITE_TOKEN }).catch(() => {});
+    const opts = blobToken ? { token: blobToken } : undefined;
+    await del(prev, opts).catch(() => {});
   }
 }
 
@@ -58,15 +70,16 @@ export async function POST(request) {
     const buf = Buffer.from(await file.arrayBuffer());
     const filename = `${auth.userId}-${Date.now()}.${ext}`;
 
-    const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-    const onVercel = process.env.VERCEL === '1';
+    const blobToken = getBlobReadWriteToken();
+    const useBlob = Boolean(blobToken);
 
-    if (onVercel && !useBlob) {
+    // Serverless filesystem is ephemeral: /uploads/... would 404 for visitors.
+    if (isVercelRuntime() && !useBlob) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            'Avatar storage is not configured for this server. In Vercel: enable Blob (Storage) and set BLOB_READ_WRITE_TOKEN, then redeploy.',
+            'Avatar storage is not configured on this deployment. In the Vercel project: Storage → Blob, link a store (adds BLOB_READ_WRITE_TOKEN), then redeploy. For local dev, add BLOB_READ_WRITE_TOKEN to .env.local or use disk uploads without VERCEL.',
         },
         { status: 503 }
       );
@@ -81,7 +94,7 @@ export async function POST(request) {
       const blob = await put(`avatars/${filename}`, buf, {
         access: 'public',
         contentType: mime,
-        token: process.env.BLOB_READ_WRITE_TOKEN,
+        token: blobToken,
         addRandomSuffix: false,
       });
       publicUrl = blob.url;
@@ -98,7 +111,7 @@ export async function POST(request) {
     if (!user) {
       if (useBlob && isVercelBlobUrl(publicUrl)) {
         const { del } = await import('@vercel/blob');
-        await del(publicUrl, { token: process.env.BLOB_READ_WRITE_TOKEN }).catch(() => {});
+        await del(publicUrl, { token: blobToken }).catch(() => {});
       } else if (localDiskPath) {
         await unlink(localDiskPath).catch(() => {});
       }
@@ -106,7 +119,7 @@ export async function POST(request) {
     }
 
     const prev = user.avatarUrl;
-    await removePreviousAvatar(prev);
+    await removePreviousAvatar(prev, blobToken);
 
     user.avatarUrl = publicUrl;
     await user.save();

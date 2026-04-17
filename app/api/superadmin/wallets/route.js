@@ -35,11 +35,32 @@ export async function GET(request) {
       if (!mongoose.isValidObjectId(forUser)) {
         return NextResponse.json({ ok: false, error: 'Invalid user id.' }, { status: 400 });
       }
-      const u = await User.findOne({ _id: forUser, role: 'user', deletedAt: null })
-        .select('email name emailVerified country avatarUrl createdAt')
+      const u = await User.findOne({ _id: forUser })
+        .select('email name role emailVerified country avatarUrl createdAt deletedAt')
         .lean();
       if (!u) {
-        return NextResponse.json({ ok: false, error: 'Wallet not found.' }, { status: 404 });
+        return NextResponse.json({ ok: false, error: 'User not found.' }, { status: 404 });
+      }
+      if (u.deletedAt) {
+        return NextResponse.json({
+          ok: true,
+          memberWallet: false,
+          archived: true,
+          role: u.role,
+          email: u.email,
+          name: u.name || '',
+          avatarUrl: u.avatarUrl || '',
+        });
+      }
+      if (u.role !== 'user') {
+        return NextResponse.json({
+          ok: true,
+          memberWallet: false,
+          role: u.role,
+          email: u.email,
+          name: u.name || '',
+          avatarUrl: u.avatarUrl || '',
+        });
       }
       const summary = await getWalletSummaryForUserId(u._id);
       const base = {
@@ -54,6 +75,7 @@ export async function GET(request) {
       if (summary.ok) {
         return NextResponse.json({
           ok: true,
+          memberWallet: true,
           wallet: {
             ...base,
             balanceDisplay: summary.totalUsdFormatted,
@@ -64,6 +86,7 @@ export async function GET(request) {
       }
       return NextResponse.json({
         ok: true,
+        memberWallet: true,
         wallet: { ...base, balanceDisplay: '—', totalUsd: 0, tokens: [] },
       });
     }
