@@ -11,10 +11,10 @@ export default function AuthShell({
   backHref = '/',
   backLabel = 'Back to home',
   badge,
-  /** Outer column max width (Tailwind classes), e.g. register uses a wider card on desktop. */
-  contentMaxWidth = 'max-w-lg',
-  /** Subtitle line length under the title */
-  subtitleMaxWidthClass = 'max-w-sm',
+  /** Outer column max width for all auth pages (matches register). */
+  contentMaxWidth = 'max-w-xl sm:max-w-2xl',
+  /** Subtitle line length under the title (matches register). */
+  subtitleMaxWidthClass = 'max-w-md sm:max-w-xl',
 }) {
   return (
     <div className="relative min-h-screen bg-brand-page font-sans text-brand-foreground">

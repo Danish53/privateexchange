@@ -94,7 +94,7 @@ export async function POST(request) {
       const blob = await put(`avatars/${filename}`, buf, {
         access: 'public',
         contentType: mime,
-        token: blobToken,
+        // token: blobToken,
         addRandomSuffix: false,
       });
       publicUrl = blob.url;

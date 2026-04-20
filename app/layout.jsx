@@ -6,6 +6,11 @@ import './globals.css';
 export const metadata = {
   title: '759 Private Exchange',
   description: '759 Private Exchange - Secure Multi-Token Wallet Platform',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export const viewport = {
