@@ -51,6 +51,11 @@ export async function GET(request) {
       filter.$or = [{ email: rx }, { name: rx }];
     }
 
+    const role = String(searchParams.get('role') || 'user');
+    if (role !== 'all') {
+      filter.role = role;
+    }
+
     const skip = (page - 1) * limit;
 
     const [total, rows] = await Promise.all([

@@ -107,6 +107,7 @@ export default function SuperAdminUsersPage() {
   const canUsersEdit = isSuperAdmin || usersPerm.usersEdit;
   const canUsersDelete = isSuperAdmin || usersPerm.usersDelete;
   const canViewWallets = isSuperAdmin || hasAnyWalletsPermission(user);
+  const [roleFilter, setRoleFilter] = useState('user'); // all | admin | user
   const [listView, setListView] = useState('active');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -167,6 +168,7 @@ export default function SuperAdminUsersPage() {
         status: listView === 'archived' ? 'archived' : 'active',
       });
       if (search) params.set('search', search);
+      if (roleFilter !== 'user') params.set('role', roleFilter);
       const res = await fetch(`/api/superadmin/users?${params}`, {
         cache: 'no-store',
         headers: { Authorization: `Bearer ${token}` },
@@ -186,7 +188,7 @@ export default function SuperAdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, pagination.pageIndex, pagination.pageSize, search, sortBy, sortOrder, listView]);
+  }, [token, pagination.pageIndex, pagination.pageSize, search, sortBy, sortOrder, listView, roleFilter]);
 
   useEffect(() => {
     if (!ready) return;
@@ -597,6 +599,23 @@ export default function SuperAdminUsersPage() {
               Archived
             </button>
           </div>
+          <div className="flex rounded-xl border border-brand-border-muted bg-black/30 p-0.5">
+  {['user', 'admin'].map((r) => (
+    <button
+      key={r}
+      type="button"
+      onClick={() => setRoleFilter(r)}
+      className={cn(
+        'rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em]',
+        roleFilter === r
+          ? 'bg-[var(--brand-accent-soft)] text-brand-heading'
+          : 'text-brand-muted hover:text-brand-heading'
+      )}
+    >
+      {r}
+    </button>
+  ))}
+</div>
           <div className="relative flex-1 sm:max-w-sm">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-subtle"
