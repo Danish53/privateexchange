@@ -78,11 +78,10 @@ function PermToggle({ id, label, checked, onChange, disabled = false }) {
   const on = Boolean(checked);
   return (
     <label
-      className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition hover:border-white/[0.08] ${
-        on
-          ? 'border-brand-accent/35 bg-[var(--brand-accent-soft)]/15 text-brand-heading'
-          : 'border-brand-border-muted bg-black/30 text-brand-muted'
-      }`}
+      className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition hover:border-white/[0.08] ${on
+        ? 'border-brand-accent/35 bg-[var(--brand-accent-soft)]/15 text-brand-heading'
+        : 'border-brand-border-muted bg-black/30 text-brand-muted'
+        }`}
     >
       <input
         id={id}
@@ -107,6 +106,7 @@ export default function SuperAdminUsersPage() {
   const canUsersEdit = isSuperAdmin || usersPerm.usersEdit;
   const canUsersDelete = isSuperAdmin || usersPerm.usersDelete;
   const canViewWallets = isSuperAdmin || hasAnyWalletsPermission(user);
+  const canmanageTokens = isSuperAdmin || usersPerm.manageTokens;
   const [roleFilter, setRoleFilter] = useState('user'); // all | admin | user
   const [listView, setListView] = useState('active');
   const [searchInput, setSearchInput] = useState('');
@@ -396,17 +396,17 @@ export default function SuperAdminUsersPage() {
       },
       ...(listView === 'archived'
         ? [
-            {
-              id: 'deletedAt',
-              accessorKey: 'deletedAt',
-              header: 'Archived',
-              cell: ({ row }) => (
-                <span className="whitespace-nowrap text-sm tabular-nums text-amber-200/85">
-                  {formatDate(row.original.deletedAt)}
-                </span>
-              ),
-            },
-          ]
+          {
+            id: 'deletedAt',
+            accessorKey: 'deletedAt',
+            header: 'Archived',
+            cell: ({ row }) => (
+              <span className="whitespace-nowrap text-sm tabular-nums text-amber-200/85">
+                {formatDate(row.original.deletedAt)}
+              </span>
+            ),
+          },
+        ]
         : []),
       {
         id: 'actions',
@@ -513,6 +513,7 @@ export default function SuperAdminUsersPage() {
       canUsersEdit,
       canUsersDelete,
       canViewWallets,
+      canmanageTokens,
     ]
   );
 
@@ -600,22 +601,22 @@ export default function SuperAdminUsersPage() {
             </button>
           </div>
           <div className="flex rounded-xl border border-brand-border-muted bg-black/30 p-0.5">
-  {['user', 'admin'].map((r) => (
-    <button
-      key={r}
-      type="button"
-      onClick={() => setRoleFilter(r)}
-      className={cn(
-        'rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em]',
-        roleFilter === r
-          ? 'bg-[var(--brand-accent-soft)] text-brand-heading'
-          : 'text-brand-muted hover:text-brand-heading'
-      )}
-    >
-      {r}
-    </button>
-  ))}
-</div>
+            {['user', 'admin'].map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRoleFilter(r)}
+                className={cn(
+                  'rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em]',
+                  roleFilter === r
+                    ? 'bg-[var(--brand-accent-soft)] text-brand-heading'
+                    : 'text-brand-muted hover:text-brand-heading'
+                )}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
           <div className="relative flex-1 sm:max-w-sm">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-subtle"
@@ -972,7 +973,7 @@ export default function SuperAdminUsersPage() {
               {isSuperAdmin && draft.role === 'admin' ? (
                 <div className="space-y-2 rounded-xl border border-white/[0.06] bg-black/25 p-4">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Users module (delegated admin)
+                    Users permissions
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <PermToggle
@@ -1005,7 +1006,7 @@ export default function SuperAdminUsersPage() {
                     />
                   </div>
                   <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Wallets module
+                    Wallets permissions
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <PermToggle
@@ -1030,9 +1031,18 @@ export default function SuperAdminUsersPage() {
                       disabled={editSaving}
                     />
                   </div>
-                  <p className="text-[0.65rem] leading-relaxed text-brand-muted">
-                    Adjust implies view. View-only admins see the wallet table without Manage.
+                  <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                    Settings permissions
                   </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <PermToggle
+                      id="edit-ap-tokens-edit"
+                      label="Manage tokens"
+                      checked={mergeAdminPermissions(draft.adminPermissions).manageTokens}
+                      onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { manageTokens: v }))}
+                      disabled={editSaving}
+                    />
+                  </div>
                 </div>
               ) : null}
               <label className="flex cursor-pointer items-center gap-2 text-sm text-brand-muted">

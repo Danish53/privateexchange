@@ -31,7 +31,7 @@ export default function TokenBalanceList({ tokens = [] }) {
         </div>
       </div>
       <ul className="divide-y divide-white/[0.04]">
-        {tokens.map((token) => {
+        {tokens.filter((token) => token.isActive === true).map((token) => {
           const rowKey = token.slug || token.symbol;
           const avatar = (
             <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.1] bg-gradient-to-br from-white/[0.08] to-black/55 text-[0.7rem] font-bold tracking-tight text-brand-heading shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] sm:h-[3.25rem] sm:w-[3.25rem] sm:text-xs">

@@ -10,84 +10,12 @@ import {
   ArrowRightLeft,
   Wallet,
   Settings2,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import CreateTokenModal from '../tokenmodal/CreateTokenModal';
 
-const TOKENS = [
-  {
-    code: '759',
-    name: '759',
-    tier: 'Primary',
-    role: 'Core ecosystem token',
-    accent: 'from-amber-500/25 via-amber-500/5 to-transparent',
-    border: 'border-amber-500/20',
-    dot: 'bg-amber-400',
-    pill: 'text-amber-100/90 border-amber-500/25 bg-amber-500/10',
-  },
-  {
-    code: 'CRS',
-    name: 'Cristalino',
-    tier: 'Premium',
-    role: 'Premium tier positioning',
-    accent: 'from-sky-400/25 via-sky-400/5 to-transparent',
-    border: 'border-sky-400/20',
-    dot: 'bg-sky-400',
-    pill: 'text-sky-100/90 border-sky-400/25 bg-sky-400/10',
-  },
-  {
-    code: 'ANJ',
-    name: 'Añejo',
-    tier: 'Reserve',
-    role: 'Reserve / long-hold narrative',
-    accent: 'from-orange-500/25 via-orange-500/5 to-transparent',
-    border: 'border-orange-500/20',
-    dot: 'bg-orange-500',
-    pill: 'text-orange-100/90 border-orange-500/25 bg-orange-500/10',
-  },
-  {
-    code: 'RFL',
-    name: 'Raffle',
-    tier: 'Entries',
-    role: 'Drawing & raffle entries',
-    accent: 'from-violet-500/25 via-violet-500/5 to-transparent',
-    border: 'border-violet-500/20',
-    dot: 'bg-violet-500',
-    pill: 'text-violet-100/90 border-violet-500/25 bg-violet-500/10',
-  },
-  {
-    code: 'SUS',
-    name: 'Susu',
-    tier: 'Community',
-    role: 'Community / pool mechanics',
-    accent: 'from-emerald-500/25 via-emerald-500/5 to-transparent',
-    border: 'border-emerald-500/20',
-    dot: 'bg-emerald-500',
-    pill: 'text-emerald-100/90 border-emerald-500/25 bg-emerald-500/10',
-  },
-];
-
-const RULE_ROWS = [
-  {
-    label: 'Reference valuation',
-    detail: 'Internal USD mapping for display & VIP thresholds (utility disclaimer in product copy).',
-    icon: Scale,
-  },
-  {
-    label: 'Transfer fee',
-    detail: 'Default $0.50 equivalent per transfer; VIP waiver hooks here when membership engine is live.',
-    icon: ArrowRightLeft,
-  },
-  {
-    label: 'Deposit / withdrawal rails',
-    detail: 'PayPal, future Stripe, crypto rails — token-specific eligibility toggles per phase.',
-    icon: Wallet,
-  },
-  {
-    label: 'Drawing eligibility',
-    detail: 'Which tokens may enter which pools; min entry and lock rules.',
-    icon: Layers,
-  },
-];
 
 function StatChip({ icon: Icon, label, value }) {
   return (
@@ -103,14 +31,128 @@ function StatChip({ icon: Icon, label, value }) {
   );
 }
 
+function TokenCardSkeleton() {
+  return (
+    <div className="animate-pulse rounded-2xl border border-white/[0.08] bg-black/[0.35] p-5">
+
+      {/* HEADER */}
+      <div className="flex items-start gap-3">
+        <div className="h-12 w-12 rounded-xl bg-white/10" />
+
+        <div className="flex-1 space-y-2">
+          <div className="h-4 w-32 rounded bg-white/10" />
+          <div className="h-3 w-20 rounded bg-white/10" />
+        </div>
+      </div>
+
+      {/* GRID */}
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="h-14 rounded-xl bg-white/10" />
+        <div className="h-14 rounded-xl bg-white/10" />
+        <div className="h-14 rounded-xl bg-white/10" />
+        <div className="h-14 rounded-xl bg-white/10" />
+      </div>
+
+      {/* TAGS */}
+      <div className="mt-4 flex gap-2">
+        <div className="h-6 w-16 rounded bg-white/10" />
+        <div className="h-6 w-16 rounded bg-white/10" />
+        <div className="h-6 w-16 rounded bg-white/10" />
+      </div>
+
+      {/* BUTTONS */}
+      <div className="mt-5 flex gap-2">
+        <div className="h-8 w-24 rounded-xl bg-white/10" />
+        <div className="h-8 w-24 rounded-xl bg-white/10" />
+      </div>
+    </div>
+  );
+}
+
 export default function SuperAdminTokensPage() {
+  const [tokens, setTokens] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editToken, setEditToken] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    tokenId: null,
+  });
+
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  useEffect(() => {
+    const fetchTokens = async () => {
+      try {
+        const res = await fetch("/api/superadmin/tokens");
+        const data = await res.json();
+
+        if (data.success) {
+          setTokens(data.data);
+        }
+      } catch (err) {
+        console.error("Token fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTokens();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-xl bg-white/10" />
+          ))}
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          {[...Array(4)].map((_, i) => (
+            <TokenCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const handleDelete = async () => {
+    if (!deleteModal.tokenId) return;
+
+    setDeleteLoading(true);
+
+    try {
+      const res = await fetch(`/api/superadmin/tokens/${deleteModal.tokenId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setTokens((prev) =>
+          prev.filter((t) => t._id !== deleteModal.tokenId)
+        );
+
+        setDeleteModal({ open: false, tokenId: null });
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleCreateClick = () => {
+    setEditToken(null);
+  };
+
+
   return (
     <div className="space-y-8">
       <div className="border-b border-white/[0.06] pb-6">
-        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Tokens</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Settings</h1>
         <p className="mt-1 max-w-3xl text-sm text-brand-muted">
-          Configure the five ecosystem assets: symbols, display rules, fee behaviour, and how each token participates
-          in transfers, deposits, and drawings—aligned with the 759 platform proposal.
+          Global platform configuration and operational toggles.
         </p>
       </div>
 
@@ -131,6 +173,25 @@ export default function SuperAdminTokensPage() {
         </div>
       </div> */}
 
+
+      {/* create token? */}
+
+      <CreateTokenModal
+        editToken={editToken}
+        onCreateClick={handleCreateClick}
+        onCreated={(newToken) => {
+          setTokens((prev) => [...prev, newToken]);
+        }}
+        onUpdated={(updatedToken) => {
+          setTokens((prev) =>
+            prev.map((t) =>
+              t._id === updatedToken._id ? updatedToken : t
+            )
+          );
+          setEditToken(null);
+        }}
+      />
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatChip icon={Coins} label="Ecosystem tokens" value="5 configured" />
         <StatChip icon={Shield} label="Compliance" value="Utility framing" />
@@ -139,120 +200,130 @@ export default function SuperAdminTokensPage() {
       </div>
 
       <div>
-        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-subtle">Asset catalogue</h2>
-            <p className="mt-1 text-xs text-brand-muted">
-              One card per listed token · fields below are layout placeholders until APIs are connected
-            </p>
-          </div>
-        </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          {TOKENS.map((t) => (
+          {tokens.map((t, index) => (
             <div
-              key={t.code}
+              key={t._id || t.slug}
               className={cn(
-                'relative overflow-hidden rounded-2xl border bg-gradient-to-b from-black/[0.45] to-[#07080c] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]',
-                t.border
+                'relative overflow-hidden rounded-2xl border bg-gradient-to-b from-black/[0.45] to-[#07080c] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]'
               )}
             >
+              {/* Background gradient (dynamic optional) */}
               <div
-                className={cn(
-                  'pointer-events-none absolute inset-0 bg-gradient-to-br opacity-90',
-                  t.accent
-                )}
+                className="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-90"
                 aria-hidden
               />
+
+              {/* Header */}
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
+
+                  {/* SYMBOL BOX */}
                   <span
-                    className={cn(
-                      'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/40 font-bold tabular-nums text-brand-heading shadow-inner',
-                      t.border
-                    )}
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/40 font-bold tabular-nums text-brand-heading shadow-inner"
                   >
-                    {t.code}
+                    {t.symbol}
                   </span>
+
+                  {/* NAME + SLUG */}
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold tracking-tight text-brand-heading">{t.name}</h3>
-                      <span
-                        className={cn(
-                          'rounded-md border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em]',
-                          t.pill
-                        )}
-                      >
-                        {t.tier}
+                      <h3 className="text-lg font-semibold tracking-tight text-brand-heading">
+                        {t.name}
+                      </h3>
+
+                      <span className="rounded-md border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-brand-subtle bg-white/5 border-white/10">
+                        {t.slug}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-brand-muted">{t.role}</p>
+
+                    <p className="mt-1 text-sm text-brand-muted">
+                      Ecosystem Token
+                    </p>
                   </div>
                 </div>
+
+                {/* STATUS DOT (active/inactive) */}
                 <span
                   className={cn(
                     'inline-flex h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/10 sm:mt-2',
-                    t.dot
+                    t.isActive ? 'bg-emerald-500' : 'bg-red-500'
                   )}
-                  title="Status placeholder"
-                  aria-hidden
+                  title={t.isActive ? "Active" : "Inactive"}
                 />
               </div>
 
+              {/* DETAILS GRID */}
               <dl className="relative mt-5 grid gap-3 sm:grid-cols-2">
+
                 <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
                   <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Reference (USD)
+                    USD Value
                   </dt>
-                  <dd className="mt-1 font-mono text-sm tabular-nums text-brand-heading">—</dd>
+                  <dd className="mt-1 font-mono text-sm tabular-nums text-brand-heading">
+                    ${t.usdPerUnit ?? 0}
+                  </dd>
                 </div>
+
+                <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
+                  <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                    Sort Order
+                  </dt>
+                  <dd className="mt-1 text-sm text-brand-muted">
+                    {t.sortOrder ?? 0}
+                  </dd>
+                </div>
+
                 <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
                   <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
                     Transfers
                   </dt>
-                  <dd className="mt-1 text-sm text-brand-muted">P2P · fee rules</dd>
+                  <dd className="mt-1 text-sm text-brand-muted">
+                    P2P · fee rules (coming soon)
+                  </dd>
                 </div>
+
                 <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
                   <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Deposits / rails
+                    Deposits
                   </dt>
-                  <dd className="mt-1 text-sm text-brand-muted">PayPal · Crypto · Stripe (phase)</dd>
-                </div>
-                <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
-                  <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Drawings
-                  </dt>
-                  <dd className="mt-1 text-sm text-brand-muted">Entry token · min stake</dd>
+                  <dd className="mt-1 text-sm text-brand-muted">
+                    Crypto · PayPal · Stripe (phase)
+                  </dd>
                 </div>
               </dl>
 
+              {/* TAGS */}
               <div className="relative mt-4 flex flex-wrap gap-2">
                 <span className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-medium text-brand-subtle">
-                  Ledger symbol: {t.code}
+                  Symbol: {t.symbol}
                 </span>
+
                 <span className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-medium text-brand-subtle">
-                  VIP fee waiver
+                  Slug: {t.slug}
                 </span>
+
                 <span className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-medium text-brand-subtle">
-                  Admin adjustments
+                  Status: {t.isActive ? "Active" : "Inactive"}
                 </span>
               </div>
 
+              {/* ACTIONS */}
               <div className="relative mt-5 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
                 <button
-                  type="button"
-                  disabled
-                  className="rounded-xl border border-brand-accent/30 bg-brand-accent/15 px-4 py-2 text-xs font-semibold text-brand-heading opacity-60"
-                  title="Connect API in a later phase"
+                  onClick={() => setEditToken(t)}
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-brand-heading hover:bg-white/10"
                 >
                   Edit token
                 </button>
+
                 <button
                   type="button"
-                  disabled
-                  className="rounded-xl border border-brand-border-muted bg-black/30 px-4 py-2 text-xs font-semibold text-brand-muted opacity-60"
+                  className="rounded-xl border border-white/10 bg-red-500 px-4 py-2 text-xs font-semibold text-brand-heading hover:bg-red-600"
+                  onClick={() => setDeleteModal({ open: true, tokenId: t._id })}
                 >
-                  Fee schedule
+                  Delete token
                 </button>
               </div>
             </div>
@@ -260,7 +331,7 @@ export default function SuperAdminTokensPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/[0.08] bg-black/[0.22] p-5 sm:p-6">
+      {/* <div className="rounded-2xl border border-white/[0.08] bg-black/[0.22] p-5 sm:p-6">
         <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-subtle">
           Rule categories (per proposal)
         </h2>
@@ -280,7 +351,47 @@ export default function SuperAdminTokensPage() {
             </li>
           ))}
         </ul>
-      </div>
+      </div> */}
+      {deleteModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0c10] p-6 shadow-xl">
+
+            {/* HEADER */}
+            <h2 className="text-lg font-semibold text-white">
+              Confirm Delete
+            </h2>
+
+            <p className="mt-2 text-sm text-white/60">
+              Are you sure you want to delete this token? This action cannot be undone.
+            </p>
+
+            {/* ACTIONS */}
+            <div className="mt-6 flex justify-end gap-3">
+
+              <button
+                disabled={deleteLoading}
+                onClick={() => setDeleteModal({ open: false, tokenId: null })}
+                className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/5"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                className="flex items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+              >
+                {deleteLoading && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                )}
+                {deleteLoading ? "Deleting..." : "Delete"}
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -107,9 +107,7 @@ export default function SuperAdminCreateUserPage() {
           <Link href="/login" className="text-brand-accent underline-offset-2 hover:underline">
             /login
           </Link>{' '}
-          with the password you set—no OTP. When SMTP is configured in{' '}
-          <code className="rounded bg-black/40 px-1 text-[0.7rem]">.env.local</code>, we email them the login
-          link and credentials.
+          with the password you set—no OTP.
         </p>
       </div>
 

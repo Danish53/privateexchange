@@ -11,7 +11,7 @@ import {
   Settings,
   UserCircle,
 } from 'lucide-react';
-import { hasAnyUsersModulePermission, hasAnyWalletsPermission } from '@/lib/adminPermissions';
+import { hasAnyUsersModulePermission, hasAnyWalletsPermission, hasAnySettingsPermission } from '@/lib/adminPermissions';
 
 /** Main operations — aligned with platform admin scope (proposal). */
 export const SUPERADMIN_NAV_MAIN = [
@@ -39,12 +39,12 @@ export const SUPERADMIN_NAV_MAIN = [
     description: 'Ledger & movements',
     icon: Activity,
   },
-  {
-    href: '/dashboard/superadmin/tokens',
-    label: 'Tokens',
-    description: 'Supported assets & rules',
-    icon: Coins,
-  },
+  // {
+  //   href: '/dashboard/superadmin/tokens',
+  //   label: 'Tokens',
+  //   description: 'Supported assets & rules',
+  //   icon: Coins,
+  // },
   {
     href: '/dashboard/superadmin/drawings',
     label: 'Drawings',
@@ -111,6 +111,7 @@ export function getSuperadminNavSections(user) {
   }
   const usersNavEnabled = hasAnyUsersModulePermission(user);
   const walletsNavEnabled = hasAnyWalletsPermission(user);
+  const settingsNavEnabled = hasAnySettingsPermission(user);
 
   const main = SUPERADMIN_NAV_MAIN.map((item) => {
     if (item.href === '/dashboard/superadmin') {
@@ -121,6 +122,9 @@ export function getSuperadminNavSections(user) {
     }
     if (item.href === '/dashboard/superadmin/wallets') {
       return { ...item, disabled: !walletsNavEnabled };
+    }
+    if (item.href === '/dashboard/superadmin/settings') {
+      return { ...item, disabled: !settingsNavEnabled };
     }
     return { ...item, disabled: true };
   });
