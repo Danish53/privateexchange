@@ -28,6 +28,7 @@ export function useUserWallet() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json().catch(() => ({}));
+      // console.log('Wallet response', { status: res.status, json });
       if (!res.ok) {
         setError(json.error || 'Could not load wallet.');
         setTokens([]);

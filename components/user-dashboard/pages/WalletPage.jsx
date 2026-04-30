@@ -56,6 +56,25 @@ export default function WalletPage() {
   const { loading, error, tokens, totalUsdFormatted } = useUserWallet();
   const hist = useUserWalletHistory({ limit: 100, enableTokenFilter: true });
 
+  // Calculate total token count (sum of all token balances)
+  const totalTokens = tokens.reduce((sum, token) => {
+    if (!token || !token.balance) return sum;
+    try {
+      // Parse formatted balance string (e.g., "1,234.56") to number
+      const balanceStr = String(token.balance).replace(/,/g, '');
+      const balanceNum = parseFloat(balanceStr);
+      return sum + (isNaN(balanceNum) ? 0 : balanceNum);
+    } catch {
+      return sum;
+    }
+  }, 0);
+  
+  // Format total tokens with commas and 2 decimal places
+  const totalTokensFormatted = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(totalTokens);
+
   return (
     <>
       <header className="mb-8 sm:mb-10">
@@ -73,7 +92,7 @@ export default function WalletPage() {
             </p>
           </div>
           {/* <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
-            {tokens.length} tokens · live data
+            {loading ? 'tokens' : `${totalTokensFormatted} tokens`} · live data
           </p> */}
         </div>
       </header>
@@ -97,7 +116,7 @@ export default function WalletPage() {
                 )}
               </p>
               <p className="mt-2 text-xs text-brand-subtle">
-                {tokens.length} tokens · USD aggregate (reference rates)
+                {loading ? 'tokens' : `${totalTokensFormatted} tokens`} · Calculated from USD deposits using token conversion rates
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">

@@ -6,6 +6,8 @@ import {
   User,
   Home,
   History,
+  ArrowDown,
+  Coins,
 } from 'lucide-react';
 
 export const USER_NAV = [
@@ -20,6 +22,18 @@ export const USER_NAV = [
     label: 'Wallet',
     description: 'Tokens',
     icon: Wallet,
+  },
+  {
+    href: '/dashboard/user/deposit',
+    label: 'Deposit',
+    description: 'Add Funds',
+    icon: ArrowDown,
+  },
+  {
+    href: '/dashboard/user/buy',
+    label: 'Buy Crypto',
+    description: 'Tokens',
+    icon: Coins,
   },
   {
     href: '/dashboard/user/history',

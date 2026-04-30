@@ -48,6 +48,8 @@ export default function SuperAdminWalletAdjustPage() {
   const [memberHistory, setMemberHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [adjustSuccess, setAdjustSuccess] = useState('');
+  const [activeTokens, setActiveTokens] = useState([]);
+  const [loadingActiveTokens, setLoadingActiveTokens] = useState(false);
 
   const loadWallet = useCallback(async () => {
     if (!token || !userId) return;
@@ -80,14 +82,18 @@ export default function SuperAdminWalletAdjustPage() {
       }
       setAdjustRow(json.wallet);
       const first = json.wallet.tokens?.[0]?.symbol;
-      setAdjustToken(String(first || PLATFORM_TOKEN_SEED[0].symbol).toUpperCase());
+      // Use activeTokens if available, otherwise fallback to PLATFORM_TOKEN_SEED
+      const defaultToken = activeTokens.length > 0
+        ? activeTokens[0].symbol
+        : PLATFORM_TOKEN_SEED[0].symbol;
+      setAdjustToken(String(first || defaultToken).toUpperCase());
     } catch {
       setLoadErr('Network error.');
       setAdjustRow(null);
     } finally {
       setLoadingWallet(false);
     }
-  }, [token, userId]);
+  }, [token, userId, activeTokens]);
 
   const loadMemberHistory = useCallback(async () => {
     if (!token || !userId) return;
@@ -119,6 +125,29 @@ export default function SuperAdminWalletAdjustPage() {
     if (!ready || !userId || !adjustRow) return;
     void loadMemberHistory();
   }, [ready, userId, adjustRow, loadMemberHistory]);
+
+  // Fetch active tokens from API
+  useEffect(() => {
+    const fetchActiveTokens = async () => {
+      setLoadingActiveTokens(true);
+      try {
+        const res = await fetch('/api/superadmin/tokens');
+        const data = await res.json();
+        if (data.success && data.data.length > 0) {
+          setActiveTokens(data.data);
+          // Update adjustToken if not already set
+          if (!adjustToken && data.data[0]?.symbol) {
+            setAdjustToken(data.data[0].symbol.toUpperCase());
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch active tokens:', err);
+      } finally {
+        setLoadingActiveTokens(false);
+      }
+    };
+    fetchActiveTokens();
+  }, []);
 
   const submitAdjust = useCallback(async () => {
     if (!token || !adjustRow || !adjustToken) return;
@@ -259,57 +288,63 @@ export default function SuperAdminWalletAdjustPage() {
                 <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-subtle">
                   Step 1 — Select token
                 </h2>
-                <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-                  {PLATFORM_TOKEN_SEED.map((t) => {
-                    const sym = String(t.symbol).toUpperCase();
-                    const selected = adjustToken === sym;
-                    const bal = tokenBalanceFromRow(adjustRow, sym);
-                    return (
-                      <button
-                        key={t.slug}
-                        type="button"
-                        onClick={() => {
-                          setAdjustToken(sym);
-                          setAdjustErr('');
-                          setAdjustSuccess('');
-                        }}
-                        className={cn(
-                          'relative flex flex-col rounded-xl border px-3 py-3.5 text-left transition-colors',
-                          selected
-                            ? 'border-brand-accent bg-[var(--brand-accent-soft)]/20 ring-2 ring-brand-accent/35'
-                            : 'border-white/[0.08] bg-black/25 hover:border-white/[0.14] hover:bg-black/35'
-                        )}
-                      >
-                        <span
+                {loadingActiveTokens ? (
+                  <div className="mt-3 flex min-h-[120px] items-center justify-center rounded-xl border border-white/[0.08] bg-black/25">
+                    <Loader2 className="h-6 w-6 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+                  </div>
+                ) : (
+                  <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+                    {(activeTokens.length > 0 ? activeTokens : PLATFORM_TOKEN_SEED).map((t) => {
+                      const sym = String(t.symbol).toUpperCase();
+                      const selected = adjustToken === sym;
+                      const bal = tokenBalanceFromRow(adjustRow, sym);
+                      return (
+                        <button
+                          key={t.slug || t._id}
+                          type="button"
+                          onClick={() => {
+                            setAdjustToken(sym);
+                            setAdjustErr('');
+                            setAdjustSuccess('');
+                          }}
                           className={cn(
-                            'pointer-events-none absolute bottom-2.5 left-2 top-2.5 w-1 rounded-full',
-                            t.bar
+                            'relative flex flex-col rounded-xl border px-3 py-3.5 text-left transition-colors',
+                            selected
+                              ? 'border-brand-accent bg-[var(--brand-accent-soft)]/20 ring-2 ring-brand-accent/35'
+                              : 'border-white/[0.08] bg-black/25 hover:border-white/[0.14] hover:bg-black/35'
                           )}
-                          aria-hidden
-                        />
-                        <span className="pl-3 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                          {t.symbol}
-                        </span>
-                        <span className="pl-3 mt-0.5 text-sm font-semibold leading-tight text-brand-heading">
-                          {t.name}
-                        </span>
-                        <span className="pl-3 mt-2 border-t border-white/[0.06] pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-brand-subtle">
-                          Balance
-                        </span>
-                        <span className="pl-3 mt-0.5 font-mono text-sm font-semibold tabular-nums text-brand-heading">
-                          {bal}
-                        </span>
-                        {selected ? (
-                          <span className="pl-3 mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-brand-accent">
-                            Selected
+                        >
+                          <span
+                            className={cn(
+                              'pointer-events-none absolute bottom-2.5 left-2 top-2.5 w-1 rounded-full',
+                              t.bar || 'bg-gray-500'
+                            )}
+                            aria-hidden
+                          />
+                          <span className="pl-3 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                            {t.symbol}
                           </span>
-                        ) : (
-                          <span className="pl-3 mt-1 text-[0.6rem] text-brand-subtle">Tap to select</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                          <span className="pl-3 mt-0.5 text-sm font-semibold leading-tight text-brand-heading">
+                            {t.name}
+                          </span>
+                          <span className="pl-3 mt-2 border-t border-white/[0.06] pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-brand-subtle">
+                            Balance
+                          </span>
+                          <span className="pl-3 mt-0.5 font-mono text-sm font-semibold tabular-nums text-brand-heading">
+                            {bal}
+                          </span>
+                          {selected ? (
+                            <span className="pl-3 mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-brand-accent">
+                              Selected
+                            </span>
+                          ) : (
+                            <span className="pl-3 mt-1 text-[0.6rem] text-brand-subtle">Tap to select</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
 
               <section>

@@ -17,13 +17,16 @@ export default function TokenBalanceList({ tokens = [] }) {
   return (
     <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/[0.22]">
       <div className="hidden border-b border-white/[0.06] px-4 py-2.5 sm:block sm:px-5">
-        <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto_auto] items-center gap-4">
+        <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto_auto_auto] items-center gap-4">
           <span />
           <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
             Asset
           </span>
           <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-            Amount
+            Total
+          </span>
+          <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+            Purchased
           </span>
           <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
             USD
@@ -55,12 +58,18 @@ export default function TokenBalanceList({ tokens = [] }) {
                     <p className="mt-0.5 text-xs text-brand-subtle">{token.symbol}</p>
                   </div>
                 </div>
-                <div className="mt-4 flex justify-between gap-4 border-t border-white/[0.05] pt-4">
+                <div className="mt-4 grid grid-cols-3 gap-4 border-t border-white/[0.05] pt-4">
                   <div>
                     <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                      Amount
+                      Total
                     </p>
                     <p className="font-semibold tabular-nums text-brand-heading">{token.balance}</p>
+                  </div>
+                  <div>
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                      Purchased
+                    </p>
+                    <p className="font-semibold tabular-nums text-brand-heading">{token.purchasedBalance || '0'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
@@ -72,14 +81,17 @@ export default function TokenBalanceList({ tokens = [] }) {
                   </div>
                 </div>
               </div>
-              <div className="hidden grid-cols-[3.25rem_minmax(0,1fr)_auto_auto] items-center gap-4 px-5 py-4 sm:grid">
+              <div className="hidden grid-cols-[3.25rem_minmax(0,1fr)_auto_auto_auto] items-center gap-4 px-5 py-4 sm:grid">
                 {avatar}
                 <div className="min-w-0">
                   <p className="font-semibold leading-tight text-brand-heading">{token.name}</p>
                   <p className="mt-0.5 text-xs text-brand-subtle">{token.symbol}</p>
                 </div>
-                <p className="text-right font-semibold tabular-nums text-brand-heading">
+                <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
                   {token.balance}
+                </p>
+                <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
+                  {token.purchasedBalance || '0'}
                 </p>
                 <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
                   {token.value}

@@ -11,6 +11,7 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
     name: "",
     symbol: "",
     slug: "",
+    totalTokens: "",
     usdPerUnit: "",
     sortOrder: "",
   });
@@ -22,6 +23,7 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
         name: editToken.name || "",
         symbol: editToken.symbol || "",
         slug: editToken.slug || "",
+        totalTokens: "",
         usdPerUnit: editToken.usdPerUnit || "",
         sortOrder: editToken.sortOrder || "",
       });
@@ -29,7 +31,20 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
   }, [editToken]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const newForm = { ...form, [e.target.name]: e.target.value };
+    
+    // Calculate usdPerUnit when totalTokens changes (1 USD / totalTokens)
+    if (e.target.name === 'totalTokens') {
+      const totalTokens = parseFloat(newForm.totalTokens);
+      
+      if (!isNaN(totalTokens) && totalTokens !== 0) {
+        newForm.usdPerUnit = (1 / totalTokens).toFixed(6);
+      } else {
+        newForm.usdPerUnit = "";
+      }
+    }
+    
+    setForm(newForm);
   };
 
   const handleSubmit = async () => {
@@ -42,10 +57,21 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
 
       const method = editToken ? "PUT" : "POST";
 
+      // Prepare data to send - include totalUsd and totalTokens for calculation
+      const dataToSend = {
+        name: form.name,
+        symbol: form.symbol,
+        slug: form.slug,
+        usdPerUnit: form.usdPerUnit,
+        sortOrder: form.sortOrder,
+        totalUsd: form.totalUsd,
+        totalTokens: form.totalTokens,
+      };
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(dataToSend),
       });
 
       const data = await res.json();
@@ -62,6 +88,8 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
           name: "",
           symbol: "",
           slug: "",
+          totalUsd: "",
+          totalTokens: "",
           usdPerUnit: "",
           sortOrder: "",
         });
@@ -81,6 +109,8 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
       name: "",
       symbol: "",
       slug: "",
+      totalUsd: "",
+      totalTokens: "",
       usdPerUnit: "",
       sortOrder: "",
     });
@@ -161,19 +191,48 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
                 />
               </div>
 
-              {/* USD VALUE */}
+              {/* TOTAL TOKENS */}
               <div>
                 <label className="text-xs font-medium text-white/70">
-                  USD Value
+                  Total Tokens
                 </label>
                 <input
-                  name="usdPerUnit"
+                  name="totalTokens"
                   type="number"
-                  value={form.usdPerUnit}
+                  step="1"
+                  value={form.totalTokens}
                   onChange={handleChange}
+                  placeholder="Enter total token"
                   className="mt-1 w-full rounded-lg border border-white/10 bg-black/40 px-4 py-2 text-white outline-none focus:border-brand-accent"
                 />
+                {/* <div className="mt-1 text-xs text-white/50">
+                  Enter how many tokens you want to create
+                </div> */}
               </div>
+
+              {/* CALCULATED PRICE PER TOKEN */}
+              {form.totalTokens && (
+                <div className="rounded-lg border border-brand-accent/30 bg-brand-accent/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-white/80">
+                      Calculated Price:
+                    </span>
+                    <span className="text-sm font-bold text-brand-accent">
+                      1 token = ${parseFloat(form.usdPerUnit || 0).toFixed(4)} USD
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs text-white/60">
+                    ${parseFloat(form.usdPerUnit || 0).toFixed(4)} per token
+                  </div>
+                </div>
+              )}
+
+              {/* HIDDEN USD PER UNIT FIELD (for API) */}
+              <input
+                type="hidden"
+                name="usdPerUnit"
+                value={form.usdPerUnit}
+              />
 
               {/* SORT ORDER */}
               <div>

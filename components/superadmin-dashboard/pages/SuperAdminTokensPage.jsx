@@ -259,10 +259,19 @@ export default function SuperAdminTokensPage() {
 
                 <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
                   <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    USD Value
+                    USD Per Token
                   </dt>
                   <dd className="mt-1 font-mono text-sm tabular-nums text-brand-heading">
-                    ${t.usdPerUnit ?? 0}
+                    ${parseFloat(t.usdPerUnit || 0).toFixed(4)}
+                  </dd>
+                </div>
+
+                <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
+                  <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                    Total Tokens
+                  </dt>
+                  <dd className="mt-1 font-mono text-sm tabular-nums text-brand-heading">
+                    {t.usdPerUnit && t.usdPerUnit > 0 ? Math.round(1 / t.usdPerUnit) : 0}
                   </dd>
                 </div>
 
@@ -277,19 +286,10 @@ export default function SuperAdminTokensPage() {
 
                 <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
                   <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Transfers
+                    Status
                   </dt>
                   <dd className="mt-1 text-sm text-brand-muted">
-                    P2P · fee rules (coming soon)
-                  </dd>
-                </div>
-
-                <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
-                  <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Deposits
-                  </dt>
-                  <dd className="mt-1 text-sm text-brand-muted">
-                    Crypto · PayPal · Stripe (phase)
+                    {t.isActive ? "Active" : "Inactive"}
                   </dd>
                 </div>
               </dl>

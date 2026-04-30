@@ -1,11 +1,42 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRightLeft, ShieldCheck, Wallet, Info } from 'lucide-react';
 import Panel from '@/components/user-dashboard/Panel';
-import { TOKEN_OPTIONS_FOR_FORMS, MEMBERSHIP } from '@/components/user-dashboard/constants';
+import { MEMBERSHIP } from '@/components/user-dashboard/constants';
 
 export default function TransferPage() {
+  const [tokens, setTokens] = useState([]);
+  const [loadingTokens, setLoadingTokens] = useState(true);
+
+  // Fetch tokens from API
+  useEffect(() => {
+    const fetchTokens = async () => {
+      try {
+        setLoadingTokens(true);
+        const response = await fetch('/api/superadmin/tokens');
+        const data = await response.json();
+        
+        if (data.success && Array.isArray(data.data)) {
+          // Filter only active tokens
+          const activeTokens = data.data.filter(t => t.isActive !== false);
+          setTokens(activeTokens);
+        } else {
+          console.error('Failed to fetch tokens:', data);
+          setTokens([]);
+        }
+      } catch (error) {
+        console.error('Error fetching tokens:', error);
+        setTokens([]);
+      } finally {
+        setLoadingTokens(false);
+      }
+    };
+
+    fetchTokens();
+  }, []);
+
   return (
     <>
       <header className="mb-8 sm:mb-10">
@@ -83,25 +114,34 @@ export default function TransferPage() {
                 Token
               </label>
               <div className="relative">
-                <select
-                  id="tok"
-                  className="auth-input appearance-none pr-10"
-                  defaultValue={TOKEN_OPTIONS_FOR_FORMS[0]?.symbol}
-                >
-                  {TOKEN_OPTIONS_FOR_FORMS.map((t) => (
-                    <option key={t.symbol} value={t.symbol}>
-                      {t.name} ({t.symbol})
-                    </option>
-                  ))}
-                </select>
-                <span
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-brand-subtle"
-                  aria-hidden
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </span>
+                {loadingTokens ? (
+                  <div className="auth-input appearance-none pr-10 flex items-center">
+                    <div className="h-4 bg-gray-600 rounded w-3/4 animate-pulse"></div>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      id="tok"
+                      className="auth-input appearance-none pr-10"
+                      defaultValue={tokens[0]?.symbol}
+                      disabled={tokens.length === 0}
+                    >
+                      {tokens.map((t) => (
+                        <option key={t.symbol} value={t.symbol}>
+                          {t.name} ({t.symbol})
+                        </option>
+                      ))}
+                    </select>
+                    <span
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-brand-subtle"
+                      aria-hidden
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 

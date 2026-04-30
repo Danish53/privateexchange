@@ -36,7 +36,36 @@ export async function POST(req) {
       );
     }
 
-    const token = await Token.create(body);
+    // Calculate usdPerUnit from totalTokens (1 USD / totalTokens)
+    let usdPerUnit = body.usdPerUnit;
+    
+    if (body.totalTokens) {
+      const totalTokens = parseFloat(body.totalTokens);
+      
+      if (totalTokens === 0) {
+        return NextResponse.json(
+          { success: false, message: "Total tokens cannot be zero" },
+          { status: 400 }
+        );
+      }
+      
+      usdPerUnit = 1 / totalTokens;
+    } else if (!body.usdPerUnit) {
+      return NextResponse.json(
+        { success: false, message: "Either provide usdPerUnit or totalTokens" },
+        { status: 400 }
+      );
+    }
+
+    // Create token with calculated usdPerUnit
+    const token = await Token.create({
+      name: body.name,
+      symbol: body.symbol,
+      slug: body.slug,
+      usdPerUnit: usdPerUnit,
+      sortOrder: body.sortOrder || 0,
+      isActive: body.isActive !== false,
+    });
 
     return NextResponse.json({
       success: true,

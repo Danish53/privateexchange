@@ -28,6 +28,8 @@ export default function SuperAdminUserWalletDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [payload, setPayload] = useState(null);
+  const [activeTokens, setActiveTokens] = useState([]);
+  const [loadingActiveTokens, setLoadingActiveTokens] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !userId) return;
@@ -51,6 +53,25 @@ export default function SuperAdminUserWalletDetailPage() {
       setLoading(false);
     }
   }, [token, userId]);
+
+  // Fetch active tokens from API
+  useEffect(() => {
+    const fetchActiveTokens = async () => {
+      setLoadingActiveTokens(true);
+      try {
+        const res = await fetch('/api/superadmin/tokens');
+        const data = await res.json();
+        if (data.success && data.data.length > 0) {
+          setActiveTokens(data.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch active tokens:', err);
+      } finally {
+        setLoadingActiveTokens(false);
+      }
+    };
+    fetchActiveTokens();
+  }, []);
 
   useEffect(() => {
     if (!ready || !userId || !canViewWallets) return;
@@ -191,33 +212,39 @@ export default function SuperAdminUserWalletDetailPage() {
 
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-subtle">Token balances</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {PLATFORM_TOKEN_SEED.map((t) => {
-                const sym = String(t.symbol).toUpperCase();
-                const bal = tokenBalanceFromRow(w, sym);
-                return (
-                  <div
-                    key={t.slug}
-                    className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-black/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
-                  >
-                    <span
-                      className={cn(
-                        'pointer-events-none absolute left-0 top-0 bottom-0 w-1 rounded-l-xl',
-                        t.bar
-                      )}
-                      aria-hidden
-                    />
-                    <p className="pl-2 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                      {t.symbol}
-                    </p>
-                    <p className="pl-2 mt-0.5 text-xs text-brand-muted">{t.name}</p>
-                    <p className="pl-2 mt-3 border-t border-white/[0.06] pt-2 font-mono text-lg font-semibold tabular-nums text-brand-heading">
-                      {bal}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
+            {loadingActiveTokens ? (
+              <div className="mt-3 flex min-h-[120px] items-center justify-center rounded-xl border border-white/[0.08] bg-black/25">
+                <Loader2 className="h-6 w-6 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+              </div>
+            ) : (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {(activeTokens.length > 0 ? activeTokens : PLATFORM_TOKEN_SEED).map((t) => {
+                  const sym = String(t.symbol).toUpperCase();
+                  const bal = tokenBalanceFromRow(w, sym);
+                  return (
+                    <div
+                      key={t.slug || t._id}
+                      className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-black/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+                    >
+                      <span
+                        className={cn(
+                          'pointer-events-none absolute left-0 top-0 bottom-0 w-1 rounded-l-xl',
+                          t.bar || 'bg-gray-500'
+                        )}
+                        aria-hidden
+                      />
+                      <p className="pl-2 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                        {t.symbol}
+                      </p>
+                      <p className="pl-2 mt-0.5 text-xs text-brand-muted">{t.name}</p>
+                      <p className="pl-2 mt-3 border-t border-white/[0.06] pt-2 font-mono text-lg font-semibold tabular-nums text-brand-heading">
+                        {bal}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {w.country ? (
