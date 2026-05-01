@@ -22,11 +22,11 @@ export default function TokenBalanceList({ tokens = [] }) {
           <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
             Asset
           </span>
-          <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+          {/* <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
             Total
-          </span>
+          </span> */}
           <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-            Purchased
+            Purchased Tokens
           </span>
           <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
             USD
@@ -60,14 +60,14 @@ export default function TokenBalanceList({ tokens = [] }) {
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-4 border-t border-white/[0.05] pt-4">
                   <div>
-                    <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                    {/* <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
                       Total
-                    </p>
-                    <p className="font-semibold tabular-nums text-brand-heading">{token.balance}</p>
+                    </p> */}
+                    {/* <p className="font-semibold tabular-nums text-brand-heading">{token.balance}</p> */}
                   </div>
                   <div>
                     <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                      Purchased
+                      Purchased Tokens
                     </p>
                     <p className="font-semibold tabular-nums text-brand-heading">{token.purchasedBalance || '0'}</p>
                   </div>
@@ -87,14 +87,14 @@ export default function TokenBalanceList({ tokens = [] }) {
                   <p className="font-semibold leading-tight text-brand-heading">{token.name}</p>
                   <p className="mt-0.5 text-xs text-brand-subtle">{token.symbol}</p>
                 </div>
-                <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
+                {/* <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
                   {token.balance}
+                </p> */}
+                <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
+                   {Math.floor(token.purchasedBalance || 0)} <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle ms-1"> tokens</span>
                 </p>
                 <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
-                  {token.purchasedBalance || '0'}
-                </p>
-                <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
-                  {token.value}
+                  {token.value} <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle ms-1"> USD</span>
                 </p>
               </div>
             </li>

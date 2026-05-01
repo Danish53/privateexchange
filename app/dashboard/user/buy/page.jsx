@@ -57,10 +57,7 @@ export default function BuyCryptoPage() {
           setTokens(cryptoTokens);
 
           // Select first non-USD token by default
-          const firstNonUsdToken = cryptoTokens.find(t => t.slug !== '759');
-          if (firstNonUsdToken) {
-            setSelectedToken(firstNonUsdToken);
-          } else if (cryptoTokens.length > 0) {
+          if (cryptoTokens.length > 0) {
             // Fallback to first token (should not happen unless only USD token exists)
             setSelectedToken(cryptoTokens[0]);
           }
@@ -150,10 +147,10 @@ export default function BuyCryptoPage() {
       return;
     }
 
-    if (amount > usdBalance) {
+    if (amount > totalUsdFormatted.replace(/[$,]/g, '')) {
       setMessage({
         type: 'error',
-        text: `Insufficient USD balance to buy ${selectedToken.symbol}. You have $${usdBalance.toFixed(2)} USD available.`
+        text: `Insufficient USD balance to buy ${selectedToken.symbol}. You have $${totalUsdFormatted.replace(/[$,]/g, '')} USD available.`
       });
       return;
     }
@@ -322,7 +319,6 @@ export default function BuyCryptoPage() {
                       ) : tokens.length > 0 ? (
                         tokens.map((token) => {
                           const isSelected = selectedToken?._id === token._id;
-                          const isUsdToken = token.slug === '759';
 
                           return (
                             <button
@@ -364,7 +360,7 @@ export default function BuyCryptoPage() {
 
                                   <div className="mt-2 flex items-center justify-between">
                                     <div className="text-xs text-gray-400">
-                                      {isUsdToken ? 'Value' : 'Price'}
+                                      Price
                                     </div>
                                     <div className="text-sm font-medium text-white">
                                       ${token.usdPerUnit.toFixed(2)}
@@ -422,7 +418,7 @@ export default function BuyCryptoPage() {
                               <Loader2 className="h-4 w-4 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
                             </span>
                           ) : (
-                            `$${usdBalance.toFixed(2)}`
+                            `${totalUsdFormatted}`
                           )}
                         </span>
                       </div>
@@ -507,7 +503,7 @@ export default function BuyCryptoPage() {
                   <div>
                     <button
                       onClick={handleBuy}
-                      disabled={processing || !selectedToken || !usdAmount || parseFloat(usdAmount) <= 0 || parseFloat(usdAmount) > usdBalance}
+                      disabled={processing || !selectedToken || !usdAmount || parseFloat(usdAmount) <= 0 || parseFloat(usdAmount) > totalUsdFormatted.replace(/[$,]/g, '')}
                       className="group w-full flex items-center justify-center gap-3 py-3.5 px-6 bg-gradient-to-r from-brand-accent to-brand-accent/80 hover:from-brand-accent/90 hover:to-brand-accent/70 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-brand-accent/20 hover:shadow-brand-accent/30"
                     >
                       {processing ? (

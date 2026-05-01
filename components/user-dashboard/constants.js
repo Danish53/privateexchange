@@ -9,4 +9,4 @@ export const TOKEN_OPTIONS_FOR_FORMS = PLATFORM_TOKEN_SEED.map((t) => ({
 /** Populated from the platform when drawing pools are live. */
 export const DRAWINGS = [];
 
-export const MEMBERSHIP = { tier: 'Member', progress: 0 };
+export const MEMBERSHIP = { tier: 'User', progress: 0 };

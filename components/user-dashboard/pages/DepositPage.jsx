@@ -231,7 +231,7 @@ export default function DepositPage() {
               onClick={() => setSelectedMethod(method.id)}
               className={`flex items-center gap-4 rounded-xl border p-4 text-left transition-all ${
                 selectedMethod === method.id
-                  ? `border-2 ${method.borderColor} bg-gradient-to-r ${method.color}/10`
+                  ? `border-2 ${method.borderColor} ${method.color}/10 text-white`
                   : 'border-white/10 bg-white/5 hover:border-white/20'
               }`}
             >
@@ -354,7 +354,7 @@ export default function DepositPage() {
                   <div>
                     <p className="text-sm text-brand-subtle">You will receive</p>
                     <p className="text-lg font-bold text-white">
-                      {tokensToReceive.toFixed(4)} {selectedToken}
+                      {Math.floor(tokensToReceive)} <span className="text-[0.70rem] font-semibold uppercase tracking-wide text-brand-subtle ms-1"> {selectedToken}</span>
                     </p>
                   </div>
                 </div>
@@ -568,7 +568,7 @@ export default function DepositPage() {
             <Wallet className="h-4 w-4" />
             Wallet
           </Link>
-          <button
+          {/* <button
             type="button"
             onClick={handlePayment}
             disabled={processingPayment}
@@ -585,7 +585,7 @@ export default function DepositPage() {
                 <Check className="h-4 w-4" />
               </>
             )}
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

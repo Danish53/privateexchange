@@ -48,7 +48,7 @@ export default function OverviewPage() {
             />
             <div className="relative flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-brand-muted">Total balance (USD eq.)</p>
+                <p className="text-sm font-medium text-brand-muted">Total balance (USD)</p>
                 <p className="mt-2 text-3xl font-semibold tabular-nums tracking-[-0.04em] text-brand-heading sm:text-[2.25rem] sm:leading-none">
                   {loading ? (
                     <span className="inline-flex items-center gap-2 text-brand-muted">

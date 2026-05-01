@@ -12,6 +12,7 @@ import {
 import Panel from '@/components/user-dashboard/Panel';
 import { useUserWalletHistory } from '@/components/user-dashboard/useUserWalletHistory';
 import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
+import { useUserWallet } from '../useUserWallet';
 
 function historyIcon(type) {
   if (type === 'fee') return 'fee';
@@ -21,6 +22,7 @@ function historyIcon(type) {
 
 export default function HistoryPage() {
   const hist = useUserWalletHistory({ limit: 200, enableTokenFilter: true });
+  const {tokens } = useUserWallet();
 
   return (
     <>
@@ -77,7 +79,7 @@ export default function HistoryPage() {
                   className="w-full max-w-xs rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 sm:w-auto"
                 >
                   <option value="all">All tokens</option>
-                  {PLATFORM_TOKEN_SEED.map((t) => (
+                  {tokens.filter((t) => t.isActive === true).map((t) => (
                     <option key={t.slug} value={t.symbol}>
                       {t.name} ({t.symbol})
                     </option>

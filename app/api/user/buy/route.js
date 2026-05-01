@@ -340,25 +340,37 @@ export async function POST(request) {
 
     const { tokenSlug, usdAmount } = await request.json();
 
-    if (!tokenSlug || !usdAmount || usdAmount <= 0) {
+    // 🔹 Validation
+    if (!tokenSlug || typeof tokenSlug !== 'string') {
       return NextResponse.json(
-        { ok: false, error: 'Invalid request' },
+        { ok: false, error: 'Token slug required' },
         { status: 400 }
       );
     }
 
-    const user = await User.findById(auth.userId).lean();
-
-    if (!user || user.role !== 'user') {
-      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 403 });
+    if (!usdAmount || typeof usdAmount !== 'number' || usdAmount <= 0) {
+      return NextResponse.json(
+        { ok: false, error: 'Invalid USD amount' },
+        { status: 400 }
+      );
     }
 
+    // 🔹 User check
+    const user = await User.findById(auth.userId).lean();
+    if (!user || user.role !== 'user') {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
+    // 🔥 Start transaction
     session = await mongoose.startSession();
     session.startTransaction();
 
-    // 1️⃣ Token fetch
+    // 🔹 Token fetch
     const token = await Token.findOne({
-      slug: tokenSlug.toLowerCase()
+      slug: tokenSlug.toLowerCase(),
     }).session(session);
 
     if (!token || !token.isActive) {
@@ -369,15 +381,15 @@ export async function POST(request) {
       throw new Error('Invalid token price');
     }
 
-    // 2️⃣ Wallet
+    // 🔹 Wallet
     let wallet = await Wallet.findOne({ user: auth.userId }).session(session);
 
     if (!wallet) {
       wallet = (await Wallet.create([{ user: auth.userId }], { session }))[0];
     }
 
-    // 3️⃣ Balance doc
-    const balanceDoc = await WalletTokenBalance.findOne({
+    // 🔹 Balance doc
+    let balanceDoc = await WalletTokenBalance.findOne({
       wallet: wallet._id,
       token: token._id,
     }).session(session);
@@ -386,33 +398,37 @@ export async function POST(request) {
       throw new Error('Wallet token balance not found');
     }
 
-    // ⚠️ USD is inside same balance
+    // 🧠 FIX: old docs may not have purchasedBalance
+    if (typeof balanceDoc.purchasedBalance !== 'number') {
+      balanceDoc.purchasedBalance = 0;
+    }
+
     const currentUsd = balanceDoc.balance || 0;
 
+    // ❌ insufficient balance
     if (currentUsd < usdAmount) {
       throw new Error('Insufficient USD balance');
     }
 
-    // 4️⃣ Convert
-    const tokenAmount = Number((usdAmount / token.usdPerUnit).toFixed(8));
+    // 🔹 Calculate tokens
+    const tokenAmount = Number(
+      (usdAmount / token.usdPerUnit).toFixed(8)
+    );
 
     if (tokenAmount <= 0) {
-      throw new Error('Invalid conversion');
+      throw new Error('Amount too small');
     }
 
-    console.log('Before update:', balanceDoc);
-
-    // 5️⃣ SAFE UPDATE (IMPORTANT FIX)
+    // 🔥 UPDATE (safe + guaranteed)
     balanceDoc.balance = currentUsd - usdAmount;
+    balanceDoc.purchasedBalance += tokenAmount;
 
-    balanceDoc.purchasedBalance =
-      (balanceDoc.purchasedBalance || 0) + tokenAmount;
+    // 🔥 important for mongoose
+    balanceDoc.markModified('purchasedBalance');
 
     await balanceDoc.save({ session });
 
-    console.log('After update:', balanceDoc);
-
-    // 6️⃣ Ledger (safe single create)
+    // 🔹 Ledger entries
     await LedgerEntry.create(
       [
         {
@@ -423,6 +439,7 @@ export async function POST(request) {
           direction: 'debit',
           note: `USD spent for ${token.symbol}`,
           balanceAfter: balanceDoc.balance,
+          externalRef: `buy:${token.slug}`,
         },
         {
           userId: auth.userId,
@@ -430,24 +447,26 @@ export async function POST(request) {
           token: token.symbol,
           amount: tokenAmount,
           direction: 'credit',
-          note: `Token purchased`,
+          note: `Purchased ${token.symbol}`,
           balanceAfter: balanceDoc.purchasedBalance,
-        }
+          externalRef: `buy:${token.slug}`,
+        },
       ],
       { session, ordered: true }
     );
 
+    // ✅ Commit
     await session.commitTransaction();
     session.endSession();
 
     return NextResponse.json({
       ok: true,
-      message: 'Purchase successful',
+      message: `Successfully bought ${tokenAmount} ${token.symbol}`,
       data: {
         token: token.symbol,
         usdUsed: usdAmount,
         tokensReceived: tokenAmount,
-        balanceAfter: balanceDoc.balance,
+        remainingBalance: balanceDoc.balance,
         purchasedBalance: balanceDoc.purchasedBalance,
       },
     });
@@ -458,9 +477,14 @@ export async function POST(request) {
       session.endSession();
     }
 
-    return NextResponse.json({
-      ok: false,
-      error: err.message,
-    }, { status: 500 });
+    console.error('BUY ERROR:', err);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err.message,
+      },
+      { status: 500 }
+    );
   }
 }

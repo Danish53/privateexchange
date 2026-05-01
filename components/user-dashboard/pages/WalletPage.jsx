@@ -105,7 +105,7 @@ export default function WalletPage() {
           />
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm font-medium text-brand-muted">Total wallet value (USD eq.)</p>
+              <p className="text-sm font-medium text-brand-muted">Total wallet value (USD)</p>
               <p className="mt-2 text-3xl font-semibold tabular-nums tracking-[-0.04em] text-brand-heading sm:text-[2.125rem]">
                 {loading ? (
                   <span className="inline-flex items-center gap-2 text-brand-muted">
@@ -116,7 +116,7 @@ export default function WalletPage() {
                 )}
               </p>
               <p className="mt-2 text-xs text-brand-subtle">
-                {loading ? 'tokens' : `${totalTokensFormatted} tokens`} · Calculated from USD deposits using token conversion rates
+                Sum of listed token balances using each asset&apos;s reference rate.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
@@ -208,7 +208,7 @@ export default function WalletPage() {
                   className="w-full max-w-xs rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 sm:w-auto"
                 >
                   <option value="all">All tokens</option>
-                  {PLATFORM_TOKEN_SEED.map((t) => (
+                  {tokens.filter((t) => t.isActive === true).map((t) => (
                     <option key={t.slug} value={t.symbol}>
                       {t.name} ({t.symbol})
                     </option>
@@ -245,7 +245,8 @@ export default function WalletPage() {
                   </p>
                 ) : (
                   <ul className="divide-y divide-white/[0.04]">
-                    {hist.entries.map((tx) => {
+                    {/* first 10 history entries list */}
+                    {hist.entries.slice(0, 10).map((tx) => {
                       const icon = historyIcon(tx.type);
                       return (
                         <li
