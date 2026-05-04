@@ -13,6 +13,7 @@ import Panel from '@/components/user-dashboard/Panel';
 import { useUserWalletHistory } from '@/components/user-dashboard/useUserWalletHistory';
 import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
 import { useUserWallet } from '../useUserWallet';
+import { useEffect, useState } from 'react';
 
 function historyIcon(type) {
   if (type === 'fee') return 'fee';
@@ -22,7 +23,46 @@ function historyIcon(type) {
 
 export default function HistoryPage() {
   const hist = useUserWalletHistory({ limit: 200, enableTokenFilter: true });
-  const {tokens } = useUserWallet();
+  const { tokens } = useUserWallet();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage] = useState(10);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const filteredEntries = hist.entries.filter((tx) => {
+    // ✅ Token filter (FIX)
+    if (
+      hist.tokenFilter !== 'all' &&
+      tx.token?.toUpperCase() !== hist.tokenFilter.toUpperCase()
+    ) {
+      return false;
+    }
+
+    // ✅ Type filter
+    if (typeFilter !== 'all' && tx.typeLabel !== typeFilter) return false;
+
+    // ✅ Date filter
+    const txDate = new Date(tx.date);
+
+    if (startDate && txDate < new Date(startDate)) return false;
+    if (endDate && txDate > new Date(endDate)) return false;
+
+    return true;
+  });
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [filteredEntries]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage));
+
+  const paginatedEntries = filteredEntries.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
 
   return (
     <>
@@ -80,11 +120,60 @@ export default function HistoryPage() {
                 >
                   <option value="all">All tokens</option>
                   {tokens.filter((t) => t.isActive === true).map((t) => (
-                    <option key={t.slug} value={t.symbol}>
+                    <option key={t.slug} value={t.symbol} onChange={(e) => {
+                      hist.setTokenFilter(e.target.value);
+                      setCurrentPage(1); // ✅ add this
+                    }}>
                       {t.name} ({t.symbol})
                     </option>
                   ))}
                 </select>
+
+                <select
+                  value={typeFilter}
+                  onChange={(e) => {
+                    setTypeFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="rounded-xl px-3 py-2 text-sm bg-black/40 border border-white/10"
+                >
+                  <option value="all">All Types</option>
+                  <option value="Deposit">Deposit</option>
+                  <option value="Withdrawal">Withdrawal</option>
+                  <option value="Transfer">Transfer</option>
+                  <option value="Fee">Fee</option>
+                  <option value="Admin credit">Admin credit</option>
+                  <option value="Admin debit">Admin debit</option>
+                </select>
+
+                {/* DATE FROM */}
+                {/* <label className="flex items-center gap-1">
+                  <span className="sr-only">From date</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-xl px-3 py-2 text-sm bg-black/40 border border-white/10"
+                  />
+                </label> */}
+
+                {/* DATE TO */}
+                {/* <label className="flex items-center gap-1">
+                  <span className="sr-only">To date</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-xl px-3 py-2 text-sm bg-black/40 border border-white/10"
+                  />
+                </label> */}
+
               </label>
               <Link
                 href="/dashboard/user/wallet"
@@ -110,13 +199,13 @@ export default function HistoryPage() {
                   <span className="hidden text-right sm:block">Status</span>
                   <span className="text-right">Amount</span>
                 </div>
-                {hist.entries.length === 0 ? (
+                {paginatedEntries.length === 0 ? (
                   <p className="px-4 py-10 text-center text-sm text-brand-muted sm:px-5">
-                    No lines for this token filter. Try &quot;All tokens&quot; or pick another asset.
+                    No history found!
                   </p>
                 ) : (
                   <ul className="divide-y divide-white/[0.04]">
-                    {hist.entries.map((tx) => {
+                    {paginatedEntries.map((tx) => {
                       const icon = historyIcon(tx.type);
                       return (
                         <li
@@ -125,13 +214,12 @@ export default function HistoryPage() {
                         >
                           <div className="flex min-w-0 flex-1 items-center gap-3 sm:min-w-[12rem]">
                             <div
-                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${
-                                icon === 'in'
-                                  ? 'bg-emerald-500/12 text-emerald-300'
-                                  : icon === 'fee'
-                                    ? 'bg-amber-500/12 text-amber-200/95'
-                                    : 'bg-sky-500/10 text-sky-200/95'
-                              }`}
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${icon === 'in'
+                                ? 'bg-emerald-500/12 text-emerald-300'
+                                : icon === 'fee'
+                                  ? 'bg-amber-500/12 text-amber-200/95'
+                                  : 'bg-sky-500/10 text-sky-200/95'
+                                }`}
                             >
                               {icon === 'in' ? (
                                 <ArrowDown className="h-4 w-4" strokeWidth={2} aria-hidden />
@@ -157,9 +245,8 @@ export default function HistoryPage() {
                             </span>
                           </div>
                           <span
-                            className={`shrink-0 font-semibold tabular-nums ${
-                              tx.isCredit ? 'text-emerald-300/95' : 'text-red-300/90'
-                            }`}
+                            className={`shrink-0 font-semibold tabular-nums ${tx.isCredit ? 'text-emerald-300/95' : 'text-red-300/90'
+                              }`}
                           >
                             {tx.amountSigned}
                           </span>
@@ -170,6 +257,31 @@ export default function HistoryPage() {
                 )}
               </div>
             )}
+
+            <div className="flex items-center justify-between mt-4 text-sm">
+
+              <span className="text-brand-muted">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <div className="flex gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                  className="px-3 py-1 rounded bg-white/10 disabled:opacity-40"
+                >
+                  Prev
+                </button>
+
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                  className="px-3 py-1 rounded bg-white/10 disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </Panel>
         )}
       </div>

@@ -1,10 +1,68 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Coins, Calculator, Wallet, Loader2, CheckCircle, ArrowRight, Minus, Plus } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Coins, Calculator, Wallet, Loader2, CheckCircle, ArrowRight, Minus, Plus, AlertCircle, Check, RefreshCw } from 'lucide-react';
 import Panel from '@/components/user-dashboard/Panel';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { useAuth } from '@/components/auth-context';
+import { cn } from '@/lib/utils';
+
+function formatDateTime(iso) {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
+}
+
+function formatDepositAmount(n) {
+  if (typeof n !== 'number' || Number.isNaN(n)) return '—';
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 6,
+  }).format(n);
+}
+
+function DepositStatusBadge({ status }) {
+  const map = {
+    pending: { label: 'Pending', className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
+    completed: { label: 'Approved', className: 'border-emerald-500/35 bg-emerald-500/[0.1] text-emerald-100' },
+    cancelled: { label: 'Rejected', className: 'border-rose-500/35 bg-rose-500/[0.1] text-rose-100' },
+  };
+  const m = map[status] || { label: status, className: 'border-white/10 bg-white/5 text-brand-muted' };
+  return (
+    <span
+      className={cn(
+        'inline-flex rounded-md border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.06em]',
+        m.className
+      )}
+    >
+      {m.label}
+    </span>
+  );
+}
+
+function PaymentMethodBadge({ method }) {
+  const map = {
+    paypal: { label: 'PayPal', className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
+    crypto: { label: 'Crypto', className: 'border-purple-500/35 bg-purple-500/[0.1] text-purple-100' },
+  };
+  const m = map[method] || { label: method, className: 'border-white/10 bg-white/5 text-brand-muted' };
+  return (
+    <span
+      className={cn(
+        'inline-flex rounded-md border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.06em]',
+        m.className
+      )}
+    >
+      {m.label}
+    </span>
+  );
+}
 
 // Helper function for token initials (similar to TokenBalanceList)
 function tokenInitials(symbol) {
@@ -34,6 +92,40 @@ export default function BuyCryptoPage() {
   const [usdBalance, setUsdBalance] = useState(0);
   const [selectedTokenBalance, setSelectedTokenBalance] = useState(0);
   const [loadingTokens, setLoadingTokens] = useState(true);
+  const [myDeposits, setMyDeposits] = useState([]);
+  const [depositsLoading, setDepositsLoading] = useState(false);
+  const [depositsError, setDepositsError] = useState('');
+
+  const loadMyDeposits = useCallback(async () => {
+    if (!token) {
+      setMyDeposits([]);
+      return;
+    }
+    setDepositsError('');
+    setDepositsLoading(true);
+    try {
+      const res = await fetch('/api/user/deposit?limit=100', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDepositsError(json.error || 'Could not load your requests.');
+        setMyDeposits([]);
+        return;
+      }
+      setMyDeposits(Array.isArray(json.deposits) ? json.deposits : []);
+    } catch {
+      setDepositsError('Network error.');
+      setMyDeposits([]);
+    } finally {
+      setDepositsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!ready || !token) return;
+    loadMyDeposits();
+  }, [ready, token, loadMyDeposits]);
 
   // Load crypto tokens from API (dynamic from database)
   useEffect(() => {
@@ -102,8 +194,8 @@ export default function BuyCryptoPage() {
       return;
     }
 
-    // Find USD token (slug '759')
-    const usdToken = walletTokens.find(t => t.slug === '759');
+    // Find USD token (slug 'usd')
+    const usdToken = walletTokens.find(t => t.slug === 'usd');
     if (!usdToken) {
       setUsdBalance(0);
       return;
@@ -147,10 +239,10 @@ export default function BuyCryptoPage() {
       return;
     }
 
-    if (amount > totalUsdFormatted.replace(/[$,]/g, '')) {
+    if (amount > usdBalance) {
       setMessage({
         type: 'error',
-        text: `Insufficient USD balance to buy ${selectedToken.symbol}. You have $${totalUsdFormatted.replace(/[$,]/g, '')} USD available.`
+        text: `Insufficient USD balance to buy ${selectedToken.symbol}. You have $${usdBalance.toFixed(2)} USD available.`
       });
       return;
     }
@@ -296,7 +388,7 @@ export default function BuyCryptoPage() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {loadingTokens ? (
                         // Loading skeleton
-                        Array.from({ length: 4 }).map((_, i) => (
+                        Array.from({ length: 5 }).map((_, i) => (
                           <div
                             key={i}
                             className="p-4 rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-black/20 animate-pulse"
@@ -317,7 +409,7 @@ export default function BuyCryptoPage() {
                           </div>
                         ))
                       ) : tokens.length > 0 ? (
-                        tokens.map((token) => {
+                        tokens.filter((token) => token.slug !== 'usd').map((token) => {
                           const isSelected = selectedToken?._id === token._id;
 
                           return (
@@ -389,7 +481,7 @@ export default function BuyCryptoPage() {
                         Enter how much USD you want to convert
                       </p>
                       <p className="mt-1 text-xs text-brand-subtle">
-                        USD will be deducted from your USD balance (759 token)
+                        USD will be deducted from your USD balance
                       </p>
                     </div>
                     <div className="relative">
@@ -503,7 +595,7 @@ export default function BuyCryptoPage() {
                   <div>
                     <button
                       onClick={handleBuy}
-                      disabled={processing || !selectedToken || !usdAmount || parseFloat(usdAmount) <= 0 || parseFloat(usdAmount) > totalUsdFormatted.replace(/[$,]/g, '')}
+                      disabled={processing || !selectedToken || !usdAmount || parseFloat(usdAmount) <= 0 || parseFloat(usdAmount) > usdBalance}
                       className="group w-full flex items-center justify-center gap-3 py-3.5 px-6 bg-gradient-to-r from-brand-accent to-brand-accent/80 hover:from-brand-accent/90 hover:to-brand-accent/70 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-brand-accent/20 hover:shadow-brand-accent/30"
                     >
                       {processing ? (
@@ -546,6 +638,110 @@ export default function BuyCryptoPage() {
               </div>
             </div>
           </Panel>
+
+          <Panel>
+            <div className="space-y-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-brand-heading">Your deposit requests</h2>
+                  <p className="mt-1 text-sm text-brand-muted">
+                    PayPal and other deposit submissions: pending, approved, or rejected by admin.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadMyDeposits}
+                  disabled={depositsLoading}
+                  className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg border border-brand-border-muted bg-[var(--brand-surface)] px-3 py-2 text-sm font-medium text-brand-heading transition hover:border-brand-accent/30 hover:bg-[var(--brand-surface)]/80 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${depositsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
+
+              {depositsError && (
+                <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.08] p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-rose-300" />
+                    <div>
+                      <p className="font-medium text-rose-100">Could not load requests</p>
+                      <p className="mt-1 text-sm text-rose-200/80">{depositsError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {depositsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-brand-accent" />
+                </div>
+              ) : myDeposits.length === 0 ? (
+                <div className="rounded-2xl border border-brand-border-muted bg-[var(--brand-surface)]/40 p-8 text-center">
+                  <div className="mx-auto max-w-sm">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-brand-border-muted bg-black/30">
+                      <Check className="h-6 w-6 text-brand-muted" />
+                    </div>
+                    <h3 className="mt-4 text-sm font-semibold text-brand-heading">No deposit requests yet</h3>
+                    <p className="mt-2 text-xs text-brand-muted">
+                      When you submit a deposit (e.g. PayPal), it will appear here with its status.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-brand-border-muted bg-[var(--brand-surface)]/40">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-brand-border-muted bg-black/20">
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
+                            Amount
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
+                            Token
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
+                            Method
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
+                            Submitted
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="">
+                        {myDeposits.map((row) => (
+                          <tr key={String(row.id)} className="hover:bg-white/[0.02]">
+                            <td className="px-4 py-4 sm:px-6">
+                              <span className="font-mono text-sm font-semibold tabular-nums text-brand-heading">
+                                {formatDepositAmount(row.amount)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 sm:px-6">
+                              <span className="font-mono text-xs font-semibold text-brand-accent">{row.token}</span>
+                            </td>
+                            <td className="px-4 py-4 sm:px-6">
+                              <PaymentMethodBadge method={row.paymentMethod} />
+                            </td>
+                            <td className="px-4 py-4 sm:px-6">
+                              <span className="whitespace-nowrap text-xs text-brand-muted">
+                                {formatDateTime(row.createdAt)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 sm:px-6">
+                              <DepositStatusBadge status={row.status} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Panel>
+
         </div>
 
         {/* Right column: Info panel */}

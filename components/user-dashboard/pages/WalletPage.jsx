@@ -116,7 +116,7 @@ export default function WalletPage() {
                 )}
               </p>
               <p className="mt-2 text-xs text-brand-subtle">
-                Sum of listed token balances using each asset&apos;s reference rate.
+                USD Balance
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
@@ -138,7 +138,7 @@ export default function WalletPage() {
           </div>
         </section>
 
-        <Panel title="Deposit methods" subtitle="How you can add funds when each channel is enabled for your account.">
+        {/* <Panel title="Deposit methods" subtitle="How you can add funds when each channel is enabled for your account.">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {DEPOSIT_METHODS.map((m) => {
               const Icon = m.icon;
@@ -178,9 +178,9 @@ export default function WalletPage() {
               );
             })}
           </div>
-        </Panel>
+        </Panel> */}
 
-        <Panel title="Token balances" subtitle="One balance per token · all amounts from your wallet record">
+        <Panel title="Token balances" subtitle="Your current token balances.">
           {error ? (
             <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
               {error}

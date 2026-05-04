@@ -11,6 +11,62 @@ import Wallet from '@/lib/models/Wallet';
 export const runtime = 'nodejs';
 
 /**
+ * GET /api/user/deposit
+ * List the signed-in member's deposit requests (all statuses by default).
+ * Query: status=pending|completed|cancelled (optional), limit (default 50, max 100)
+ */
+export async function GET(request) {
+  try {
+    const auth = await loadRequestActor(request);
+    if ('error' in auth) return auth.error;
+
+    if (auth.user?.role !== 'user') {
+      return NextResponse.json(
+        { ok: false, error: 'Only member accounts can view deposit history.' },
+        { status: 403 }
+      );
+    }
+
+    await connectDB();
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 100);
+
+    const filter = { userId: auth.userId };
+    if (status && ['pending', 'completed', 'cancelled'].includes(status)) {
+      filter.status = status;
+    }
+
+    const deposits = await Deposit.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    const list = deposits.map((d) => ({
+      id: d._id,
+      amount: d.amount,
+      token: d.token,
+      paymentMethod: d.paymentMethod,
+      status: d.status,
+      note: d.note,
+      externalRef: d.externalRef,
+      approvedAt: d.approvedAt,
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+    }));
+
+    return NextResponse.json({ ok: true, deposits: list });
+  } catch (e) {
+    console.error('user/deposit GET', e);
+    return NextResponse.json(
+      { ok: false, error: 'Failed to load deposits.' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * POST /api/user/deposit
  * Create a deposit request (pending for PayPal, auto‑completed for crypto).
  * Body: { amount: number, token: string, paymentMethod: 'paypal' | 'crypto' }

@@ -202,7 +202,7 @@ export default function SuperAdminTokensPage() {
       <div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          {tokens.map((t, index) => (
+          {tokens.filter((t) => t.slug !== "usd").map((t, index) => (
             <div
               key={t._id || t.slug}
               className={cn(

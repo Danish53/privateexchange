@@ -14,93 +14,44 @@ export default function TokenBalanceList({ tokens = [] }) {
     );
   }
 
+  // Filter active tokens only
+  const activeTokens = tokens.filter((token) => token.isActive === true && token?.slug !== 'usd');
+
   return (
-    <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/[0.22]">
-      <div className="hidden border-b border-white/[0.06] px-4 py-2.5 sm:block sm:px-5">
-        <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto_auto_auto] items-center gap-4">
-          <span />
-          <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-            Asset
-          </span>
-          {/* <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-            Total
-          </span> */}
-          <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-            Purchased Tokens
-          </span>
-          <span className="text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-            USD
-          </span>
-        </div>
-      </div>
-      <ul className="divide-y divide-white/[0.04]">
-        {tokens.filter((token) => token.isActive === true).map((token) => {
-          const rowKey = token.slug || token.symbol;
-          const avatar = (
-            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.1] bg-gradient-to-br from-white/[0.08] to-black/55 text-[0.7rem] font-bold tracking-tight text-brand-heading shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] sm:h-[3.25rem] sm:w-[3.25rem] sm:text-xs">
-              <span
-                className={`pointer-events-none absolute inset-0 opacity-[0.24] ${token.bar}`}
-                aria-hidden
-              />
-              <span className="relative z-[1]">{tokenInitials(token.symbol)}</span>
+    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {activeTokens.map((token) => {
+        const rowKey = token.slug || token.symbol;
+        return (
+          <div
+            key={rowKey}
+            className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-black/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+          >
+            {/* Left colored bar matching token.bar */}
+            {/* <span
+              className={`pointer-events-none absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${token.bar || 'bg-gray-500'}`}
+              aria-hidden
+            /> */}
+            
+            {/* Token symbol and name */}
+            <div className="pl-2">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                {token.symbol}
+              </p>
+              <p className="font-mono font-semibold tabular-nums text-brand-heading">{token.name}</p>
             </div>
-          );
-          return (
-            <li
-              key={rowKey}
-              className="transition duration-200 hover:bg-[var(--brand-surface-hover)]/70"
-            >
-              <div className="px-4 py-4 sm:hidden">
-                <div className="flex items-start gap-3">
-                  {avatar}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold leading-tight text-brand-heading">{token.name}</p>
-                    <p className="mt-0.5 text-xs text-brand-subtle">{token.symbol}</p>
-                  </div>
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-4 border-t border-white/[0.05] pt-4">
-                  <div>
-                    {/* <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                      Total
-                    </p> */}
-                    {/* <p className="font-semibold tabular-nums text-brand-heading">{token.balance}</p> */}
-                  </div>
-                  <div>
-                    <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                      Purchased Tokens
-                    </p>
-                    <p className="font-semibold tabular-nums text-brand-heading">{token.purchasedBalance || '0'}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                      USD
-                    </p>
-                    <p className="text-sm font-semibold tabular-nums text-brand-heading">
-                      {token.value}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="hidden grid-cols-[3.25rem_minmax(0,1fr)_auto_auto_auto] items-center gap-4 px-5 py-4 sm:grid">
-                {avatar}
-                <div className="min-w-0">
-                  <p className="font-semibold leading-tight text-brand-heading">{token.name}</p>
-                  <p className="mt-0.5 text-xs text-brand-subtle">{token.symbol}</p>
-                </div>
-                {/* <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
-                  {token.balance}
-                </p> */}
-                <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
-                   {Math.floor(token.purchasedBalance || 0)} <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle ms-1"> tokens</span>
-                </p>
-                <p className="text-right text-base font-semibold tabular-nums text-brand-heading">
-                  {token.value} <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle ms-1"> USD</span>
-                </p>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+
+            {/* Token balance (amount) */}
+            <div className="pl-2 mt-3 border-t border-white/[0.06] pt-2">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                Balance
+              </p>
+              <p className="font-mono text-lg font-semibold tabular-nums text-brand-heading">
+                {token.balance}
+              </p>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -82,10 +82,9 @@ export default function SuperAdminWalletAdjustPage() {
       }
       setAdjustRow(json.wallet);
       const first = json.wallet.tokens?.[0]?.symbol;
-      // Use activeTokens if available, otherwise fallback to PLATFORM_TOKEN_SEED
-      const defaultToken = activeTokens.length > 0
-        ? activeTokens[0].symbol
-        : PLATFORM_TOKEN_SEED[0].symbol;
+      // Prefer USD if available in activeTokens or PLATFORM_TOKEN_SEED
+      const usdToken = (activeTokens.length > 0 ? activeTokens : PLATFORM_TOKEN_SEED).find(t => t.symbol === 'USD');
+      const defaultToken = usdToken ? usdToken.symbol : (activeTokens.length > 0 ? activeTokens[0].symbol : PLATFORM_TOKEN_SEED[0].symbol);
       setAdjustToken(String(first || defaultToken).toUpperCase());
     } catch {
       setLoadErr('Network error.');
@@ -135,9 +134,13 @@ export default function SuperAdminWalletAdjustPage() {
         const data = await res.json();
         if (data.success && data.data.length > 0) {
           setActiveTokens(data.data);
-          // Update adjustToken if not already set
-          if (!adjustToken && data.data[0]?.symbol) {
-            setAdjustToken(data.data[0].symbol.toUpperCase());
+          // Update adjustToken if not already set, prefer USD
+          if (!adjustToken) {
+            const usdToken = data.data.find(t => t.symbol === 'USD');
+            const defaultToken = usdToken ? usdToken.symbol : data.data[0]?.symbol;
+            if (defaultToken) {
+              setAdjustToken(defaultToken.toUpperCase());
+            }
           }
         }
       } catch (err) {
@@ -294,55 +297,66 @@ export default function SuperAdminWalletAdjustPage() {
                   </div>
                 ) : (
                   <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-                    {(activeTokens.length > 0 ? activeTokens : PLATFORM_TOKEN_SEED).map((t) => {
-                      const sym = String(t.symbol).toUpperCase();
-                      const selected = adjustToken === sym;
-                      const bal = tokenBalanceFromRow(adjustRow, sym);
-                      return (
-                        <button
-                          key={t.slug || t._id}
-                          type="button"
-                          onClick={() => {
-                            setAdjustToken(sym);
-                            setAdjustErr('');
-                            setAdjustSuccess('');
-                          }}
-                          className={cn(
-                            'relative flex flex-col rounded-xl border px-3 py-3.5 text-left transition-colors',
-                            selected
-                              ? 'border-brand-accent bg-[var(--brand-accent-soft)]/20 ring-2 ring-brand-accent/35'
-                              : 'border-white/[0.08] bg-black/25 hover:border-white/[0.14] hover:bg-black/35'
-                          )}
-                        >
-                          <span
+                    {(() => {
+                      // Static USD token (always shown)
+                      const USD_TOKEN = PLATFORM_TOKEN_SEED.find(t => t.symbol === 'USD') || PLATFORM_TOKEN_SEED[0];
+                      // Combine USD with active tokens, removing duplicate USD
+                      const displayTokens = [
+                        USD_TOKEN,
+                        ...(activeTokens.length > 0 ? activeTokens : PLATFORM_TOKEN_SEED).filter(
+                          t => t.symbol !== 'USD'
+                        )
+                      ];
+                      return displayTokens.map((t) => {
+                        const sym = String(t.symbol).toUpperCase();
+                        const selected = adjustToken === sym;
+                        const bal = tokenBalanceFromRow(adjustRow, sym);
+                        return (
+                          <button
+                            key={t.slug || t._id}
+                            type="button"
+                            onClick={() => {
+                              setAdjustToken(sym);
+                              setAdjustErr('');
+                              setAdjustSuccess('');
+                            }}
                             className={cn(
-                              'pointer-events-none absolute bottom-2.5 left-2 top-2.5 w-1 rounded-full',
-                              t.bar || 'bg-gray-500'
+                              'relative flex flex-col rounded-xl border px-3 py-3.5 text-left transition-colors',
+                              selected
+                                ? 'border-brand-accent bg-[var(--brand-accent-soft)]/20 ring-2 ring-brand-accent/35'
+                                : 'border-white/[0.08] bg-black/25 hover:border-white/[0.14] hover:bg-black/35'
                             )}
-                            aria-hidden
-                          />
-                          <span className="pl-3 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                            {t.symbol}
-                          </span>
-                          <span className="pl-3 mt-0.5 text-sm font-semibold leading-tight text-brand-heading">
-                            {t.name}
-                          </span>
-                          <span className="pl-3 mt-2 border-t border-white/[0.06] pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-brand-subtle">
-                            Balance
-                          </span>
-                          <span className="pl-3 mt-0.5 font-mono text-sm font-semibold tabular-nums text-brand-heading">
-                            {bal}
-                          </span>
-                          {selected ? (
-                            <span className="pl-3 mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-brand-accent">
-                              Selected
+                          >
+                            <span
+                              // className={cn(
+                              //   'pointer-events-none absolute bottom-2.5 left-2 top-2.5 w-1 rounded-full',
+                              //   t.bar || 'bg-gray-500'
+                              // )}
+                              aria-hidden
+                            />
+                            <span className="pl-3 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                              {t.symbol}
                             </span>
-                          ) : (
-                            <span className="pl-3 mt-1 text-[0.6rem] text-brand-subtle">Tap to select</span>
-                          )}
-                        </button>
-                      );
-                    })}
+                            <span className="pl-3 mt-0.5 text-sm font-semibold leading-tight text-brand-heading">
+                              {t.name}
+                            </span>
+                            <span className="pl-3 mt-2 border-t border-white/[0.06] pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-brand-subtle">
+                              Balance
+                            </span>
+                            <span className="pl-3 mt-0.5 font-mono text-sm font-semibold tabular-nums text-brand-heading">
+                              {bal}
+                            </span>
+                            {selected ? (
+                              <span className="pl-3 mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-brand-accent">
+                                Selected
+                              </span>
+                            ) : (
+                              <span className="pl-3 mt-1 text-[0.6rem] text-brand-subtle">Tap to select</span>
+                            )}
+                          </button>
+                        );
+                      });
+                    })()}
                   </div>
                 )}
               </section>

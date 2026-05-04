@@ -72,7 +72,7 @@ export default function DepositPage() {
   const [paymentSuccess, setPaymentSuccess] = useState('');
   const [depositResult, setDepositResult] = useState(null);
 
-  // Fetch active tokens
+  // Fetch active tokens (we still fetch but don't use for token selection)
   useEffect(() => {
     const fetchActiveTokens = async () => {
       setLoadingActiveTokens(true);
@@ -81,7 +81,7 @@ export default function DepositPage() {
         const data = await res.json();
         if (data.success && data.data.length > 0) {
           setActiveTokens(data.data);
-          setSelectedToken(data.data[0].symbol);
+          // Don't override selectedToken - keep it as 'USD'
         }
       } catch (err) {
         console.error('Failed to fetch active tokens:', err);
@@ -99,7 +99,14 @@ export default function DepositPage() {
   };
 
   const selectedMethodData = DEPOSIT_METHODS.find(m => m.id === selectedMethod);
-  const selectedTokenData = activeTokens.find(t => t.symbol === selectedToken) || activeTokens[0];
+  // Static USD token object (always USD for deposits)
+  const usdToken = {
+    symbol: 'USD',
+    name: 'US Dollar',
+    usdPerUnit: 1,
+    bar: 'bg-amber-500'
+  };
+  const selectedTokenData = usdToken; // Always USD
 
   // Calculate tokens user will receive based on usdPerUnit with precise calculation
   const calculateTokensToReceive = () => {
@@ -164,7 +171,7 @@ export default function DepositPage() {
         headers,
         body: JSON.stringify({
           amount: parseFloat(amount),
-          token: selectedToken,
+          token: 'USD', // Always USD for deposits
           paymentMethod: selectedMethod,
         }),
       });
@@ -256,60 +263,29 @@ export default function DepositPage() {
         </div>
       </Panel>
 
-      {/* Token Selection - Form-like */}
-      <Panel title="Select Token" subtitle="Choose token to receive">
-        {loadingActiveTokens ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-accent" />
-            <span className="ml-3 text-brand-subtle">Loading tokens...</span>
-          </div>
-        ) : activeTokens.length === 0 ? (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-center">
-            <p className="text-amber-300">No active tokens available.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-              {activeTokens.map((token) => (
-                <button
-                  key={token.symbol}
-                  type="button"
-                  onClick={() => setSelectedToken(token.symbol)}
-                  className={`rounded-lg border p-3 text-center transition-colors ${
-                    selectedToken === token.symbol
-                      ? 'border-brand-accent bg-brand-accent/10'
-                      : 'border-white/10 bg-white/5 hover:border-white/20'
-                  }`}
-                >
-                  <div className="text-sm font-semibold text-white">{token.symbol}</div>
-                  <div className="mt-1 text-xs text-brand-subtle">
-                    ${token.usdPerUnit?.toFixed(4)}
-                  </div>
-                </button>
-              ))}
-            </div>
-            
-            {selectedTokenData && (
-              <div className="rounded-lg border border-brand-accent/20 bg-brand-accent/5 p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-brand-subtle">Selected</p>
-                    <p className="font-semibold text-white">
-                      {selectedTokenData.name} ({selectedTokenData.symbol})
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-brand-subtle">Rate</p>
-                    <p className="font-semibold text-brand-accent">
-                      $1 = {(1 / selectedTokenData.usdPerUnit).toFixed(4)} {selectedTokenData.symbol}
-                    </p>
-                  </div>
-                </div>
+      {/* Token Information - Always USD */}
+      {/* <Panel title="Deposit Token" subtitle="All deposits go to USD balance">
+        <div className="rounded-lg border border-brand-accent/20 bg-brand-accent/5 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20">
+                <span className="text-lg font-bold text-amber-400">$</span>
               </div>
-            )}
+              <div>
+                <p className="text-sm text-brand-subtle">Token</p>
+                <p className="font-semibold text-white">US Dollar (USD)</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-brand-subtle">Rate</p>
+              <p className="font-semibold text-brand-accent">$1 = 1.0000 USD</p>
+            </div>
           </div>
-        )}
-      </Panel>
+          <p className="mt-3 text-sm text-brand-subtle">
+            All deposits will be credited to your USD token balance. You can convert USD to other tokens later.
+          </p>
+        </div>
+      </Panel> */}
 
       {/* Amount Input */}
       <Panel title="Enter Amount" subtitle="How much do you want to deposit?">
@@ -327,7 +303,7 @@ export default function DepositPage() {
               step="0.01"
             />
             <div className="ml-4 rounded-lg bg-white/10 px-3 py-2">
-              <span className="font-medium text-white">{selectedToken}</span>
+              <span className="font-medium text-white">USD</span>
             </div>
           </div>
 
@@ -354,16 +330,16 @@ export default function DepositPage() {
                   <div>
                     <p className="text-sm text-brand-subtle">You will receive</p>
                     <p className="text-lg font-bold text-white">
-                      {Math.floor(tokensToReceive)} <span className="text-[0.70rem] font-semibold uppercase tracking-wide text-brand-subtle ms-1"> {selectedToken}</span>
+                      {Math.floor(tokensToReceive)} <span className="text-[0.70rem] font-semibold uppercase tracking-wide text-brand-subtle ms-1"> USD</span>
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
+                {/* <div className="text-right">
                   <p className="text-sm text-brand-subtle">Price per token</p>
                   <p className="font-medium text-brand-accent">
                     ${selectedTokenData.usdPerUnit?.toFixed(4)}
                   </p>
-                </div>
+                </div> */}
               </div>
             </div>
           )}
@@ -421,10 +397,10 @@ export default function DepositPage() {
                   <span className="font-medium text-white">{selectedMethodData?.name}</span>
                 </div>
               </div>
-              <div className="flex justify-between">
+              {/* <div className="flex justify-between">
                 <span className="text-brand-subtle">Token</span>
-                <span className="font-medium text-white">{selectedToken}</span>
-              </div>
+                <span className="font-medium text-white">USD</span>
+              </div> */}
               <div className="flex justify-between">
                 <span className="text-brand-subtle">Amount</span>
                 <span className="text-xl font-bold text-white">${amount}</span>
@@ -437,12 +413,12 @@ export default function DepositPage() {
                 <div className="flex justify-between">
                   <span className="text-brand-subtle">You will receive</span>
                   <span className="text-xl font-bold text-brand-accent">
-                    {tokensToReceive.toFixed(4)} {selectedToken}
+                    {tokensToReceive} USD
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-brand-subtle">
-                  Rate: $1 = {(1 / (selectedTokenData?.usdPerUnit || 1)).toFixed(4)} {selectedToken}
-                </p>
+                {/* <p className="mt-1 text-xs text-brand-subtle">
+                  Rate: $1 = {(1 / (selectedTokenData?.usdPerUnit || 1)).toFixed(4)} USD
+                </p> */}
               </div>
             </div>
           </div>
@@ -453,7 +429,7 @@ export default function DepositPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-lg font-semibold text-white">Crypto Deposit</h4>
-                  <p className="text-sm text-amber-200/80">Send {selectedToken} to address below</p>
+                  <p className="text-sm text-amber-200/80">Send USD to address below</p>
                 </div>
                 <Coins className="h-10 w-10 text-amber-400" />
               </div>
@@ -476,7 +452,7 @@ export default function DepositPage() {
                   </button>
                 </div>
                 <p className="mt-3 text-xs text-amber-200/60">
-                  Only send {selectedToken} tokens to this address. Sending other tokens may result in loss.
+                  Only send USD tokens to this address. Sending other tokens may result in loss.
                 </p>
               </div>
             </div>

@@ -204,7 +204,7 @@ export default function SuperAdminUserWalletDetailPage() {
             </div>
             <div className="rounded-xl border border-brand-accent/20 bg-[var(--brand-accent-soft)]/15 px-4 py-3 text-right">
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                Total (USD eq.)
+                Total (USD)
               </p>
               <p className="mt-1 text-2xl font-semibold tabular-nums text-brand-heading">{w.balanceDisplay}</p>
             </div>
@@ -218,21 +218,21 @@ export default function SuperAdminUserWalletDetailPage() {
               </div>
             ) : (
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                {(activeTokens.length > 0 ? activeTokens : PLATFORM_TOKEN_SEED).map((t) => {
-                  const sym = String(t.symbol).toUpperCase();
-                  const bal = tokenBalanceFromRow(w, sym);
-                  return (
-                    <div
-                      key={t.slug || t._id}
-                      className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-black/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
-                    >
-                      <span
-                        className={cn(
-                          'pointer-events-none absolute left-0 top-0 bottom-0 w-1 rounded-l-xl',
+                {activeTokens.filter((t) => t.slug !== "usd").map((t) => {
+                    const sym = String(t.symbol).toUpperCase();
+                    const bal = tokenBalanceFromRow(w, sym);
+                    return (
+                      <div
+                        key={t.slug || t._id}
+                        className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-black/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+                      >
+                        {/* <span
+                          className={cn(
+                            'pointer-events-none absolute left-0 top-0 bottom-0 w-1 rounded-l-xl',
                           t.bar || 'bg-gray-500'
                         )}
                         aria-hidden
-                      />
+                      /> */}
                       <p className="pl-2 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
                         {t.symbol}
                       </p>

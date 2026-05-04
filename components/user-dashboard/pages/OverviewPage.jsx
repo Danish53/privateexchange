@@ -59,7 +59,7 @@ export default function OverviewPage() {
                   )}
                 </p>
                 <p className="mt-2 text-xs text-brand-subtle">
-                  Sum of listed token balances using each asset&apos;s reference rate.
+                  USD Balance
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full border border-white/[0.1] bg-black/30 px-3.5 py-1.5 text-xs font-semibold text-brand-heading shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
@@ -85,7 +85,7 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        <Panel title="Token balances" subtitle="Per-token rows from your wallet · USD uses each token’s reference rate">
+        <Panel title="Token balances" subtitle="Your current token balances.">
           {error ? (
             <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
               {error}

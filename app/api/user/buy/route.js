@@ -368,7 +368,16 @@ export async function POST(request) {
     session = await mongoose.startSession();
     session.startTransaction();
 
-    // 🔹 Token fetch
+    // 🔹 Find USD token (slug 'usd')
+    const usdToken = await Token.findOne({
+      slug: 'usd',
+    }).session(session);
+
+    if (!usdToken || !usdToken.isActive) {
+      throw new Error('USD token not available');
+    }
+
+    // 🔹 Find selected token to buy
     const token = await Token.findOne({
       slug: tokenSlug.toLowerCase(),
     }).session(session);
@@ -388,29 +397,45 @@ export async function POST(request) {
       wallet = (await Wallet.create([{ user: auth.userId }], { session }))[0];
     }
 
-    // 🔹 Balance doc
-    let balanceDoc = await WalletTokenBalance.findOne({
+    // 🔹 Find USD token balance (to deduct from)
+    let usdBalanceDoc = await WalletTokenBalance.findOne({
+      wallet: wallet._id,
+      token: usdToken._id,
+    }).session(session);
+
+    if (!usdBalanceDoc) {
+      throw new Error('USD wallet balance not found');
+    }
+
+    const currentUsdBalance = usdBalanceDoc.balance || 0;
+
+    // ❌ insufficient USD balance
+    if (currentUsdBalance < usdAmount) {
+      throw new Error(`Insufficient USD balance. You have $${currentUsdBalance.toFixed(2)} USD available.`);
+    }
+
+    // 🔹 Find selected token balance (to add purchasedBalance)
+    let tokenBalanceDoc = await WalletTokenBalance.findOne({
       wallet: wallet._id,
       token: token._id,
     }).session(session);
 
-    if (!balanceDoc) {
-      throw new Error('Wallet token balance not found');
+    if (!tokenBalanceDoc) {
+      // Create token balance if doesn't exist
+      tokenBalanceDoc = (await WalletTokenBalance.create([{
+        wallet: wallet._id,
+        token: token._id,
+        balance: 0,
+        // purchasedBalance: 0,
+      }], { session }))[0];
     }
 
     // 🧠 FIX: old docs may not have purchasedBalance
-    if (typeof balanceDoc.purchasedBalance !== 'number') {
-      balanceDoc.purchasedBalance = 0;
+    if (typeof tokenBalanceDoc.balance !== 'number') {
+      tokenBalanceDoc.balance = 0;
     }
 
-    const currentUsd = balanceDoc.balance || 0;
-
-    // ❌ insufficient balance
-    if (currentUsd < usdAmount) {
-      throw new Error('Insufficient USD balance');
-    }
-
-    // 🔹 Calculate tokens
+    // 🔹 Calculate tokens to receive
     const tokenAmount = Number(
       (usdAmount / token.usdPerUnit).toFixed(8)
     );
@@ -419,40 +444,28 @@ export async function POST(request) {
       throw new Error('Amount too small');
     }
 
-    // 🔥 UPDATE (safe + guaranteed)
-    balanceDoc.balance = currentUsd - usdAmount;
-    balanceDoc.purchasedBalance += tokenAmount;
+    // 🔥 UPDATE USD balance (deduct)
+    usdBalanceDoc.balance = currentUsdBalance - usdAmount;
+    await usdBalanceDoc.save({ session });
 
-    // 🔥 important for mongoose
-    balanceDoc.markModified('purchasedBalance');
+    // 🔥 UPDATE token balance (add)
+    tokenBalanceDoc.balance += tokenAmount;
+    tokenBalanceDoc.markModified('balance');
+    await tokenBalanceDoc.save({ session });
 
-    await balanceDoc.save({ session });
-
-    // 🔹 Ledger entries
+    // 🔹 Single ledger entry for conversion (as requested by user)
     await LedgerEntry.create(
-      [
-        {
-          userId: auth.userId,
-          type: 'transfer',
-          token: token.symbol,
-          amount: usdAmount,
-          direction: 'debit',
-          note: `USD spent for ${token.symbol}`,
-          balanceAfter: balanceDoc.balance,
-          externalRef: `buy:${token.slug}`,
-        },
-        {
-          userId: auth.userId,
-          type: 'transfer',
-          token: token.symbol,
-          amount: tokenAmount,
-          direction: 'credit',
-          note: `Purchased ${token.symbol}`,
-          balanceAfter: balanceDoc.purchasedBalance,
-          externalRef: `buy:${token.slug}`,
-        },
-      ],
-      { session, ordered: true }
+      [{
+        userId: auth.userId,
+        type: 'transfer',
+        token: token.symbol,
+        amount: tokenAmount,
+        direction: 'credit',
+        note: `Converted $${usdAmount.toFixed(2)} USD to ${tokenAmount.toFixed(8)} ${token.symbol}`,
+        balanceAfter: tokenBalanceDoc.balance,
+        externalRef: `buy:${token.slug}`,
+      }],
+      { session }
     );
 
     // ✅ Commit
@@ -461,13 +474,13 @@ export async function POST(request) {
 
     return NextResponse.json({
       ok: true,
-      message: `Successfully bought ${tokenAmount} ${token.symbol}`,
+      message: `${tokenAmount} ${token.symbol} Buy successful!`,
       data: {
         token: token.symbol,
         usdUsed: usdAmount,
         tokensReceived: tokenAmount,
-        remainingBalance: balanceDoc.balance,
-        purchasedBalance: balanceDoc.purchasedBalance,
+        remainingUsdBalance: usdBalanceDoc.balance,
+        totalTokenBalance: tokenBalanceDoc.balance,
       },
     });
 
