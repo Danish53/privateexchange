@@ -11,8 +11,8 @@ import {
   Banknote,
   ArrowRightLeft,
   CheckCircle2,
-  Loader2,
 } from 'lucide-react';
+import { UsdHeroSkeleton, TokenBalanceCardsSkeleton, LedgerTableSkeleton } from '@/components/ui/content-skeletons';
 import Panel from '@/components/user-dashboard/Panel';
 import TokenBalanceList from '@/components/user-dashboard/TokenBalanceList';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
@@ -48,7 +48,7 @@ const DEPOSIT_METHODS = [
 
 function historyIcon(type) {
   if (type === 'fee') return 'fee';
-  if (type === 'deposit' || type === 'admin_credit') return 'in';
+  if (type === 'deposit' || type === 'admin_credit' || type === 'buy') return 'in';
   return 'out';
 }
 
@@ -107,13 +107,7 @@ export default function WalletPage() {
             <div>
               <p className="text-sm font-medium text-brand-muted">Total wallet value (USD)</p>
               <p className="mt-2 text-3xl font-semibold tabular-nums tracking-[-0.04em] text-brand-heading sm:text-[2.125rem]">
-                {loading ? (
-                  <span className="inline-flex items-center gap-2 text-brand-muted">
-                    <Loader2 className="h-7 w-7 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-                  </span>
-                ) : (
-                  totalUsdFormatted
-                )}
+                {loading ? <UsdHeroSkeleton className="mt-0" /> : totalUsdFormatted}
               </p>
               <p className="mt-2 text-xs text-brand-subtle">
                 USD Balance
@@ -186,9 +180,7 @@ export default function WalletPage() {
               {error}
             </div>
           ) : loading ? (
-            <div className="flex min-h-[160px] items-center justify-center rounded-xl border border-brand-border-muted bg-black/20">
-              <Loader2 className="h-8 w-8 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-            </div>
+            <TokenBalanceCardsSkeleton count={5} className="mt-0" />
           ) : (
             <TokenBalanceList tokens={tokens} />
           )}
@@ -228,9 +220,7 @@ export default function WalletPage() {
                 {hist.error}
               </div>
             ) : hist.loading ? (
-              <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-brand-border-muted bg-black/20">
-                <Loader2 className="h-8 w-8 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-              </div>
+              <LedgerTableSkeleton rows={10} className="rounded-xl border border-white/[0.05] bg-black/[0.2]" />
             ) : (
               <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/[0.2]">
                 <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-white/[0.06] px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] sm:px-5">

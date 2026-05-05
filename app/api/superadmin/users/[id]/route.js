@@ -74,7 +74,7 @@ export async function PATCH(request, context) {
       return NextResponse.json({ ok: false, error: 'Cannot edit a super admin account.' }, { status: 403 });
     }
 
-    const profileKeys = ['name', 'phone', 'country', 'timezone', 'emailVerified', 'role', 'email'];
+    const profileKeys = ['name', 'phone', 'country', 'timezone', 'emailVerified', 'role', 'email', 'isVip'];
     const touchesProfile = profileKeys.some((k) => body[k] !== undefined);
     const touchesAdminPerms = body.adminPermissions !== undefined;
 
@@ -129,6 +129,9 @@ export async function PATCH(request, context) {
       }
       if (body.emailVerified !== undefined) {
         target.emailVerified = Boolean(body.emailVerified);
+      }
+      if (body.isVip !== undefined) {
+        target.isVip = Boolean(body.isVip);
       }
       if (body.role !== undefined) {
         if (!isSuper) {
@@ -194,6 +197,7 @@ export async function PATCH(request, context) {
         email: saved.email,
         name: saved.name || '',
         role: saved.role,
+        isVip: !!saved.isVip,
         emailVerified: !!saved.emailVerified,
         phone: saved.phone || '',
         country: saved.country || '',

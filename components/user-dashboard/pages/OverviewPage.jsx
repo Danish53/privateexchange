@@ -1,16 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, ArrowRightLeft, Gift, Wallet, Loader2 } from 'lucide-react';
+import { ArrowRight, ArrowRightLeft, Gift, Wallet } from 'lucide-react';
 import Panel from '@/components/user-dashboard/Panel';
 import TokenBalanceList from '@/components/user-dashboard/TokenBalanceList';
 import { MEMBERSHIP } from '@/components/user-dashboard/constants';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { useUserWalletHistory } from '@/components/user-dashboard/useUserWalletHistory';
+import { UsdHeroSkeleton, TokenBalanceCardsSkeleton } from '@/components/ui/content-skeletons';
 
 function overviewHistoryIcon(type) {
   if (type === 'fee') return 'fee';
-  if (type === 'deposit' || type === 'admin_credit') return 'in';
+  if (type === 'deposit' || type === 'admin_credit' || type === 'buy') return 'in';
   return 'out';
 }
 
@@ -50,13 +51,7 @@ export default function OverviewPage() {
               <div>
                 <p className="text-sm font-medium text-brand-muted">Total balance (USD)</p>
                 <p className="mt-2 text-3xl font-semibold tabular-nums tracking-[-0.04em] text-brand-heading sm:text-[2.25rem] sm:leading-none">
-                  {loading ? (
-                    <span className="inline-flex items-center gap-2 text-brand-muted">
-                      <Loader2 className="h-7 w-7 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-                    </span>
-                  ) : (
-                    totalUsdFormatted
-                  )}
+                  {loading ? <UsdHeroSkeleton className="mt-0" /> : totalUsdFormatted}
                 </p>
                 <p className="mt-2 text-xs text-brand-subtle">
                   USD Balance
@@ -91,9 +86,7 @@ export default function OverviewPage() {
               {error}
             </div>
           ) : loading ? (
-            <div className="flex min-h-[160px] items-center justify-center rounded-xl border border-brand-border-muted bg-black/20">
-              <Loader2 className="h-8 w-8 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-            </div>
+            <TokenBalanceCardsSkeleton count={5} className="mt-0" />
           ) : (
             <TokenBalanceList tokens={tokens} />
           )}

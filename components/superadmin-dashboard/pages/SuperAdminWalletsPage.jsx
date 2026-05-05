@@ -13,7 +13,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Loader2,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -22,6 +21,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { AdminDataTableSkeleton } from '@/components/ui/content-skeletons';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { cn } from '@/lib/utils';
 import { mergeAdminPermissions } from '@/lib/adminPermissions';
@@ -330,8 +330,8 @@ export default function SuperAdminWalletsPage() {
         />
 
         {loading ? (
-          <div className="flex min-h-[280px] items-center justify-center py-16">
-            <Loader2 className="h-9 w-9 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+          <div className="relative py-2">
+            <AdminDataTableSkeleton rows={10} headerCells={7} minHeight="min-h-[280px]" />
           </div>
         ) : (
           <>

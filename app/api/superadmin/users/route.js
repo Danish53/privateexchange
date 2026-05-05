@@ -62,7 +62,7 @@ export async function GET(request) {
       User.countDocuments(filter),
       User.find(filter)
         .select(
-          'email name role emailVerified phone country timezone avatarUrl createdAt updatedAt deletedAt adminPermissions'
+          'email name role isVip emailVerified phone country timezone avatarUrl createdAt updatedAt deletedAt adminPermissions'
         )
         .sort({ [sortBy]: sortOrder })
         .skip(skip)
@@ -75,6 +75,7 @@ export async function GET(request) {
       email: u.email,
       name: u.name || '',
       role: u.role,
+      isVip: !!u.isVip,
       emailVerified: !!u.emailVerified,
       phone: u.phone || '',
       country: u.country || '',
@@ -122,6 +123,7 @@ export async function POST(request) {
       password: body.password,
       name: body.name,
       role,
+      isVip: body.isVip,
       adminPermissions:
         auth.isSuperAdmin && role === 'admin' && body.adminPermissions
           ? body.adminPermissions

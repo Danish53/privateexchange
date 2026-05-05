@@ -13,9 +13,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Users, Wallet, ShieldCheck, UserPlus, ArrowUpRight, ArrowRight, Loader2 } from 'lucide-react';
+import { Users, Wallet, ShieldCheck, UserPlus, ArrowUpRight, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { hasAnyUsersModulePermission } from '@/lib/adminPermissions';
+import { AdminStatsRowSkeleton, AdminChartsRowSkeleton } from '@/components/ui/content-skeletons';
 
 const ACCENT = '#c9a227';
 const ACCENT_FAINT = 'rgba(201, 162, 39, 0.12)';
@@ -178,8 +179,9 @@ export default function SuperAdminOverviewPage() {
       </div>
 
       {loading ? (
-        <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-brand-border-muted bg-black/20">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+        <div className="space-y-8">
+          <AdminStatsRowSkeleton cards={4} />
+          <AdminChartsRowSkeleton />
         </div>
       ) : error ? (
         <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">

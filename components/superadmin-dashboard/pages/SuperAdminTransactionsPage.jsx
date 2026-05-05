@@ -13,7 +13,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Loader2,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -23,18 +22,20 @@ import {
   Clock,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { AdminDataTableSkeleton } from '@/components/ui/content-skeletons';
 import { cn } from '@/lib/utils';
 
 const TYPE_LABELS = {
   deposit: 'Deposit',
   withdrawal: 'Withdrawal',
+  buy: 'Buy',
   transfer: 'Transfer',
   fee: 'Fee',
   admin_credit: 'Admin credit',
   admin_debit: 'Admin debit',
 };
 
-const TYPE_ORDER = ['deposit', 'withdrawal', 'transfer', 'fee', 'admin_credit', 'admin_debit'];
+const TYPE_ORDER = ['deposit', 'withdrawal', 'buy', 'transfer', 'fee', 'admin_credit', 'admin_debit'];
 
 const TOKEN_FILTERS = ['759', 'CRISTALINO', 'ANEJO', 'RAFFLE', 'SUSU'];
 
@@ -63,6 +64,7 @@ function TypeBadge({ type }) {
   const styles = {
     deposit: 'border-emerald-500/35 bg-emerald-500/[0.1] text-emerald-100',
     withdrawal: 'border-rose-500/35 bg-rose-500/[0.1] text-rose-100',
+    buy: 'border-indigo-500/35 bg-indigo-500/[0.1] text-indigo-100',
     transfer: 'border-sky-500/35 bg-sky-500/[0.1] text-sky-100',
     fee: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100',
     admin_credit: 'border-violet-500/35 bg-violet-500/[0.1] text-violet-100',
@@ -436,8 +438,8 @@ export default function SuperAdminTransactionsPage() {
         />
 
         {loading ? (
-          <div className="flex min-h-[280px] items-center justify-center py-16">
-            <Loader2 className="h-9 w-9 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+          <div className="relative py-2">
+            <AdminDataTableSkeleton rows={10} headerCells={7} minHeight="min-h-[280px]" />
           </div>
         ) : (
           <>

@@ -30,6 +30,7 @@ export default function SuperAdminCreateUserPage() {
   const { token, user } = useAuth();
   const isSuperAdmin = user?.role === 'superadmin';
   const [role, setRole] = useState('user');
+  const [isVip, setIsVip] = useState(false);
   const [adminPermissions, setAdminPermissions] = useState(() => ({ ...DEFAULT_ADMIN_PERMISSIONS }));
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -66,6 +67,7 @@ export default function SuperAdminCreateUserPage() {
           password,
           name: name.trim(),
           role: isSuperAdmin ? role : 'user',
+          isVip: (isSuperAdmin ? role : 'user') === 'user' ? isVip : false,
           ...(isSuperAdmin && role === 'admin'
             ? { adminPermissions: mergeAdminPermissions(adminPermissions) }
             : {}),
@@ -82,6 +84,7 @@ export default function SuperAdminCreateUserPage() {
       setEmail('');
       setPassword('');
       setConfirm('');
+      setIsVip(false);
     } catch {
       setError('Network error.');
     } finally {
@@ -256,6 +259,24 @@ export default function SuperAdminCreateUserPage() {
                 <p className="text-[0.65rem] leading-relaxed text-brand-muted">
                   Adjust includes view. View-only shows balances in the table; adjust unlocks the Manage panel.
                 </p>
+              </div>
+            ) : null}
+            {(isSuperAdmin ? role : 'user') === 'user' ? (
+              <div className="space-y-2 rounded-xl border border-white/[0.06] bg-black/25 p-4">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                  User flags
+                </p>
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-brand-border-muted bg-black/30 px-3 py-2.5 text-sm text-brand-muted transition hover:border-white/[0.08]">
+                  <input
+                    id="sa-user-isvip"
+                    type="checkbox"
+                    checked={isVip}
+                    onChange={(e) => setIsVip(e.target.checked)}
+                    disabled={loading}
+                    className="h-4 w-4 rounded border-brand-border-muted bg-black/40 text-brand-accent focus:ring-brand-accent/30 disabled:opacity-40"
+                  />
+                  <span className="font-medium text-brand-heading">VIP user (isVip)</span>
+                </label>
               </div>
             ) : null}
             <div>

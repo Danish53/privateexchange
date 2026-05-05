@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, Wallet, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Wallet, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { cn } from '@/lib/utils';
+import { AdminMemberWalletSkeleton, TokenBalanceCardsSkeleton } from '@/components/ui/content-skeletons';
 import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
 import { mergeAdminPermissions, hasAnyWalletsPermission } from '@/lib/adminPermissions';
 import { avatarSrc } from '@/lib/avatarUrl';
@@ -129,9 +130,7 @@ export default function SuperAdminUserWalletDetailPage() {
       </div>
 
       {loading ? (
-        <div className="flex min-h-[240px] items-center justify-center py-16">
-          <Loader2 className="h-9 w-9 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-        </div>
+        <AdminMemberWalletSkeleton tokenCount={5} />
       ) : error ? (
         <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
           {error}
@@ -213,9 +212,7 @@ export default function SuperAdminUserWalletDetailPage() {
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-subtle">Token balances</h2>
             {loadingActiveTokens ? (
-              <div className="mt-3 flex min-h-[120px] items-center justify-center rounded-xl border border-white/[0.08] bg-black/25">
-                <Loader2 className="h-6 w-6 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-              </div>
+              <TokenBalanceCardsSkeleton count={5} className="mt-3" />
             ) : (
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {activeTokens.filter((t) => t.slug !== "usd").map((t) => {

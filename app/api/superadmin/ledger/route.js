@@ -41,7 +41,7 @@ export async function GET(request) {
 
     const filter = {};
 
-    if (type && ['deposit', 'withdrawal', 'transfer', 'fee', 'admin_credit', 'admin_debit'].includes(type)) {
+    if (type && ['deposit', 'withdrawal', 'buy', 'transfer', 'fee', 'admin_credit', 'admin_debit'].includes(type)) {
       filter.type = type;
     }
     if (token) {

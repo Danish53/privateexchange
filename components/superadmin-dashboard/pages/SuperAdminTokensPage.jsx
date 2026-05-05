@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import CreateTokenModal from '../tokenmodal/CreateTokenModal';
+import { AdminStatsRowSkeleton } from '@/components/ui/content-skeletons';
 
 
 function StatChip({ icon: Icon, label, value }) {
@@ -101,11 +102,7 @@ export default function SuperAdminTokensPage() {
   if (loading) {
     return (
       <div className="space-y-8">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-white/10" />
-          ))}
-        </div>
+        <AdminStatsRowSkeleton cards={4} />
 
         <div className="grid gap-4 lg:grid-cols-2">
           {[...Array(4)].map((_, i) => (
@@ -150,9 +147,9 @@ export default function SuperAdminTokensPage() {
   return (
     <div className="space-y-8">
       <div className="border-b border-white/[0.06] pb-6">
-        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Settings</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Tokens Management</h1>
         <p className="mt-1 max-w-3xl text-sm text-brand-muted">
-          Global platform configuration and operational toggles.
+          Manage the tokens available on the platform.
         </p>
       </div>
 

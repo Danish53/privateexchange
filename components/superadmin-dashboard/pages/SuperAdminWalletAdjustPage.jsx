@@ -6,6 +6,11 @@ import { useParams, useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, Plus, Minus, History } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { cn } from '@/lib/utils';
+import {
+  TokenBalanceCardsSkeleton,
+  AdminAdjustmentHistorySkeleton,
+} from '@/components/ui/content-skeletons';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
 import { mergeAdminPermissions } from '@/lib/adminPermissions';
 
@@ -252,8 +257,16 @@ export default function SuperAdminWalletAdjustPage() {
       </div>
 
       {loadingWallet ? (
-        <div className="flex min-h-[200px] items-center justify-center py-16">
-          <Loader2 className="h-9 w-9 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+        <div className="space-y-6">
+          <div className="flex flex-wrap gap-2 rounded-xl border border-white/[0.06] bg-black/25 px-4 py-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-24 rounded-md" aria-hidden />
+            ))}
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-black/[0.35] to-[#060708] p-5 sm:p-6">
+            <Skeleton className="h-3 w-36" aria-hidden />
+            <TokenBalanceCardsSkeleton count={6} className="mt-4" />
+          </div>
         </div>
       ) : loadErr || !adjustRow ? (
         <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
@@ -292,9 +305,7 @@ export default function SuperAdminWalletAdjustPage() {
                   Step 1 — Select token
                 </h2>
                 {loadingActiveTokens ? (
-                  <div className="mt-3 flex min-h-[120px] items-center justify-center rounded-xl border border-white/[0.08] bg-black/25">
-                    <Loader2 className="h-6 w-6 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-                  </div>
+                  <TokenBalanceCardsSkeleton count={6} className="mt-3" />
                 ) : (
                   <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
                     {(() => {
@@ -485,9 +496,7 @@ export default function SuperAdminWalletAdjustPage() {
             </div>
 
             {historyLoading ? (
-              <div className="mt-6 flex justify-center py-8">
-                <Loader2 className="h-7 w-7 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-              </div>
+              <AdminAdjustmentHistorySkeleton cards={6} />
             ) : memberHistory.length === 0 ? (
               <p className="mt-6 rounded-xl border border-dashed border-white/[0.1] bg-black/20 px-3 py-4 text-center text-sm text-brand-muted">
                 No admin adjustments yet for this account.

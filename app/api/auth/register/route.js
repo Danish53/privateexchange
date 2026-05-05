@@ -48,6 +48,7 @@ export async function POST(request) {
       user.passwordHash = passwordHash;
       user.name = name || user.name;
       user.role = role;
+      user.isVip = false;
       user.verificationOtpHash = otpHash;
       user.verificationOtpExpires = verificationOtpExpires;
       await user.save();
@@ -57,6 +58,7 @@ export async function POST(request) {
         passwordHash,
         name,
         role,
+        isVip: false,
         emailVerified: false,
         verificationOtpHash: otpHash,
         verificationOtpExpires,

@@ -6,9 +6,9 @@ import {
   ArrowUp,
   Activity,
   CheckCircle2,
-  Loader2,
   Wallet,
 } from 'lucide-react';
+import { LedgerTableSkeleton } from '@/components/ui/content-skeletons';
 import Panel from '@/components/user-dashboard/Panel';
 import { useUserWalletHistory } from '@/components/user-dashboard/useUserWalletHistory';
 import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react';
 
 function historyIcon(type) {
   if (type === 'fee') return 'fee';
-  if (type === 'deposit' || type === 'admin_credit') return 'in';
+  if (type === 'deposit' || type === 'admin_credit' || type === 'buy') return 'in';
   return 'out';
 }
 
@@ -139,6 +139,7 @@ export default function HistoryPage() {
                 >
                   <option value="all">All Types</option>
                   <option value="Deposit">Deposit</option>
+                  <option value="Buy">Buy</option>
                   <option value="Withdrawal">Withdrawal</option>
                   <option value="Transfer">Transfer</option>
                   <option value="Fee">Fee</option>
@@ -188,9 +189,7 @@ export default function HistoryPage() {
                 {hist.error}
               </div>
             ) : hist.loading ? (
-              <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-brand-border-muted bg-black/20">
-                <Loader2 className="h-8 w-8 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-              </div>
+              <LedgerTableSkeleton rows={10} className="rounded-xl border border-white/[0.05] bg-black/[0.2]" />
             ) : (
               <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/[0.2]">
                 <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-white/[0.06] px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] sm:px-5">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check, X, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { cn } from '@/lib/utils';
+import { DepositRequestsTableSkeleton } from '@/components/ui/content-skeletons';
 
 function formatDateTime(iso) {
   if (!iso) return '—';
@@ -127,8 +128,9 @@ export default function SuperAdminDepositManagement() {
 
   if (!ready) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-brand-accent" />
+      <div className="space-y-6 py-2">
+        <div className="h-8 w-48 animate-pulse rounded-lg bg-white/[0.06]" aria-hidden />
+        <DepositRequestsTableSkeleton rows={5} />
       </div>
     );
   }
@@ -165,9 +167,7 @@ export default function SuperAdminDepositManagement() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-accent" />
-        </div>
+        <DepositRequestsTableSkeleton rows={6} />
       ) : deposits.length === 0 ? (
         <div className="rounded-2xl border border-brand-border-muted bg-[var(--brand-surface)]/40 p-8 text-center">
           <div className="mx-auto max-w-sm">
@@ -209,7 +209,7 @@ export default function SuperAdminDepositManagement() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-brand-border-muted/50">
+              <tbody className="">
                 {deposits.map((deposit) => (
                   <tr key={deposit.id} className="hover:bg-white/[0.02]">
                     <td className="px-6 py-4">

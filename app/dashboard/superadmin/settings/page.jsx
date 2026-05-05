@@ -1,14 +1,13 @@
 'use client';
 
+import SuperAdminSettingsPage from '@/components/superadmin-dashboard/pages/SuperAdminSettingsPage';
 import SuperAdminTokensPage from '@/components/superadmin-dashboard/pages/SuperAdminTokensPage';
-// import SuperAdminPageFrame from '@/components/superadmin-dashboard/SuperAdminPageFrame';
 
-export default function SuperAdminSettingsPage() {
+export default function SuperAdminSettingsRoute() {
   return (
-    // <SuperAdminPageFrame
-    //   title="Settings"
-    //   description="Global platform configuration and operational toggles."
-    // />
-    <SuperAdminTokensPage />
+    <div className="space-y-10">
+      <SuperAdminSettingsPage />
+      <SuperAdminTokensPage />
+    </div>
   );
 }

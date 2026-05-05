@@ -27,6 +27,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { AdminDataTableSkeleton } from '@/components/ui/content-skeletons';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { cn } from '@/lib/utils';
 import { mergeAdminPermissions, hasAnyWalletsPermission } from '@/lib/adminPermissions';
@@ -648,8 +649,8 @@ export default function SuperAdminUsersPage() {
         />
 
         {loading ? (
-          <div className="flex min-h-[320px] items-center justify-center py-16">
-            <Loader2 className="h-9 w-9 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
+          <div className="relative py-2">
+            <AdminDataTableSkeleton rows={12} headerCells={7} minHeight="min-h-[320px]" />
           </div>
         ) : (
           <>

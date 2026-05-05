@@ -453,11 +453,11 @@ export async function POST(request) {
     tokenBalanceDoc.markModified('balance');
     await tokenBalanceDoc.save({ session });
 
-    // 🔹 Single ledger entry for conversion (as requested by user)
+    // 🔹 Single ledger entry for conversion
     await LedgerEntry.create(
       [{
         userId: auth.userId,
-        type: 'transfer',
+        type: 'buy',
         token: token.symbol,
         amount: tokenAmount,
         direction: 'credit',

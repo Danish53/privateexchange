@@ -6,6 +6,12 @@ import Panel from '@/components/user-dashboard/Panel';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { useAuth } from '@/components/auth-context';
 import { cn } from '@/lib/utils';
+import {
+  UsdHeroSkeleton,
+  UsdInlineSkeleton,
+  BuyTokenPickerSkeleton,
+  DepositRequestsTableSkeleton,
+} from '@/components/ui/content-skeletons';
 
 function formatDateTime(iso) {
   if (!iso) return '—';
@@ -349,13 +355,7 @@ export default function BuyCryptoPage() {
               Available Balance
             </p>
             <p className="mt-2 text-3xl font-semibold tabular-nums tracking-[-0.04em] text-brand-heading sm:text-[2.25rem] sm:leading-none">
-              {loading ? (
-                <span className="inline-flex items-center gap-2 text-brand-muted">
-                  <Loader2 className="h-7 w-7 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-                </span>
-              ) : (
-                totalUsdFormatted
-              )}
+              {loading ? <UsdHeroSkeleton className="mt-0" /> : totalUsdFormatted}
             </p>
             <p className="mt-0.5 text-xs text-brand-muted">
               USD · Ready to spend
@@ -387,27 +387,7 @@ export default function BuyCryptoPage() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {loadingTokens ? (
-                        // Loading skeleton
-                        Array.from({ length: 5 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="p-4 rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-black/20 animate-pulse"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-gray-700">
-                                <div className="h-full w-full bg-gray-600" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="h-4 bg-gray-600 rounded w-3/4 mb-2"></div>
-                                <div className="h-3 bg-gray-700 rounded w-1/2"></div>
-                                <div className="mt-2 flex items-center justify-between">
-                                  <div className="h-3 bg-gray-700 rounded w-1/4"></div>
-                                  <div className="h-3 bg-gray-600 rounded w-1/3"></div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))
+                        <BuyTokenPickerSkeleton count={6} className="col-span-full" />
                       ) : tokens.length > 0 ? (
                         tokens.filter((token) => token.slug !== 'usd').map((token) => {
                           const isSelected = selectedToken?._id === token._id;
@@ -505,13 +485,7 @@ export default function BuyCryptoPage() {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-brand-muted">Available USD balance:</span>
                         <span className="font-semibold tabular-nums text-brand-heading">
-                          {loading ? (
-                            <span className="inline-flex items-center gap-2 text-brand-muted">
-                              <Loader2 className="h-4 w-4 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-                            </span>
-                          ) : (
-                            `${totalUsdFormatted}`
-                          )}
+                          {loading ? <UsdInlineSkeleton className="inline-block align-middle" /> : `${totalUsdFormatted}`}
                         </span>
                       </div>
                       {selectedToken && (
@@ -639,7 +613,7 @@ export default function BuyCryptoPage() {
             </div>
           </Panel>
 
-          <Panel>
+          {/* <Panel>
             <div className="space-y-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -672,9 +646,7 @@ export default function BuyCryptoPage() {
               )}
 
               {depositsLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-brand-accent" />
-                </div>
+                <DepositRequestsTableSkeleton rows={5} />
               ) : myDeposits.length === 0 ? (
                 <div className="rounded-2xl border border-brand-border-muted bg-[var(--brand-surface)]/40 p-8 text-center">
                   <div className="mx-auto max-w-sm">
@@ -740,7 +712,7 @@ export default function BuyCryptoPage() {
                 </div>
               )}
             </div>
-          </Panel>
+          </Panel> */}
 
         </div>
 
@@ -754,13 +726,7 @@ export default function BuyCryptoPage() {
             <div className="space-y-4">
               <div className="text-center p-4 bg-brand-card border border-brand-border rounded-lg">
                 <div className="text-3xl font-bold text-brand-heading">
-                  {loading ? (
-                    <span className="inline-flex items-center gap-2 text-brand-muted">
-                      <Loader2 className="h-7 w-7 animate-spin text-brand-accent/80" strokeWidth={1.5} aria-hidden />
-                    </span>
-                  ) : (
-                    totalUsdFormatted
-                  )}
+                  {loading ? <UsdHeroSkeleton className="mx-auto mt-0" /> : totalUsdFormatted}
                 </div>
                 <div className="text-sm text-brand-subtle mt-1">
                   Available for token purchases
