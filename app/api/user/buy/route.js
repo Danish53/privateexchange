@@ -326,6 +326,7 @@ import WalletTokenBalance from '@/lib/models/WalletTokenBalance';
 import LedgerEntry from '@/lib/models/LedgerEntry';
 import mongoose from 'mongoose';
 import User from '@/lib/models/User';
+import { formatNumberSmart } from '@/lib/numberFormat';
 
 export const runtime = 'nodejs';
 
@@ -411,7 +412,7 @@ export async function POST(request) {
 
     // ❌ insufficient USD balance
     if (currentUsdBalance < usdAmount) {
-      throw new Error(`Insufficient USD balance. You have $${currentUsdBalance.toFixed(2)} USD available.`);
+      throw new Error(`Insufficient USD balance. You have $${formatNumberSmart(currentUsdBalance, { maxFractionDigits: 2 })} available.`);
     }
 
     // 🔹 Find selected token balance (to add purchasedBalance)
@@ -461,7 +462,7 @@ export async function POST(request) {
         token: token.symbol,
         amount: tokenAmount,
         direction: 'credit',
-        note: `Converted $${usdAmount.toFixed(2)} USD to ${tokenAmount.toFixed(8)} ${token.symbol}`,
+        note: `Converted $${formatNumberSmart(usdAmount, { maxFractionDigits: 2 })} USD to ${formatNumberSmart(tokenAmount, { maxFractionDigits: 2 })} ${token.symbol}`,
         balanceAfter: tokenBalanceDoc.balance,
         externalRef: `buy:${token.slug}`,
       }],
@@ -474,7 +475,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       ok: true,
-      message: `${tokenAmount} ${token.symbol} Buy successful!`,
+      message: `${formatNumberSmart(tokenAmount, { maxFractionDigits: 2 })} ${token.symbol} Buy successful!`,
       data: {
         token: token.symbol,
         usdUsed: usdAmount,

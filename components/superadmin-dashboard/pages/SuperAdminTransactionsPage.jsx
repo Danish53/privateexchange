@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/components/auth-context';
 import { AdminDataTableSkeleton } from '@/components/ui/content-skeletons';
 import { cn } from '@/lib/utils';
+import { formatNumberSmart } from '@/lib/numberFormat';
 
 const TYPE_LABELS = {
   deposit: 'Deposit',
@@ -53,10 +54,7 @@ function formatDateTime(iso) {
 
 function formatAmount(n) {
   if (typeof n !== 'number' || Number.isNaN(n)) return '—';
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 6,
-  }).format(n);
+  return formatNumberSmart(n, { maxFractionDigits: 2 });
 }
 
 function TypeBadge({ type }) {

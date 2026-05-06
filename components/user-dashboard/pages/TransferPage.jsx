@@ -7,9 +7,12 @@ import Panel from '@/components/user-dashboard/Panel';
 import { useAuth } from '@/components/auth-context';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useToast } from '@/components/ui/toast-context';
+import { formatNumberSmart } from '@/lib/numberFormat';
 
 export default function TransferPage() {
   const { token, user } = useAuth();
+  const toast = useToast();
   const { tokens: walletTokens, loading: walletLoading } = useUserWallet();
   const [tokens, setTokens] = useState([]);
   const [loadingTokens, setLoadingTokens] = useState(true);
@@ -89,7 +92,9 @@ export default function TransferPage() {
       : transferFee.amount;
   const totalDebit = normalizedAmount + feeAmount;
   const feeDisplay =
-    transferFee.type === 'percentage' ? `${transferFee.amount} %` : transferFee.amount.toFixed(8);
+    transferFee.type === 'percentage'
+      ? `${formatNumberSmart(transferFee.amount, { maxFractionDigits: 2 })} %`
+      : formatNumberSmart(transferFee.amount, { maxFractionDigits: 2 });
   const selectedTokenWallet = walletTokens.find(
     (t) => String(t.symbol || '').toUpperCase() === String(selectedToken || '').toUpperCase()
   );
@@ -97,7 +102,7 @@ export default function TransferPage() {
   const hasEnoughBalance = selectedTokenBalance >= totalDebit;
   const amountError =
     normalizedAmount > 0 && !walletLoading && !hasEnoughBalance
-      ? `Insufficient ${selectedToken} balance. Available ${selectedTokenBalance.toFixed(8)}, required ${totalDebit.toFixed(8)}.`
+      ? `Insufficient ${selectedToken} balance. Available ${formatNumberSmart(selectedTokenBalance, { maxFractionDigits: 2 })}, required ${formatNumberSmart(totalDebit, { maxFractionDigits: 2 })}.`
       : '';
   const canSubmit = !!recipient && !!selectedToken && normalizedAmount > 0 && hasEnoughBalance && !submitting;
 
@@ -109,7 +114,9 @@ export default function TransferPage() {
     setSubmitSuccess('');
     if (!email) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setRecipientError('Please enter a valid email address.');
+      const msg = 'Please enter a valid email address.';
+      setRecipientError(msg);
+      toast.error(msg, { title: 'Recipient Error' });
       return;
     }
     if (!token) return;
@@ -120,12 +127,15 @@ export default function TransferPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        setRecipientError(json.error || 'Recipient not found.');
+        const msg = json.error || 'Recipient not found.';
+        setRecipientError(msg);
+        toast.error(msg, { title: 'Recipient Error' });
         return;
       }
       setRecipient(json.recipient);
     } catch {
       setRecipientError('Could not verify recipient right now.');
+      toast.error('Could not verify recipient right now.', { title: 'Recipient Error' });
     } finally {
       setCheckingRecipient(false);
     }
@@ -136,7 +146,9 @@ export default function TransferPage() {
     setSubmitError('');
     setSubmitSuccess('');
     if (!canSubmit || !token) {
-      setSubmitError('Please complete recipient, token, and amount.');
+      const msg = 'Please complete recipient, token, and amount.';
+      setSubmitError(msg);
+      toast.error(msg, { title: 'Transfer Failed' });
       return;
     }
     try {
@@ -155,13 +167,19 @@ export default function TransferPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        setSubmitError(json.error || 'Transfer failed.');
+        const msg = json.error || 'Transfer failed.';
+        setSubmitError(msg);
+        toast.error(msg, { title: 'Transfer Failed' });
         return;
       }
-      setSubmitSuccess(json.message || 'Transfer completed.');
+      const successMsg = json.message || 'Transfer completed.';
+      setSubmitSuccess(successMsg);
+      toast.success(successMsg, { title: 'Transfer Complete' });
       setAmount('');
     } catch {
-      setSubmitError('Network error while transferring.');
+      const msg = 'Network error while transferring.';
+      setSubmitError(msg);
+      toast.error(msg, { title: 'Transfer Failed' });
     } finally {
       setSubmitting(false);
     }
@@ -308,7 +326,7 @@ export default function TransferPage() {
               <p className="mt-2 text-xs text-brand-muted">
                 {walletLoading
                   ? 'Loading balance...'
-                  : `Available ${selectedToken || 'token'} balance: ${selectedTokenBalance.toFixed(8)}`}
+                  : `Available ${selectedToken || 'token'} balance: ${formatNumberSmart(selectedTokenBalance, { maxFractionDigits: 2 })}`}
               </p>
             </div>
 
@@ -350,7 +368,9 @@ export default function TransferPage() {
                   amount ? <div className="flex items-center justify-between text-sm">
                     <span className="text-brand-muted">Network / transfer fee</span>
                     <span className="font-semibold tabular-nums text-brand-heading">
-                      {loadingFee ? <Skeleton className="h-5 w-20" /> : `${feeAmount.toFixed(4)} ${selectedToken || ''}`}
+                      {loadingFee
+                        ? <Skeleton className="h-5 w-20" />
+                        : `${formatNumberSmart(feeAmount, { maxFractionDigits: 2 })} ${selectedToken || ''}`}
                     </span>
                   </div> : ""
                 }
@@ -366,7 +386,9 @@ export default function TransferPage() {
                     <span className="text-sm font-medium text-brand-heading">Estimated total</span>
                     {
                       amount ? <span className="text-lg font-semibold tabular-nums text-brand-accent">
-                        {loadingFee ? '...' : `${totalDebit.toFixed(4)} ${selectedToken || ''}`}
+                        {loadingFee
+                          ? '...'
+                          : `${formatNumberSmart(totalDebit, { maxFractionDigits: 2 })} ${selectedToken || ''}`}
                       </span> : ""
                     }
                   </div>
@@ -379,16 +401,7 @@ export default function TransferPage() {
               </div>
             </div>
 
-            {submitError ? (
-              <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
-                {submitError}
-              </div>
-            ) : null}
-            {submitSuccess ? (
-              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-3 text-sm text-emerald-100/95">
-                {submitSuccess}
-              </div>
-            ) : null}
+            {submitError || submitSuccess ? null : null}
 
             <button
               type="submit"

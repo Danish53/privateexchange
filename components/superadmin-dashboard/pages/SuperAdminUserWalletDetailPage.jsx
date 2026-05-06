@@ -11,6 +11,7 @@ import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
 import { mergeAdminPermissions, hasAnyWalletsPermission } from '@/lib/adminPermissions';
 import { avatarSrc } from '@/lib/avatarUrl';
 import { emailInitials } from '@/components/user-dashboard/utils';
+import FeedbackMessage from '@/components/ui/FeedbackMessage';
 
 function tokenBalanceFromRow(row, symbolUpper) {
   const sym = String(symbolUpper).toUpperCase();
@@ -81,17 +82,17 @@ export default function SuperAdminUserWalletDetailPage() {
 
   if (!userId) {
     return (
-      <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
-        Missing user id.
-      </div>
+      <FeedbackMessage tone="error" title="Invalid Request" message="Missing user id." />
     );
   }
 
   if (!canViewWallets) {
     return (
-      <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3 text-sm text-amber-100/95">
-        You don&apos;t have permission to view wallets. Ask a super admin to grant wallet access.
-      </div>
+      <FeedbackMessage
+        tone="info"
+        title="Access Required"
+        message="You don't have permission to view wallets. Ask a super admin to grant wallet access."
+      />
     );
   }
 
@@ -132,9 +133,7 @@ export default function SuperAdminUserWalletDetailPage() {
       {loading ? (
         <AdminMemberWalletSkeleton tokenCount={5} />
       ) : error ? (
-        <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
-          {error}
-        </div>
+        <FeedbackMessage tone="error" title="Wallet Error" message={error} />
       ) : nonMember ? (
         <div className="space-y-4 rounded-2xl border border-white/[0.08] bg-black/[0.25] p-6">
           {payload?.archived ? (

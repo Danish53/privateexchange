@@ -9,6 +9,7 @@ import WalletTokenBalance from '@/lib/models/WalletTokenBalance';
 import LedgerEntry from '@/lib/models/LedgerEntry';
 import PlatformSetting from '@/lib/models/PlatformSetting';
 import { ensureWalletForMemberUser } from '@/lib/walletService';
+import { formatNumberSmart } from '@/lib/numberFormat';
 
 export const runtime = 'nodejs';
 
@@ -114,7 +115,7 @@ export async function POST(request) {
 
     if ((Number(senderBal.balance) || 0) < totalDebit) {
       throw new Error(
-        `INSUFFICIENT_BALANCE:${tokenSymbol}:${totalDebit.toFixed(8)}:${Number(senderBal.balance || 0).toFixed(8)}`
+        `INSUFFICIENT_BALANCE:${tokenSymbol}:${formatNumberSmart(totalDebit, { maxFractionDigits: 2 })}:${formatNumberSmart(Number(senderBal.balance || 0), { maxFractionDigits: 2 })}`
       );
     }
 

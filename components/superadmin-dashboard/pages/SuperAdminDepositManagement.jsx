@@ -5,6 +5,7 @@ import { Check, X, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { cn } from '@/lib/utils';
 import { DepositRequestsTableSkeleton } from '@/components/ui/content-skeletons';
+import { formatNumberSmart } from '@/lib/numberFormat';
 
 function formatDateTime(iso) {
   if (!iso) return '—';
@@ -20,10 +21,7 @@ function formatDateTime(iso) {
 
 function formatAmount(n) {
   if (typeof n !== 'number' || Number.isNaN(n)) return '—';
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 6,
-  }).format(n);
+  return formatNumberSmart(n, { maxFractionDigits: 2 });
 }
 
 function StatusBadge({ status }) {
@@ -78,7 +76,7 @@ export default function SuperAdminDepositManagement() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('/api/superadmin/deposits?status=pending&limit=50', {
+      const res = await fetch('/api/superadmin/deposits?status=pending&paymentMethod=paypal&limit=50', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json().catch(() => ({}));

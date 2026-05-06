@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import CreateTokenModal from '../tokenmodal/CreateTokenModal';
 import { AdminStatsRowSkeleton } from '@/components/ui/content-skeletons';
+import { formatNumberSmart } from '@/lib/numberFormat';
 
 
 function StatChip({ icon: Icon, label, value }) {
@@ -259,7 +260,7 @@ export default function SuperAdminTokensPage() {
                     USD Per Token
                   </dt>
                   <dd className="mt-1 font-mono text-sm tabular-nums text-brand-heading">
-                    ${parseFloat(t.usdPerUnit || 0).toFixed(4)}
+                    ${formatNumberSmart(parseFloat(t.usdPerUnit || 0), { maxFractionDigits: 2 })}
                   </dd>
                 </div>
 

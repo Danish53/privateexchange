@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, Save, Percent, DollarSign } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { Skeleton } from '@/components/ui/Skeleton';
+import FeedbackMessage from '@/components/ui/FeedbackMessage';
 
 function amountPlaceholder(type) {
   return type === 'percentage' ? 'e.g. 2.5' : 'e.g. 0.50';
@@ -120,16 +121,8 @@ export default function SuperAdminSettingsPage() {
         </p>
       </div>
 
-      {error ? (
-        <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
-          {error}
-        </div>
-      ) : null}
-      {success ? (
-        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-3 text-sm text-emerald-100/95">
-          {success}
-        </div>
-      ) : null}
+      {error ? <FeedbackMessage tone="error" title="Settings Error" message={error} /> : null}
+      {success ? <FeedbackMessage tone="success" title="Saved" message={success} /> : null}
 
       <form
         onSubmit={onSave}

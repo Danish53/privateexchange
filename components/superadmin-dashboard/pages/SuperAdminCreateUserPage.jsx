@@ -8,6 +8,7 @@ import { useAuth } from '@/components/auth-context';
 import PasswordField from '@/components/auth/PasswordField';
 import { cn } from '@/lib/utils';
 import { DEFAULT_ADMIN_PERMISSIONS, mergeAdminPermissions } from '@/lib/adminPermissions';
+import FeedbackMessage from '@/components/ui/FeedbackMessage';
 
 function PermToggle({ id, label, checked, onChange, disabled = false }) {
   return (
@@ -132,31 +133,25 @@ export default function SuperAdminCreateUserPage() {
           </div>
 
           {success ? (
-            <div className="mb-6 flex gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-3 text-sm text-emerald-100/95">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" strokeWidth={2} aria-hidden />
-              <div>
-                <p className="font-medium">{success}</p>
-                {emailSent === false ? (
-                  <p className="mt-2 text-xs text-emerald-100/80">
-                    SMTP missing: share credentials manually or add SMTP_* vars so the next user gets email
-                    automatically.
-                  </p>
-                ) : null}
-                <Link
-                  href="/dashboard/superadmin/users"
-                  className="mt-2 inline-block text-xs font-semibold text-brand-accent hover:underline"
-                >
-                  View users list →
-                </Link>
-              </div>
+            <div className="mb-6 space-y-3">
+              <FeedbackMessage tone="success" title="User Created" message={success} />
+              {emailSent === false ? (
+                <FeedbackMessage
+                  tone="info"
+                  title="Email Not Sent"
+                  message="SMTP is missing: share credentials manually or add SMTP_* vars for automatic email delivery."
+                />
+              ) : null}
+              <Link
+                href="/dashboard/superadmin/users"
+                className="inline-block text-xs font-semibold text-brand-accent hover:underline"
+              >
+                View users list →
+              </Link>
             </div>
           ) : null}
 
-          {error ? (
-            <div className="mb-6 rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
-              {error}
-            </div>
-          ) : null}
+          {error ? <FeedbackMessage tone="error" title="Create Failed" message={error} className="mb-6" /> : null}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

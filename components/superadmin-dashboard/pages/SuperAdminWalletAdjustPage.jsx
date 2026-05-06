@@ -13,6 +13,7 @@ import {
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
 import { mergeAdminPermissions } from '@/lib/adminPermissions';
+import FeedbackMessage from '@/components/ui/FeedbackMessage';
 
 function formatDateTime(iso) {
   if (!iso) return '—';
@@ -230,9 +231,7 @@ export default function SuperAdminWalletAdjustPage() {
 
   if (!userId) {
     return (
-      <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
-        Missing wallet user id.
-      </div>
+      <FeedbackMessage tone="error" title="Invalid Request" message="Missing wallet user id." />
     );
   }
 
@@ -269,16 +268,10 @@ export default function SuperAdminWalletAdjustPage() {
           </div>
         </div>
       ) : loadErr || !adjustRow ? (
-        <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
-          {loadErr || 'Wallet not found.'}
-        </div>
+        <FeedbackMessage tone="error" title="Wallet Error" message={loadErr || 'Wallet not found.'} />
       ) : !canAdjustWallets ? null : (
         <div className="space-y-6">
-          {adjustSuccess ? (
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.1] px-4 py-3 text-sm text-emerald-100/95">
-              {adjustSuccess}
-            </div>
-          ) : null}
+          {adjustSuccess ? <FeedbackMessage tone="success" title="Saved" message={adjustSuccess} /> : null}
 
           <div className="flex flex-wrap gap-2 rounded-xl border border-white/[0.06] bg-black/25 px-4 py-3">
             <span className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
@@ -456,11 +449,7 @@ export default function SuperAdminWalletAdjustPage() {
                 </div>
               </section>
 
-              {adjustErr ? (
-                <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
-                  {adjustErr}
-                </div>
-              ) : null}
+              {adjustErr ? <FeedbackMessage tone="error" title="Adjustment Failed" message={adjustErr} /> : null}
 
               <div className="flex flex-wrap gap-2">
                 <button

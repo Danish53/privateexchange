@@ -65,6 +65,13 @@ export async function PATCH(request, context) {
       );
     }
 
+    if (deposit.paymentMethod === 'crypto') {
+      return NextResponse.json(
+        { ok: false, error: 'Crypto deposits are processed automatically via blockchain confirmation.' },
+        { status: 400 }
+      );
+    }
+
     const newStatus = action === 'approve' ? 'completed' : 'cancelled';
     const adminNote = note?.trim() || (action === 'approve' ? 'Admin approved' : 'Admin cancelled');
 

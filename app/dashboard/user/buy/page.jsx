@@ -6,6 +6,8 @@ import Panel from '@/components/user-dashboard/Panel';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { useAuth } from '@/components/auth-context';
 import { cn } from '@/lib/utils';
+import { formatCurrencySmart, formatNumberSmart } from '@/lib/numberFormat';
+import { useToast } from '@/components/ui/toast-context';
 import {
   UsdHeroSkeleton,
   UsdInlineSkeleton,
@@ -27,10 +29,7 @@ function formatDateTime(iso) {
 
 function formatDepositAmount(n) {
   if (typeof n !== 'number' || Number.isNaN(n)) return '—';
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 6,
-  }).format(n);
+  return formatNumberSmart(n, { maxFractionDigits: 2 });
 }
 
 function DepositStatusBadge({ status }) {
@@ -88,6 +87,7 @@ const BAR_COLORS = {
 
 export default function BuyCryptoPage() {
   const { token, ready } = useAuth();
+  const toast = useToast();
   const { tokens: walletTokens, loading, reload: refreshWallet, totalUsdFormatted } = useUserWallet();
   const [tokens, setTokens] = useState([]);
   const [selectedToken, setSelectedToken] = useState(null);
@@ -235,21 +235,29 @@ export default function BuyCryptoPage() {
 
   const handleBuy = async () => {
     if (!selectedToken || !usdAmount || !token) {
-      setMessage({ type: 'error', text: 'Please select a token and enter USD amount.' });
+      const msg = 'Please select a token and enter USD amount.';
+      setMessage({ type: 'error', text: msg });
+      toast.error(msg, { title: 'Purchase Failed' });
       return;
     }
 
     const amount = parseFloat(usdAmount);
     if (isNaN(amount) || amount <= 0) {
-      setMessage({ type: 'error', text: 'Please enter a valid USD amount greater than 0.' });
+      const msg = 'Please enter a valid USD amount greater than 0.';
+      setMessage({ type: 'error', text: msg });
+      toast.error(msg, { title: 'Purchase Failed' });
       return;
     }
 
     if (amount > usdBalance) {
       setMessage({
         type: 'error',
-        text: `Insufficient USD balance to buy ${selectedToken.symbol}. You have $${usdBalance.toFixed(2)} USD available.`
+        text: `Insufficient USD balance to buy ${selectedToken.symbol}. You have ${formatCurrencySmart(usdBalance)} available.`
       });
+      toast.error(
+        `Insufficient USD balance to buy ${selectedToken.symbol}. You have ${formatCurrencySmart(usdBalance)} available.`,
+        { title: 'Purchase Failed' }
+      );
       return;
     }
 
@@ -287,6 +295,7 @@ export default function BuyCryptoPage() {
           type: 'success',
           text: data.message || 'Purchase successful!'
         });
+        toast.success(data.message || 'Purchase successful!', { title: 'Purchase Complete' });
 
         // Reset form
         setUsdAmount('');
@@ -304,32 +313,27 @@ export default function BuyCryptoPage() {
           type: 'error',
           text: data.error || 'Failed to process purchase.'
         });
+        toast.error(data.error || 'Failed to process purchase.', { title: 'Purchase Failed' });
       }
     } catch (error) {
       console.error('Buy error:', error);
+      const msg = `Error: ${error.message || 'Network error. Please try again.'}`;
       setMessage({
         type: 'error',
-        text: `Error: ${error.message || 'Network error. Please try again.'}`
+        text: msg
       });
+      toast.error(msg, { title: 'Purchase Failed' });
     } finally {
       setProcessing(false);
     }
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
+    return formatCurrencySmart(amount);
   };
 
   const formatTokens = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 8,
-    }).format(amount);
+    return formatNumberSmart(amount, { locale: 'en-US', maxFractionDigits: 2 });
   };
 
   return (
@@ -435,7 +439,7 @@ export default function BuyCryptoPage() {
                                       Price
                                     </div>
                                     <div className="text-sm font-medium text-white">
-                                      ${token.usdPerUnit.toFixed(2)}
+                                      ${formatNumberSmart(token.usdPerUnit, { maxFractionDigits: 2 })}
                                     </div>
                                   </div>
                                 </div>
@@ -558,7 +562,7 @@ export default function BuyCryptoPage() {
                         <div className="flex items-center justify-between pt-2 border-t border-white/[0.05]">
                           <span className="text-brand-muted">Exchange rate</span>
                           <span className="font-semibold text-brand-heading">
-                            1 {selectedToken.symbol} = ${selectedToken.usdPerUnit.toFixed(2)} USD
+                            1 {selectedToken.symbol} = ${formatNumberSmart(selectedToken.usdPerUnit, { maxFractionDigits: 2 })} USD
                           </span>
                         </div>
                       </div>
@@ -587,27 +591,7 @@ export default function BuyCryptoPage() {
                     </button>
                   </div>
 
-                  {/* Message display */}
-                  {message.text && (
-                    <div className={`rounded-xl border p-4 ${message.type === 'success'
-                      ? 'border-emerald-500/30 bg-emerald-500/5'
-                      : 'border-red-500/30 bg-red-500/5'
-                      }`}>
-                      <div className="flex items-start gap-3">
-                        {message.type === 'success' ? (
-                          <CheckCircle className="h-5 w-5 text-emerald-400 mt-0.5" />
-                        ) : (
-                          <div className="h-5 w-5 text-red-400 mt-0.5">!</div>
-                        )}
-                        <div className="text-sm">
-                          <div className={`font-medium ${message.type === 'success' ? 'text-emerald-300' : 'text-red-300'
-                            }`}>
-                            {message.text}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {message.text ? null : null}
                 </div>
               </div>
             </div>

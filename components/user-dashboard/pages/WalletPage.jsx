@@ -18,6 +18,7 @@ import TokenBalanceList from '@/components/user-dashboard/TokenBalanceList';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { useUserWalletHistory } from '@/components/user-dashboard/useUserWalletHistory';
 import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
+import { formatNumberSmart } from '@/lib/numberFormat';
 
 const DEPOSIT_METHODS = [
   {
@@ -70,10 +71,11 @@ export default function WalletPage() {
   }, 0);
   
   // Format total tokens with commas and 2 decimal places
-  const totalTokensFormatted = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(totalTokens);
+  const totalTokensFormatted = formatNumberSmart(totalTokens, {
+    locale: 'en-US',
+    minFractionDigits: 0,
+    maxFractionDigits: 2,
+  });
 
   return (
     <>

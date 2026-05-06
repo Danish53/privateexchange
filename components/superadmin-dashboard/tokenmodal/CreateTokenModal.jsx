@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
+import { formatNumberSmart } from "@/lib/numberFormat";
 
 export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCreateClick }) {
   const [open, setOpen] = useState(false);
@@ -38,7 +39,7 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
       const totalTokens = parseFloat(newForm.totalTokens);
       
       if (!isNaN(totalTokens) && totalTokens !== 0) {
-        newForm.usdPerUnit = (1 / totalTokens).toFixed(6);
+        newForm.usdPerUnit = Number(1 / totalTokens);
       } else {
         newForm.usdPerUnit = "";
       }
@@ -218,11 +219,11 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
                       Calculated Price:
                     </span>
                     <span className="text-sm font-bold text-brand-accent">
-                      1 token = ${parseFloat(form.usdPerUnit || 0).toFixed(4)} USD
+                      1 token = ${formatNumberSmart(parseFloat(form.usdPerUnit || 0), { maxFractionDigits: 2 })} USD
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-white/60">
-                    ${parseFloat(form.usdPerUnit || 0).toFixed(4)} per token
+                    ${formatNumberSmart(parseFloat(form.usdPerUnit || 0), { maxFractionDigits: 2 })} per token
                   </div>
                 </div>
               )}
