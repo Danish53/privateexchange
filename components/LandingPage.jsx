@@ -430,7 +430,7 @@ export default function LandingPage() {
                 { label: 'Tokens live', value: '5' },
                 { label: 'Designed uptime target', value: '99.9%' },
                 { label: 'Transfer fee (standard)', value: '$0.50' },
-                { label: 'VIP fee waiver', value: 'Yes' },
+                { label: 'VIP fee', value: 'Yes' },
               ].map((row, i) => (
                 <Reveal key={row.label} delay={i * 75}>
                   <div className="rounded-lg border border-brand-border-muted bg-[var(--brand-surface)] px-4 py-4 transition duration-200 hover:border-brand-border hover:bg-[var(--brand-surface-hover)]">

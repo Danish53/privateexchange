@@ -306,7 +306,7 @@ export default function TransferPage() {
                       onChange={(e) => setSelectedToken(e.target.value)}
                       disabled={tokens.length === 0}
                     >
-                      {tokens.map((t) => (
+                      {tokens.filter(t => t.slug !== 'usd').map((t) => (
                         <option key={t.symbol} value={t.symbol}>
                           {t.name} ({t.symbol})
                         </option>
@@ -375,7 +375,7 @@ export default function TransferPage() {
                   </div> : ""
                 }
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-brand-muted">VIP fee waiver</span>
+                  <span className="text-brand-muted">VIP fee</span>
                   <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300/95">
                     <ShieldCheck className="h-4 w-4" strokeWidth={2} aria-hidden />
                     {isVipUser ? 'Eligible' : 'Not eligible'}
