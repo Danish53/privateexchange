@@ -321,7 +321,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
         </div>
       </header>
 
-      <div className="relative z-10 mx-auto flex max-w-[1600px] flex-1 gap-0 lg:gap-6">
+      <div className="relative z-10 mx-auto flex flex-1 gap-0 lg:gap-6">
         <aside className="relative sticky top-16 z-20 hidden h-[calc(100vh-4rem)] w-[272px] shrink-0 flex-col overflow-hidden border-r border-brand-border-muted bg-gradient-to-b from-[rgba(10,11,15,0.97)] via-[rgba(7,8,11,0.95)] to-[rgba(5,6,9,0.98)] shadow-[inset_-1px_0_0_0_rgba(255,255,255,0.04),4px_0_24px_-12px_rgba(0,0,0,0.5)] backdrop-blur-md lg:flex lg:flex-col xl:w-[280px]">
           <div
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_45%_at_0%_0%,rgba(201,162,39,0.07),transparent_55%)]"
