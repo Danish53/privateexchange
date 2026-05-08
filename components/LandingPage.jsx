@@ -94,6 +94,8 @@ function Reveal({ children, className = '', delay = 0 }) {
 export default function LandingPage() {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [winnerRows, setWinnerRows] = useState([]);
+  const [winnersLoading, setWinnersLoading] = useState(true);
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? 'hidden' : '';
@@ -101,6 +103,23 @@ export default function LandingPage() {
       document.body.style.overflow = '';
     };
   }, [mobileOpen]);
+
+  useEffect(() => {
+    const loadWinners = async () => {
+      setWinnersLoading(true);
+      try {
+        const res = await fetch('/api/drawings/winners', { cache: 'no-store' });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) return;
+        setWinnerRows(Array.isArray(json.winners) ? json.winners : []);
+      } catch {
+        // Keep landing stable if request fails.
+      } finally {
+        setWinnersLoading(false);
+      }
+    };
+    void loadWinners();
+  }, []);
 
   const closeMobile = () => setMobileOpen(false);
 
@@ -696,6 +715,57 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="border-b border-brand-border-muted px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <Reveal>
+              <div className="mb-8 max-w-2xl">
+                <h2 className="text-2xl font-semibold tracking-tight text-brand-heading sm:text-3xl">
+                  Recent drawing winners
+                </h2>
+                <p className="prose-landing mt-3 leading-[1.65]">
+                  Latest completed drawings and the members who won them.
+                </p>
+              </div>
+            </Reveal>
+
+            {winnersLoading ? (
+              <div className="space-y-2 animate-pulse">
+                <div className="h-12 rounded-xl border border-white/[0.08] bg-black/[0.25]" />
+                <div className="h-12 rounded-xl border border-white/[0.08] bg-black/[0.25]" />
+              </div>
+            ) : winnerRows.length === 0 ? (
+              <div className="rounded-xl border border-white/[0.08] bg-black/25 p-4 text-sm text-brand-muted">
+                Winners will appear here once drawings are completed.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-white/[0.08] bg-black/[0.2]">
+                <table className="w-full min-w-[680px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-white/[0.06] text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                      <th className="px-4 py-3 sm:px-5">Drawing</th>
+                      <th className="px-4 py-3 sm:px-5">Winner</th>
+                      <th className="px-4 py-3 sm:px-5">Prize</th>
+                      <th className="px-4 py-3 sm:px-5">Draw date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {winnerRows.slice(0, 10).map((row) => (
+                      <tr key={row.id} className="hover:bg-white/[0.02]">
+                        <td className="px-4 py-3.5 sm:px-5 text-brand-heading">{row.title || '—'}</td>
+                        <td className="px-4 py-3.5 sm:px-5 text-brand-muted">{row.winner?.name || 'Member'}</td>
+                        <td className="px-4 py-3.5 sm:px-5 text-brand-muted">{row.prize_title || '—'}</td>
+                        <td className="px-4 py-3.5 sm:px-5 text-brand-muted">
+                          {row.draw_date ? new Date(row.draw_date).toLocaleDateString() : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </section>
 

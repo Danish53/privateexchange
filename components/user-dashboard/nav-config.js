@@ -8,6 +8,7 @@ import {
   History,
   ArrowDown,
   Coins,
+  Megaphone,
 } from 'lucide-react';
 
 export const USER_NAV = [
@@ -58,6 +59,12 @@ export const USER_NAV = [
     label: 'Membership',
     description: 'Tier',
     icon: Users,
+  },
+  {
+    href: '/dashboard/user/community-announcements',
+    label: 'Announcements',
+    description: 'Community',
+    icon: Megaphone,
   },
   {
     href: '/dashboard/user/profile',

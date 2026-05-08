@@ -5,6 +5,7 @@ import {
   Activity,
   Coins,
   Gift,
+  Megaphone,
   Shield,
   CreditCard,
   TrendingUp,
@@ -56,6 +57,12 @@ export const SUPERADMIN_NAV_MAIN = [
     label: 'Membership',
     description: 'Tiers & fee rules',
     icon: Shield,
+  },
+  {
+    href: '/dashboard/superadmin/community-announcements',
+    label: 'Community announcements',
+    description: 'Broadcast user updates',
+    icon: Megaphone,
   },
   {
     href: '/dashboard/superadmin/payments',

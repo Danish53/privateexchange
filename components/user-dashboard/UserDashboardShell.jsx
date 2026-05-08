@@ -3,16 +3,19 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, User, Menu, X, ChevronDown, Plus } from 'lucide-react';
+import { LogOut, User, Menu, X, ChevronDown, Plus, Megaphone } from 'lucide-react';
 import { USER_NAV } from '@/components/user-dashboard/nav-config';
 import { emailInitials, isUserNavActive } from '@/components/user-dashboard/utils';
 import { avatarSrc } from '@/lib/avatarUrl';
+import { useAuth } from '@/components/auth-context';
 
 export default function UserDashboardShell({ user, onLogout, children }) {
+  const { token, ready } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNav, setMobileNav] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const userMenuRef = useRef(null);
 
   const initials = emailInitials(user?.email);
@@ -32,6 +35,24 @@ export default function UserDashboardShell({ user, onLogout, children }) {
     };
   }, []);
 
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      if (!ready || !token || user?.role !== 'user') return;
+      try {
+        const res = await fetch('/api/user/community-announcements/unread-count', {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) return;
+        setUnreadAnnouncements(Number(json.unreadCount || 0));
+      } catch {
+        // Ignore counter fetch errors.
+      }
+    };
+    void loadUnreadCount();
+  }, [ready, token, user?.role, pathname]);
+
   const openProfile = () => {
     router.push('/dashboard/user/profile');
     setUserMenuOpen(false);
@@ -41,11 +62,21 @@ export default function UserDashboardShell({ user, onLogout, children }) {
   const profileHref = '/dashboard/user/profile';
   const navMain = USER_NAV.filter((item) => item.href !== profileHref);
   const navFooter = USER_NAV.find((item) => item.href === profileHref);
+  const unreadBadgeText = unreadAnnouncements > 99 ? '99+' : String(unreadAnnouncements);
+
+  const openAnnouncements = () => {
+    router.push('/dashboard/user/community-announcements');
+    setUserMenuOpen(false);
+    setMobileNav(false);
+  };
 
   function NavRow({ item, onNavigate }) {
     if (!item) return null;
     const active = isUserNavActive(pathname, item.href);
     const Icon = item.icon;
+    const badgeCount =
+      item.href === '/dashboard/user/community-announcements' ? unreadAnnouncements : 0;
+
     return (
       <Link
         href={item.href}
@@ -67,7 +98,14 @@ export default function UserDashboardShell({ user, onLogout, children }) {
           <Icon className="h-[1.125rem] w-[1.125rem]" strokeWidth={2} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[0.8125rem] font-medium leading-tight tracking-tight">{item.label}</span>
+          <span className="flex items-center gap-2 text-[0.8125rem] font-medium leading-tight tracking-tight">
+            <span>{item.label}</span>
+            {badgeCount > 0 ? (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-brand-accent bg-brand-accent px-1 text-[0.62rem] font-bold leading-none text-black">
+                {badgeCount > 99 ? '99+' : badgeCount}
+              </span>
+            ) : null}
+          </span>
           {item.description ? (
             <span className="mt-0.5 block truncate text-[0.65rem] font-normal leading-snug text-brand-subtle/85 group-hover:text-brand-muted">
               {item.description}
@@ -186,6 +224,11 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                   className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-accent/30 to-transparent opacity-90 transition-opacity group-hover/avatar:opacity-100"
                   aria-hidden
                 />
+                {unreadAnnouncements > 0 ? (
+                  <span className="absolute -right-1 -top-1 z-[2] inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-brand-accent bg-brand-accent px-1 text-[0.62rem] font-bold leading-none text-black">
+                    {unreadBadgeText}
+                  </span>
+                ) : null}
                 {user?.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- user avatar (local or blob URL)
                   <img
@@ -224,6 +267,37 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                 className="absolute right-0 top-full z-[60] mt-2 w-[min(100vw-2rem,16.5rem)] origin-top-right rounded-xl border border-brand-border-strong bg-[var(--brand-page)] py-1 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.06)]"
                 role="menu"
               >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    openAnnouncements();
+                  }}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-brand-heading transition duration-150 hover:bg-[var(--brand-surface-hover)]"
+                >
+                  <span className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-brand-border-muted bg-black/30 text-brand-accent">
+                    <Megaphone className="h-4 w-4" strokeWidth={1.5} />
+                    {unreadAnnouncements > 0 ? (
+                      <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-brand-accent bg-brand-accent px-1 text-[0.58rem] font-bold leading-none text-black">
+                        {unreadBadgeText}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      Community announcements
+                      {unreadAnnouncements > 0 ? (
+                        <span className="rounded-full border border-brand-accent bg-brand-accent px-1.5 py-0 text-[0.58rem] font-bold text-black">
+                          New
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="text-xs text-brand-subtle">
+                      {unreadAnnouncements > 0 ? `${unreadBadgeText} unread update(s)` : 'Latest platform updates'}
+                    </span>
+                  </span>
+                </button>
                 <button
                   type="button"
                   role="menuitem"

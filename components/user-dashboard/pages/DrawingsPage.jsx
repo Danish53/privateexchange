@@ -15,6 +15,8 @@ const formatToTwoDecimals = (value) => {
 export default function DrawingsPage() {
   const { token, ready } = useAuth();
   const [rows, setRows] = useState([]);
+  const [winnerRows, setWinnerRows] = useState([]);
+  const [winnersLoading, setWinnersLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [joinPreview, setJoinPreview] = useState(null);
@@ -48,6 +50,23 @@ export default function DrawingsPage() {
     };
     void load();
   }, [ready, token]);
+
+  useEffect(() => {
+    const loadWinners = async () => {
+      setWinnersLoading(true);
+      try {
+        const res = await fetch('/api/drawings/winners', { cache: 'no-store' });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) return;
+        setWinnerRows(Array.isArray(json.winners) ? json.winners : []);
+      } catch {
+        // Keep section graceful on network errors.
+      } finally {
+        setWinnersLoading(false);
+      }
+    };
+    void loadWinners();
+  }, []);
 
   const imageSrc = (value) => {
     const raw = String(value || '').trim();
@@ -267,6 +286,50 @@ export default function DrawingsPage() {
             </p>
           </Panel>
         )}
+
+        <Panel title="Recent winners" subtitle="Latest completed drawings and winning users.">
+          {winnersLoading ? (
+            <div className="space-y-2 animate-pulse">
+              <div className="h-12 rounded-xl border border-white/[0.08] bg-black/[0.25]" />
+              <div className="h-12 rounded-xl border border-white/[0.08] bg-black/[0.25]" />
+            </div>
+          ) : winnerRows.length === 0 ? (
+            <div className="rounded-xl border border-white/[0.08] bg-black/25 p-4 text-sm text-brand-muted">
+              No winners announced yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-white/[0.08] bg-black/[0.2]">
+              <table className="w-full min-w-[680px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.06] text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                    <th className="px-4 py-3 sm:px-5">Drawing</th>
+                    <th className="px-4 py-3 sm:px-5">Winner</th>
+                    <th className="px-4 py-3 sm:px-5">Prize</th>
+                    <th className="px-4 py-3 sm:px-5">Draw date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {winnerRows.map((row) => (
+                    <tr key={row.id} className="hover:bg-white/[0.02]">
+                      <td className="px-4 py-3.5 sm:px-5">
+                        <p className="font-medium text-brand-heading">{row.title || '—'}</p>
+                      </td>
+                      <td className="px-4 py-3.5 text-brand-muted sm:px-5">
+                        {row.winner?.name || 'Member'}
+                      </td>
+                      <td className="px-4 py-3.5 text-brand-muted sm:px-5">
+                        {row.prize_title || '—'}
+                      </td>
+                      <td className="px-4 py-3.5 text-brand-muted sm:px-5">
+                        {row.draw_date ? new Date(row.draw_date).toLocaleString() : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
       </div>
 
       {showJoinModal ? (
