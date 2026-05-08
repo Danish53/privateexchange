@@ -16,6 +16,7 @@ function serializeDrawing(doc) {
     title: d.title || '',
     slug: d.slug || '',
     description: d.description || '',
+    drawing_image: d.drawing_image || '',
     prize_title: d.prize_title || '',
     prize_description: d.prize_description || '',
     prize_image: d.prize_image || '',

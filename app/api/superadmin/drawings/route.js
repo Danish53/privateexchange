@@ -31,6 +31,7 @@ function serializeDrawing(doc) {
     title: d.title || '',
     slug: d.slug || '',
     description: d.description || '',
+    drawing_image: d.drawing_image || '',
     prize_title: d.prize_title || '',
     prize_description: d.prize_description || '',
     prize_image: d.prize_image || '',
@@ -92,16 +93,16 @@ export async function POST(request) {
     const prizeDescription = String(formData.get('prize_description') || '').trim();
     const rewardType = String(formData.get('reward_type') || 'physical').trim();
     const rewardTokenId = String(formData.get('reward_token_id') || '').trim();
-    const rewardTokenAmount = String(formData.get('reward_token_amount') || '0').trim() || '0';
+    const rewardTokenAmount = String(formData.get('reward_token_amount') || '').trim();
     const entryTokenId = String(formData.get('entry_token_id') || '').trim();
     const entryCost = String(formData.get('entry_cost') || '').trim();
-    const totalEntriesRaw = String(formData.get('total_entries') || '0').trim();
+    const totalEntriesRaw = String(formData.get('total_entries') || '').trim();
     const drawDateRaw = String(formData.get('draw_date') || '').trim();
     const totalEntries = Number.parseInt(totalEntriesRaw || '0', 10);
 
-    if (!title || !prizeTitle || !entryTokenId || !entryCost) {
+    if (!title || !description || !prizeTitle || !prizeDescription || !entryTokenId || !entryCost || !drawDateRaw || !totalEntriesRaw || !rewardTokenAmount) {
       return NextResponse.json(
-        { ok: false, error: 'Title, prize title, entry token and entry cost are required.' },
+        { ok: false, error: 'All drawing fields are required.' },
         { status: 400 }
       );
     }
@@ -142,29 +143,61 @@ export async function POST(request) {
     }
 
     let prizeImage = '';
-    const file = formData.get('prize_image');
-    if (file && typeof file !== 'string' && 'arrayBuffer' in file && file.size > 0) {
-      const ext = MIME_TO_EXT[file.type];
+    let drawingImage = '';
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'drawings');
+
+    const prizeImageFile = formData.get('prize_image');
+    if (prizeImageFile && typeof prizeImageFile !== 'string' && 'arrayBuffer' in prizeImageFile && prizeImageFile.size > 0) {
+      const ext = MIME_TO_EXT[prizeImageFile.type];
       if (!ext) {
         return NextResponse.json(
           { ok: false, error: 'Use JPEG, PNG, WEBP or GIF image.' },
           { status: 400 }
         );
       }
-      if (file.size > MAX_BYTES) {
+      if (prizeImageFile.size > MAX_BYTES) {
         return NextResponse.json(
           { ok: false, error: 'Image must be 3MB or smaller.' },
           { status: 400 }
         );
       }
 
-      const filename = `${slug}-${Date.now()}.${ext}`;
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'drawings');
+      const filename = `${slug}-prize-${Date.now()}.${ext}`;
       await mkdir(uploadDir, { recursive: true });
       const filepath = path.join(uploadDir, filename);
-      const buffer = Buffer.from(await file.arrayBuffer());
+      const buffer = Buffer.from(await prizeImageFile.arrayBuffer());
       await writeFile(filepath, buffer);
       prizeImage = `/uploads/drawings/${filename}`;
+    }
+    if (!prizeImage) {
+      return NextResponse.json({ ok: false, error: 'Prize image is required.' }, { status: 400 });
+    }
+
+    const drawingImageFile = formData.get('drawing_image');
+    if (drawingImageFile && typeof drawingImageFile !== 'string' && 'arrayBuffer' in drawingImageFile && drawingImageFile.size > 0) {
+      const ext = MIME_TO_EXT[drawingImageFile.type];
+      if (!ext) {
+        return NextResponse.json(
+          { ok: false, error: 'Use JPEG, PNG, WEBP or GIF image.' },
+          { status: 400 }
+        );
+      }
+      if (drawingImageFile.size > MAX_BYTES) {
+        return NextResponse.json(
+          { ok: false, error: 'Image must be 3MB or smaller.' },
+          { status: 400 }
+        );
+      }
+
+      const filename = `${slug}-drawing-${Date.now()}.${ext}`;
+      await mkdir(uploadDir, { recursive: true });
+      const filepath = path.join(uploadDir, filename);
+      const buffer = Buffer.from(await drawingImageFile.arrayBuffer());
+      await writeFile(filepath, buffer);
+      drawingImage = `/uploads/drawings/${filename}`;
+    }
+    if (!drawingImage) {
+      return NextResponse.json({ ok: false, error: 'Drawing image is required.' }, { status: 400 });
     }
 
     if (drawDateRaw) {
@@ -178,6 +211,7 @@ export async function POST(request) {
       title,
       slug,
       description: description || null,
+      drawing_image: drawingImage || null,
       prize_title: prizeTitle,
       prize_description: prizeDescription || null,
       prize_image: prizeImage || null,

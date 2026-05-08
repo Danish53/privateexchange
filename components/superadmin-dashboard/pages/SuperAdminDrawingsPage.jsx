@@ -12,6 +12,7 @@ const REWARD_OPTIONS = ['physical', 'token', 'event_access', 'custom'];
 const initialFormState = {
   title: '',
   description: '',
+  drawing_image_name: '',
   prize_title: '',
   prize_description: '',
   prize_image_name: '',
@@ -76,6 +77,7 @@ export default function SuperAdminDrawingsPage() {
   const [formData, setFormData] = useState(initialFormState);
   const [tokenOptions, setTokenOptions] = useState([]);
   const [loadingTokens, setLoadingTokens] = useState(false);
+  const [drawingImageFile, setDrawingImageFile] = useState(null);
   const [prizeImageFile, setPrizeImageFile] = useState(null);
   const [formError, setFormError] = useState('');
   const [listError, setListError] = useState('');
@@ -149,8 +151,18 @@ export default function SuperAdminDrawingsPage() {
     }));
   };
 
+  const onDrawingImageSelect = (event) => {
+    const file = event.target.files?.[0] || null;
+    setDrawingImageFile(file);
+    setFormData((prev) => ({
+      ...prev,
+      drawing_image_name: file?.name || '',
+    }));
+  };
+
   const closeModal = () => {
     setFormData(initialFormState);
+    setDrawingImageFile(null);
     setPrizeImageFile(null);
     setFormError('');
     setShowCreateModal(false);
@@ -160,6 +172,7 @@ export default function SuperAdminDrawingsPage() {
   const openCreateModal = () => {
     setEditingDrawingId('');
     setFormData(initialFormState);
+    setDrawingImageFile(null);
     setPrizeImageFile(null);
     setFormError('');
     setShowCreateModal(true);
@@ -170,6 +183,7 @@ export default function SuperAdminDrawingsPage() {
     setFormData({
       title: row.title || '',
       description: row.description || '',
+      drawing_image_name: row.drawing_image ? String(row.drawing_image).split('/').pop() : '',
       prize_title: row.prize_title || '',
       prize_description: row.prize_description || '',
       prize_image_name: row.prize_image ? String(row.prize_image).split('/').pop() : '',
@@ -181,6 +195,7 @@ export default function SuperAdminDrawingsPage() {
       total_entries: String(row.total_entries ?? 0),
       draw_date: row.draw_date ? String(row.draw_date).slice(0, 16) : '',
     });
+    setDrawingImageFile(null);
     setPrizeImageFile(null);
     setFormError('');
     setShowCreateModal(true);
@@ -208,12 +223,33 @@ export default function SuperAdminDrawingsPage() {
     event.preventDefault();
     setFormError('');
 
-    if (!formData.title.trim() || !formData.prize_title.trim() || !formData.entry_token_id || !formData.entry_cost) {
-      setFormError('Title, prize title, entry token and entry cost are required.');
+    if (
+      !formData.title.trim() ||
+      !formData.description.trim() ||
+      !formData.prize_title.trim() ||
+      !formData.prize_description.trim() ||
+      !formData.entry_token_id ||
+      !formData.entry_cost ||
+      !formData.total_entries ||
+      !formData.draw_date
+    ) {
+      setFormError('Please fill all required fields.');
+      return;
+    }
+    if (!drawingImageFile && !formData.drawing_image_name) {
+      setFormError('Drawing image is required.');
+      return;
+    }
+    if (!prizeImageFile && !formData.prize_image_name) {
+      setFormError('Prize image is required.');
       return;
     }
     if (formData.reward_type === 'token' && !formData.reward_token_id) {
       setFormError('Reward token is required when reward type is token.');
+      return;
+    }
+    if (!String(formData.reward_token_amount || '').trim()) {
+      setFormError('Reward amount is required.');
       return;
     }
     if (formData.draw_date && new Date(formData.draw_date).getTime() <= Date.now()) {
@@ -240,6 +276,9 @@ export default function SuperAdminDrawingsPage() {
       payload.append('entry_cost', formData.entry_cost);
       payload.append('total_entries', formData.total_entries || '0');
       payload.append('draw_date', formData.draw_date || '');
+      if (drawingImageFile) {
+        payload.append('drawing_image', drawingImageFile);
+      }
       if (prizeImageFile) {
         payload.append('prize_image', prizeImageFile);
       }
@@ -314,7 +353,7 @@ export default function SuperAdminDrawingsPage() {
         <StatChip icon={Gift} label="Total drawings" value={String(rows.length)} hint="Current listing rows" />
         <StatChip
           icon={Calendar}
-          label="Entries (all pools)"
+          label="Recipients (all pools)"
           value={totalEntries.toLocaleString()}
           hint="Aggregated from table data"
         />
@@ -342,13 +381,28 @@ export default function SuperAdminDrawingsPage() {
               <div className="grid gap-3 sm:grid-cols-1">
                 <label className="space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Title *</span>
-                  <input name="title" value={formData.title} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
+                  <input required name="title" value={formData.title} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
               </div>
 
               <label className="space-y-1.5">
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Drawing image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={onDrawingImageSelect}
+                  required={!formData.drawing_image_name}
+                  className="w-full cursor-pointer rounded-lg border border-white/[0.12] bg-[#0a0c12] px-3 py-2 text-sm text-brand-heading transition hover:border-brand-accent/45 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-white/[0.2] file:bg-[#374151] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-200"
+                />
+                {drawingImageFile ? <p className="text-xs text-brand-muted">Selected: {drawingImageFile.name}</p> : null}
+                {!drawingImageFile && formData.drawing_image_name ? (
+                  <p className="text-xs text-brand-muted">Current: {formData.drawing_image_name}</p>
+                ) : null}
+              </label>
+
+              <label className="space-y-1.5">
                 <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Description</span>
-                <textarea name="description" rows={3} value={formData.description} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
+                <textarea required name="description" rows={3} value={formData.description} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
               </label>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -357,7 +411,7 @@ export default function SuperAdminDrawingsPage() {
                 </p>
                 <label className="space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Prize title *</span>
-                  <input name="prize_title" value={formData.prize_title} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
+                  <input required name="prize_title" value={formData.prize_title} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
                 <label className="space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Prize image</span>
@@ -366,7 +420,8 @@ export default function SuperAdminDrawingsPage() {
                       type="file"
                       accept="image/*"
                       onChange={onPrizeImageSelect}
-                      className="w-full cursor-pointer rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2 text-sm text-brand-muted transition hover:border-brand-accent/35 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-brand-accent/25 file:bg-brand-accent/15 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-heading"
+                      required={!formData.prize_image_name}
+                      className="w-full cursor-pointer rounded-lg border border-white/[0.12] bg-[#0a0c12] px-3 py-2 text-sm text-brand-heading transition hover:border-brand-accent/45 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-white/[0.2] file:bg-[#374151] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-200"
                     />
                   {/* </div> */}
                   {prizeImageFile ? <p className="text-xs text-brand-muted">Selected: {prizeImageFile.name}</p> : null}
@@ -378,7 +433,7 @@ export default function SuperAdminDrawingsPage() {
 
               <label className="space-y-1.5">
                 <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Prize description</span>
-                <textarea name="prize_description" rows={2} value={formData.prize_description} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
+                <textarea required name="prize_description" rows={2} value={formData.prize_description} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
               </label>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -387,14 +442,14 @@ export default function SuperAdminDrawingsPage() {
                 </p>
                 <label className="space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Reward type</span>
-                  <select name="reward_type" value={formData.reward_type} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
+                  <select required name="reward_type" value={formData.reward_type} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
                     {REWARD_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 </label>
                 {formData.reward_type === 'token' ? (
                   <label className="space-y-1.5">
                     <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Reward token *</span>
-                    <select name="reward_token_id" value={formData.reward_token_id} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
+                    <select required name="reward_token_id" value={formData.reward_token_id} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
                       <option value="">{loadingTokens ? 'Loading tokens...' : 'Select token'}</option>
                       {tokenOptions.map((t) => (
                         <option key={t._id} value={t._id}>
@@ -408,7 +463,7 @@ export default function SuperAdminDrawingsPage() {
                 )}
                 <label className="space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Reward amount</span>
-                  <input type="number" step="0.00000001" name="reward_token_amount" value={formData.reward_token_amount} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
+                  <input required type="number" step="0.00000001" name="reward_token_amount" value={formData.reward_token_amount} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -417,7 +472,7 @@ export default function SuperAdminDrawingsPage() {
                 </p>
                 <label className="space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Entry token *</span>
-                  <select name="entry_token_id" value={formData.entry_token_id} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
+                  <select required name="entry_token_id" value={formData.entry_token_id} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
                     <option value="">{loadingTokens ? 'Loading tokens...' : 'Select token'}</option>
                     {tokenOptions.map((t) => (
                       <option key={t._id} value={t._id}>
@@ -428,18 +483,18 @@ export default function SuperAdminDrawingsPage() {
                 </label>
                 <label className="space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Entry cost *</span>
-                  <input type="number" step="0.00000001" name="entry_cost" value={formData.entry_cost} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
+                  <input required type="number" step="0.00000001" name="entry_cost" value={formData.entry_cost} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Total entries</span>
-                  <input type="number" min="0" name="total_entries" value={formData.total_entries} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Total recipients</span>
+                  <input required type="number" min="0" name="total_entries" value={formData.total_entries} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-1">
                 <label className="space-y-1.5 cursor-pointer" onClick={openDrawDatePicker}>
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Draw date</span>
-                  <input ref={drawDateInputRef} min={nowInputMin} type="datetime-local" name="draw_date" value={formData.draw_date} onChange={onFormField} onClick={openDrawDatePicker} onFocus={openDrawDatePicker} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
+                  <input required ref={drawDateInputRef} min={nowInputMin} type="datetime-local" name="draw_date" value={formData.draw_date} onChange={onFormField} onClick={openDrawDatePicker} onFocus={openDrawDatePicker} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
               </div>
 
@@ -533,7 +588,7 @@ export default function SuperAdminDrawingsPage() {
                   Actions
                 </th>
                 <th className="whitespace-nowrap px-5 py-3.5 text-right text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle sm:pr-6">
-                  Total entries
+                  Total recipients
                 </th>
               </tr>
             </thead>
@@ -570,7 +625,7 @@ export default function SuperAdminDrawingsPage() {
                     <span className="font-medium text-brand-accent">{row.prize_title || '—'}</span>
                   </td>
                   <td className="px-4 py-4 align-middle">
-                    <span className="capitalize text-brand-muted">{row.reward_type || '—'}</span>
+                    <span className="capitalize text-brand-muted">{row.reward_type === "event_access" ? "Event Access" : row.reward_type || '—'}</span>
                     <p className="mt-0.5 text-xs text-brand-subtle">Entry cost: {row.entry_cost || '—'}</p>
                   </td>
                   <td className="px-4 py-4 text-right align-middle">

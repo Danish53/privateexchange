@@ -134,6 +134,18 @@ export default function SuperAdminDrawingDetailPage() {
 
           <div className="grid gap-4 lg:grid-cols-3">
             <section className="rounded-2xl border border-white/[0.08] bg-black/[0.24] p-5">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">Drawing Image</h2>
+              {drawing.drawing_image ? (
+                <div className="mt-3 overflow-hidden rounded-xl border border-white/[0.08] bg-black/30 h-40 w-fit">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imageSrc(drawing.drawing_image)} alt={drawing.title || 'Drawing image'} className="h-40 object-cover" />
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-brand-muted">No drawing image uploaded.</p>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-white/[0.08] bg-black/[0.24] p-5">
               <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">Prize Info</h2>
               <p className="mt-2 text-base font-semibold text-brand-accent">{drawing.prize_title || '—'}</p>
               <p className="mt-2 text-sm leading-relaxed text-brand-muted">{drawing.prize_description || 'No prize details.'}</p>
@@ -147,16 +159,18 @@ export default function SuperAdminDrawingDetailPage() {
 
             <section className="rounded-2xl border border-white/[0.08] bg-black/[0.24] p-5">
               <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">Reward Info</h2>
-              <p className="mt-2 text-sm text-brand-muted">
-                Type: <span className="capitalize text-brand-heading">{drawing.reward_type || '—'}</span>
+              <p className="mt-2 text-md text-brand-muted">
+                Type: <span className="capitalize text-brand-heading">{ drawing.reward_type === "event_access" ? "Event Access" : drawing.reward_type || '—'}</span>
               </p>
-              <p className="mt-1 text-sm text-brand-muted">
+              {drawing.reward_type === "token" ? (
+              <p className="mt-1 text-md text-brand-muted">
                 Token:{' '}
                 <span className="text-brand-heading">
                   {drawing.reward_token?.symbol || drawing.reward_token?.name || 'N/A'}
                 </span>
               </p>
-              <p className="mt-1 text-sm text-brand-muted">
+              ) : null}
+              <p className="mt-1 text-md text-brand-muted">
                 Reward amount: <span className="text-brand-heading">{drawing.reward_token_amount || '0'}</span>
               </p>
             </section>
@@ -173,10 +187,10 @@ export default function SuperAdminDrawingDetailPage() {
                 Entry cost: <span className="text-brand-heading">{drawing.entry_cost || '0'}</span>
               </p>
               <p className="mt-1 text-sm text-brand-muted">
-                Total entries: <span className="text-brand-heading">{Number(drawing.total_entries || 0).toLocaleString()}</span>
+                Total recipients: <span className="text-brand-heading">{Number(drawing.total_entries || 0).toLocaleString()}</span>
               </p>
               <p className="mt-1 text-sm text-brand-muted">
-                Joined entries: <span className="text-brand-heading">{Number(drawing.joined_count || 0).toLocaleString()}</span>
+                Joined recipients: <span className="text-brand-heading">{Number(drawing.joined_count || 0).toLocaleString()}</span>
               </p>
               <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-xs text-brand-muted">
                 <Ticket className="h-3.5 w-3.5 text-brand-subtle" strokeWidth={2} aria-hidden />

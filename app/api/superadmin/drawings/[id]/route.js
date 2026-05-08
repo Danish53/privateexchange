@@ -53,18 +53,21 @@ export async function PATCH(request, { params }) {
 
     const formData = await request.formData();
     const title = String(formData.get('title') || '').trim();
+    const description = String(formData.get('description') || '').trim();
     const prizeTitle = String(formData.get('prize_title') || '').trim();
+    const prizeDescription = String(formData.get('prize_description') || '').trim();
     const rewardTokenId = String(formData.get('reward_token_id') || '').trim();
+    const rewardTokenAmount = String(formData.get('reward_token_amount') || '').trim();
     const entryCost = String(formData.get('entry_cost') || '').trim();
     const entryTokenId = String(formData.get('entry_token_id') || '').trim();
-    const totalEntriesRaw = String(formData.get('total_entries') || '0').trim();
+    const totalEntriesRaw = String(formData.get('total_entries') || '').trim();
     const rewardType = String(formData.get('reward_type') || 'physical').trim();
     const drawDateRaw = String(formData.get('draw_date') || '').trim();
     const totalEntries = Number.parseInt(totalEntriesRaw || '0', 10);
 
-    if (!title || !prizeTitle || !entryTokenId || !entryCost) {
+    if (!title || !description || !prizeTitle || !prizeDescription || !entryTokenId || !entryCost || !drawDateRaw || !totalEntriesRaw || !rewardTokenAmount) {
       return NextResponse.json(
-        { ok: false, error: 'Title, prize title, entry token and entry cost are required.' },
+        { ok: false, error: 'All drawing fields are required.' },
         { status: 400 }
       );
     }
@@ -104,12 +107,12 @@ export async function PATCH(request, { params }) {
 
     drawing.title = title;
     drawing.slug = nextSlug;
-    drawing.description = String(formData.get('description') || '').trim() || null;
+    drawing.description = description || null;
     drawing.prize_title = prizeTitle;
-    drawing.prize_description = String(formData.get('prize_description') || '').trim() || null;
+    drawing.prize_description = prizeDescription || null;
     drawing.reward_type = rewardType;
     drawing.reward_token_id = rewardType === 'token' ? rewardTokenId : null;
-    drawing.reward_token_amount = String(formData.get('reward_token_amount') || '0').trim() || '0';
+    drawing.reward_token_amount = rewardTokenAmount;
     drawing.entry_token_id = entryTokenId;
     drawing.entry_cost = entryCost;
     drawing.total_entries = totalEntries;
@@ -123,28 +126,58 @@ export async function PATCH(request, { params }) {
       drawing.draw_date = null;
     }
 
-    const file = formData.get('prize_image');
-    if (file && typeof file !== 'string' && 'arrayBuffer' in file && file.size > 0) {
-      const ext = MIME_TO_EXT[file.type];
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'drawings');
+
+    const prizeImageFile = formData.get('prize_image');
+    if (prizeImageFile && typeof prizeImageFile !== 'string' && 'arrayBuffer' in prizeImageFile && prizeImageFile.size > 0) {
+      const ext = MIME_TO_EXT[prizeImageFile.type];
       if (!ext) {
         return NextResponse.json(
           { ok: false, error: 'Use JPEG, PNG, WEBP or GIF image.' },
           { status: 400 }
         );
       }
-      if (file.size > MAX_BYTES) {
+      if (prizeImageFile.size > MAX_BYTES) {
         return NextResponse.json(
           { ok: false, error: 'Image must be 3MB or smaller.' },
           { status: 400 }
         );
       }
-      const filename = `${nextSlug}-${Date.now()}.${ext}`;
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'drawings');
+      const filename = `${nextSlug}-prize-${Date.now()}.${ext}`;
       await mkdir(uploadDir, { recursive: true });
       const filepath = path.join(uploadDir, filename);
-      const buffer = Buffer.from(await file.arrayBuffer());
+      const buffer = Buffer.from(await prizeImageFile.arrayBuffer());
       await writeFile(filepath, buffer);
       drawing.prize_image = `/uploads/drawings/${filename}`;
+    }
+
+    const drawingImageFile = formData.get('drawing_image');
+    if (drawingImageFile && typeof drawingImageFile !== 'string' && 'arrayBuffer' in drawingImageFile && drawingImageFile.size > 0) {
+      const ext = MIME_TO_EXT[drawingImageFile.type];
+      if (!ext) {
+        return NextResponse.json(
+          { ok: false, error: 'Use JPEG, PNG, WEBP or GIF image.' },
+          { status: 400 }
+        );
+      }
+      if (drawingImageFile.size > MAX_BYTES) {
+        return NextResponse.json(
+          { ok: false, error: 'Image must be 3MB or smaller.' },
+          { status: 400 }
+        );
+      }
+      const filename = `${nextSlug}-drawing-${Date.now()}.${ext}`;
+      await mkdir(uploadDir, { recursive: true });
+      const filepath = path.join(uploadDir, filename);
+      const buffer = Buffer.from(await drawingImageFile.arrayBuffer());
+      await writeFile(filepath, buffer);
+      drawing.drawing_image = `/uploads/drawings/${filename}`;
+    }
+    if (!drawing.drawing_image) {
+      return NextResponse.json({ ok: false, error: 'Drawing image is required.' }, { status: 400 });
+    }
+    if (!drawing.prize_image) {
+      return NextResponse.json({ ok: false, error: 'Prize image is required.' }, { status: 400 });
     }
 
     await drawing.save();

@@ -18,6 +18,7 @@ export default function DrawingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [joinPreview, setJoinPreview] = useState(null);
+  const [joinPreviewLoading, setJoinPreviewLoading] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [joinSuccess, setJoinSuccess] = useState('');
   const [isJoining, setIsJoining] = useState(false);
@@ -57,6 +58,9 @@ export default function DrawingsPage() {
 
   const loadJoinPreview = async (slug) => {
     if (!token || !slug) return;
+    setShowJoinModal(true);
+    setJoinPreview(null);
+    setJoinPreviewLoading(true);
     setJoinError('');
     setJoinSuccess('');
     try {
@@ -70,9 +74,10 @@ export default function DrawingsPage() {
         return;
       }
       setJoinPreview({ ...(json.preview || null), slug });
-      setShowJoinModal(true);
     } catch {
       setJoinError('Network error while loading join info.');
+    } finally {
+      setJoinPreviewLoading(false);
     }
   };
 
@@ -103,6 +108,7 @@ export default function DrawingsPage() {
       );
       setShowJoinModal(false);
       setJoinPreview(null);
+      setJoinPreviewLoading(false);
       setJoinSuccess(json.message || 'Drawing joined successfully.');
     } catch {
       setJoinError('Network error while joining drawing.');
@@ -212,7 +218,7 @@ export default function DrawingsPage() {
                         <span className="text-brand-heading">
                           {draw.reward_type === 'token'
                             ? `${draw.reward_token_amount || '0'} ${draw.reward_token?.symbol || ''}`.trim()
-                            : draw.reward_type || '—'}
+                            : draw.reward_type === "event_access" ? "Event Access" : draw.reward_type || '—'}
                         </span>
                       </p>
                     </div>
@@ -265,7 +271,7 @@ export default function DrawingsPage() {
 
       {showJoinModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-white/[0.08] bg-[#07080c] p-5 sm:p-6">
+          <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#07080c] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:p-6">
             <h3 className="text-lg font-semibold text-brand-heading">Confirm drawing join</h3>
             <p className="mt-1 text-sm text-brand-muted">
               Joining this drawing will deduct entry cost from your wallet.
@@ -273,35 +279,46 @@ export default function DrawingsPage() {
             <p className="mt-1 text-xs text-brand-subtle">
               This deduction will be added to your transaction history.
             </p>
-            <div className="mt-4 grid gap-2 rounded-xl border border-white/[0.08] bg-black/25 p-4 text-sm">
-              <p className="text-brand-muted">
-                Entry token: <span className="text-brand-heading">{joinPreview?.entryToken?.symbol || '—'}</span>
-              </p>
-              <p className="text-brand-muted">
-                Entry cost: <span className="text-brand-heading">{joinPreview?.entryCost ?? '—'}</span>
-              </p>
-              <p className="text-brand-muted">
-                Your balance: <span className="text-brand-heading">{formatToTwoDecimals(joinPreview?.walletBalance)}</span>
-              </p>
-              <p className="text-brand-muted">
-                Balance after join:{' '}
-                <span className="text-brand-heading">{joinPreview?.walletBalanceAfterJoin ?? '—'}</span>
-              </p>
-              <p className="text-brand-muted">
-                Deduction:{' '}
-                <span className="text-rose-300">
-                  -{joinPreview?.entryCost ?? '—'} {joinPreview?.entryToken?.symbol || ''}
-                </span>
-              </p>
-              <p className="text-brand-muted">
-                Reward:{' '}
-                <span className="text-brand-heading">
-                  {joinPreview?.reward?.type === 'token'
-                    ? `${joinPreview?.reward?.tokenAmount || '0'} ${joinPreview?.reward?.token?.symbol || ''}`.trim()
-                    : joinPreview?.reward?.type || '—'}
-                </span>
-              </p>
-            </div>
+            {joinPreviewLoading ? (
+              <div className="mt-4 grid gap-3 rounded-xl border border-white/[0.08] bg-black/25 p-4 animate-pulse">
+                <div className="h-9 rounded-lg border border-white/[0.08] bg-white/[0.04]" />
+                <div className="h-9 rounded-lg border border-white/[0.08] bg-white/[0.04]" />
+                <div className="h-9 rounded-lg border border-white/[0.08] bg-white/[0.04]" />
+                <div className="h-9 rounded-lg border border-white/[0.08] bg-white/[0.04]" />
+                <div className="h-9 rounded-lg border border-white/[0.08] bg-white/[0.04]" />
+                <div className="h-9 rounded-lg border border-white/[0.08] bg-white/[0.04]" />
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-2 rounded-xl border border-white/[0.08] bg-black/25 p-4 text-sm">
+                <p className="text-brand-muted">
+                  Entry token: <span className="text-brand-heading">{joinPreview?.entryToken?.symbol || '—'}</span>
+                </p>
+                <p className="text-brand-muted">
+                  Entry cost: <span className="text-brand-heading">{joinPreview?.entryCost ?? '—'}</span>
+                </p>
+                <p className="text-brand-muted">
+                  Your balance: <span className="text-brand-heading">{formatToTwoDecimals(joinPreview?.walletBalance)}</span>
+                </p>
+                <p className="text-brand-muted">
+                  Balance after join:{' '}
+                  <span className="text-brand-heading">{joinPreview?.walletBalanceAfterJoin ?? '—'}</span>
+                </p>
+                <p className="text-brand-muted">
+                  Deduction:{' '}
+                  <span className="text-rose-300">
+                    -{joinPreview?.entryCost ?? '—'} {joinPreview?.entryToken?.symbol || ''}
+                  </span>
+                </p>
+                <p className="text-brand-muted">
+                  Reward:{' '}
+                  <span className="text-brand-heading">
+                    {joinPreview?.reward?.type === 'token'
+                      ? `${joinPreview?.reward?.tokenAmount || '0'} ${joinPreview?.reward?.token?.symbol || ''}`.trim()
+                      : joinPreview?.reward?.type || '—'}
+                  </span>
+                </p>
+              </div>
+            )}
             {joinError ? <p className="mt-3 text-sm text-rose-300">{joinError}</p> : null}
             <div className="mt-5 flex justify-end gap-2">
               <button
@@ -309,6 +326,7 @@ export default function DrawingsPage() {
                 onClick={() => {
                   setShowJoinModal(false);
                   setJoinPreview(null);
+                  setJoinPreviewLoading(false);
                   setJoinError('');
                 }}
                 className="rounded-xl border border-white/[0.1] px-4 py-2 text-sm font-semibold text-brand-muted"
@@ -317,7 +335,7 @@ export default function DrawingsPage() {
               </button>
               <button
                 type="button"
-                disabled={isJoining || !joinPreview?.canJoin}
+                disabled={isJoining || joinPreviewLoading || !joinPreview?.canJoin}
                 onClick={onConfirmJoin}
                 className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
               >
