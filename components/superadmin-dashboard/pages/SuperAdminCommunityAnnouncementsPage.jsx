@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Megaphone, Send, CalendarClock, Users, AlertTriangle } from 'lucide-react';
+import { CalendarClock, Megaphone, Pencil, Send, Trash2, Users } from 'lucide-react';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 import { useAuth } from '@/components/auth-context';
 
@@ -51,6 +51,31 @@ const INITIAL_FORM = {
   emailNotice: false,
 };
 
+function rowToForm(row) {
+  const toLocal = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+  return {
+    title: row.title || '',
+    type: row.type || 'general',
+    audience: row.audience || 'all_users',
+    priority: row.priority || 'normal',
+    summary: row.summary || '',
+    details: row.details || '',
+    startsAt: toLocal(row.startsAt),
+    endsAt: toLocal(row.endsAt),
+    actionLabel: row.cta?.label || '',
+    actionUrl: row.cta?.url || '',
+    dashboardBanner: Boolean(row.channels?.dashboardBanner),
+    inAppNotice: Boolean(row.channels?.inAppNotice),
+    emailNotice: Boolean(row.channels?.emailNotice),
+  };
+}
+
 export default function SuperAdminCommunityAnnouncementsPage() {
   const { token, ready } = useAuth();
   const [form, setForm] = useState(INITIAL_FORM);
@@ -60,6 +85,8 @@ export default function SuperAdminCommunityAnnouncementsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [preview, setPreview] = useState(null);
   const [rows, setRows] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const loadAnnouncements = async () => {
@@ -140,39 +167,98 @@ export default function SuperAdminCommunityAnnouncementsPage() {
       return;
     }
 
+    const body = JSON.stringify({
+      ...payload,
+      channels: {
+        dashboardBanner: form.dashboardBanner,
+        inAppNotice: form.inAppNotice,
+        emailNotice: form.emailNotice,
+      },
+    });
+
     setIsSaving(true);
     try {
-      const res = await fetch('/api/superadmin/community-announcements', {
-        method: 'POST',
+      const url = editingId
+        ? `/api/superadmin/community-announcements/${encodeURIComponent(editingId)}`
+        : '/api/superadmin/community-announcements';
+      const res = await fetch(url, {
+        method: editingId ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...payload,
-          channels: {
-            dashboardBanner: form.dashboardBanner,
-            inAppNotice: form.inAppNotice,
-            emailNotice: form.emailNotice,
-          },
-        }),
+        body,
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setError(json.error || 'Could not create announcement.');
+        setError(json.error || (editingId ? 'Could not update announcement.' : 'Could not create announcement.'));
         return;
       }
-      const created = json.announcement || null;
-      if (created) {
-        setRows((prev) => [created, ...prev]);
+      const saved = json.announcement || null;
+      if (saved) {
+        if (editingId) {
+          setRows((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
+        } else {
+          setRows((prev) => [saved, ...prev]);
+        }
       }
       setPreview(payload);
-      setSuccess(json.message || 'Announcement created successfully.');
+      setSuccess(json.message || (editingId ? 'Announcement updated successfully.' : 'Announcement created successfully.'));
       setForm(INITIAL_FORM);
+      setEditingId(null);
     } catch {
-      setError('Network error while creating announcement.');
+      setError(editingId ? 'Network error while updating announcement.' : 'Network error while creating announcement.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const startEdit = (row) => {
+    setError('');
+    setSuccess('');
+    setPreview(null);
+    setForm(rowToForm(row));
+    setEditingId(row.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm(INITIAL_FORM);
+    setError('');
+    setSuccess('');
+    setPreview(null);
+  };
+
+  const onDelete = async (row) => {
+    if (!token) {
+      setError('Unauthorized. Please login again.');
+      return;
+    }
+    const title = String(row.title || 'Untitled').trim();
+    if (!window.confirm(`Delete announcement "${title}"? This cannot be undone.`)) return;
+    setError('');
+    setSuccess('');
+    setDeletingId(row.id);
+    try {
+      const res = await fetch(`/api/superadmin/community-announcements/${encodeURIComponent(row.id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        setError(json.error || 'Could not delete announcement.');
+        return;
+      }
+      setRows((prev) => prev.filter((r) => r.id !== row.id));
+      if (editingId === row.id) {
+        cancelEdit();
+      }
+      setSuccess(json.message || 'Announcement deleted successfully.');
+    } catch {
+      setError('Network error while deleting announcement.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -183,36 +269,54 @@ export default function SuperAdminCommunityAnnouncementsPage() {
           Community Announcements
         </h1>
         <p className="mt-1 max-w-3xl text-sm text-brand-muted">
-          Create platform announcements for drawings, maintenance, token updates, membership notices, and user-wide
-          alerts.
+          Create, update, or remove platform announcements for drawings, maintenance, token updates, membership
+          notices, and user-wide alerts.
         </p>
       </div>
 
       {error ? <FeedbackMessage tone="error" title="Validation error" message={error} /> : null}
-      {success ? <FeedbackMessage tone="success" title="Ready to publish" message={success} /> : null}
+      {success ? <FeedbackMessage tone="success" title="Success" message={success} /> : null}
 
       <form
         onSubmit={onSubmit}
         className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-black/[0.35] to-[#060708] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] sm:p-6"
       >
-        <div className="mb-4 flex items-start justify-between gap-4 border-b border-white/[0.06] pb-4">
+        <div className="mb-4 flex flex-col gap-4 border-b border-white/[0.06] pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-accent/25 bg-[var(--brand-accent-soft)]/40 text-brand-accent">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-accent/25 bg-[var(--brand-accent-soft)]/40 text-brand-accent">
               <Megaphone className="h-5 w-5" strokeWidth={2} aria-hidden />
             </span>
             <div>
-              <h2 className="text-base font-semibold text-brand-heading">Announcement composer</h2>
-              <p className="mt-0.5 text-xs text-brand-muted">Fill details and publish to database.</p>
+              <h2 className="text-base font-semibold text-brand-heading">
+                {editingId ? 'Edit announcement' : 'Announcement composer'}
+              </h2>
+              <p className="mt-0.5 text-xs text-brand-muted">
+                {editingId
+                  ? 'You are editing an existing announcement. Save to apply changes.'
+                  : 'Fill details and publish to the database.'}
+              </p>
             </div>
           </div>
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold"
-          >
-            <Send className="h-4 w-4" strokeWidth={2} aria-hidden />
-            {isSaving ? 'Publishing...' : 'Publish announcement'}
-          </button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {editingId ? (
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={isSaving}
+                className="rounded-xl border border-white/[0.12] bg-black/30 px-4 py-2 text-sm font-semibold text-brand-muted transition hover:border-white/[0.18] hover:text-brand-heading disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            ) : null}
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
+            >
+              <Send className="h-4 w-4" strokeWidth={2} aria-hidden />
+              {isSaving ? (editingId ? 'Saving...' : 'Publishing...') : editingId ? 'Save changes' : 'Publish announcement'}
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -311,7 +415,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
             </span>
             <input
               type="datetime-local"
-              min={minStartDateTime}
+              min={editingId ? undefined : minStartDateTime}
               name="startsAt"
               value={form.startsAt}
               onChange={onField}
@@ -408,14 +512,14 @@ export default function SuperAdminCommunityAnnouncementsPage() {
           <p className="mt-3 text-sm text-brand-muted">No announcements created yet.</p>
         ) : (
           <div className="mt-3 space-y-3">
-            {rows.slice(0, 8).map((row) => (
+            {rows.map((row) => (
               <div
                 key={row.id}
                 className="rounded-xl border border-white/[0.08] bg-black/35 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <p className="text-sm font-semibold text-brand-heading">{row.title || '—'}</p>
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="min-w-0 flex-1 text-sm font-semibold text-brand-heading">{row.title || '—'}</p>
+                  <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                     <span className="rounded-md border border-white/[0.12] bg-black/35 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-brand-subtle">
                       {row.type || 'general'}
                     </span>
@@ -430,6 +534,24 @@ export default function SuperAdminCommunityAnnouncementsPage() {
                     >
                       {row.priority || 'normal'}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(row)}
+                      disabled={Boolean(deletingId)}
+                      className="inline-flex items-center gap-1 rounded-md border border-white/[0.12] bg-black/40 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.06em] text-brand-heading transition hover:border-brand-accent/40 hover:text-brand-accent disabled:opacity-50"
+                    >
+                      <Pencil className="h-3 w-3" aria-hidden />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onDelete(row)}
+                      disabled={deletingId === row.id || Boolean(deletingId)}
+                      className="inline-flex items-center gap-1 rounded-md border border-rose-500/30 bg-rose-500/[0.1] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.06em] text-rose-200 transition hover:bg-rose-500/[0.18] disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3 w-3" aria-hidden />
+                      {deletingId === row.id ? '…' : 'Delete'}
+                    </button>
                   </div>
                 </div>
 

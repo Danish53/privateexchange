@@ -20,6 +20,10 @@ import {
   Lock,
   LogIn,
   UserPlus,
+  Trophy,
+  Calendar,
+  Award,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 
@@ -30,6 +34,7 @@ const navLinks = [
   { href: '#overview', label: 'Overview' },
   { href: '#tokens', label: 'Tokens' },
   { href: '#features', label: 'Features' },
+  { href: '#winners', label: 'Winners' },
   { href: '#payments', label: 'Payments' },
 ];
 
@@ -89,6 +94,30 @@ function Reveal({ children, className = '', delay = 0 }) {
       {children}
     </div>
   );
+}
+
+function winnerInitials(name) {
+  const n = String(name || '').trim();
+  if (!n) return 'M';
+  const parts = n.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const a = parts[0][0] || '';
+    const b = parts[1][0] || '';
+    const pair = `${a}${b}`.toUpperCase();
+    if (pair) return pair.slice(0, 2);
+  }
+  return n.slice(0, 2).toUpperCase() || 'M';
+}
+
+function winnerPrizeLine(row) {
+  const type = String(row.reward_type || '').toLowerCase();
+  if (type === 'token' && row.reward_token_symbol) {
+    return `${row.reward_token_amount || '0'} ${row.reward_token_symbol}`.trim();
+  }
+  if (row.prize_title) return row.prize_title;
+  if (type === 'event_access') return 'Event access';
+  if (type === 'physical') return 'Physical prize';
+  return 'Prize';
 }
 
 export default function LandingPage() {
@@ -466,6 +495,156 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section
+          id="winners"
+          className="border-b border-brand-border-muted px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+        >
+          <div className="mx-auto max-w-6xl">
+            <Reveal>
+              <div className="mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+                <div className="max-w-2xl">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
+                    Drawings
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-brand-heading sm:text-3xl">
+                    Recent drawing winners
+                  </h2>
+                  <p className="prose-landing mt-3 max-w-xl leading-[1.65]">
+                    Latest completed drawings and the members who won them. Join the workspace to
+                    enter open pools and see full history in your dashboard.
+                  </p>
+                </div>
+                <Link
+                  href={user ? '/dashboard/user/drawings' : '/register'}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/[0.1] bg-black/30 px-5 py-2.5 text-sm font-semibold text-brand-heading shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] transition hover:border-brand-accent/35 hover:bg-[var(--brand-accent-soft)]"
+                >
+                  {user ? 'View drawings' : 'Create account'}
+                  <ChevronRight className="h-4 w-4 opacity-80" aria-hidden />
+                </Link>
+              </div>
+            </Reveal>
+
+            {winnersLoading ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div
+                    key={i}
+                    className="animate-pulse rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0d0f14] to-[#060709] p-5"
+                  >
+                    <div className="h-4 w-20 rounded bg-white/[0.06]" />
+                    <div className="mt-4 flex gap-4">
+                      <div className="h-14 w-14 shrink-0 rounded-2xl bg-white/[0.06]" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-full rounded bg-white/[0.06]" />
+                        <div className="h-3 w-4/5 rounded bg-white/[0.04]" />
+                      </div>
+                    </div>
+                    <div className="mt-4 h-16 rounded-xl bg-white/[0.04]" />
+                  </div>
+                ))}
+              </div>
+            ) : winnerRows.length === 0 ? (
+              <Reveal delay={80}>
+                <div className="flex flex-col items-center rounded-2xl border border-white/[0.08] bg-black/20 px-6 py-14 text-center">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-400/25 bg-amber-500/10 text-amber-200/95">
+                    <Trophy className="h-7 w-7" strokeWidth={1.5} aria-hidden />
+                  </span>
+                  <p className="mt-4 max-w-md text-sm leading-relaxed text-brand-muted">
+                    Winners will appear here once drawings complete and results are published. Sign in
+                    to join active pools from your member dashboard.
+                  </p>
+                  {!user ? (
+                    <Link href="/login" className="btn-primary mt-6 inline-flex items-center gap-2">
+                      Sign in
+                      <ArrowRight className="h-4 w-4" aria-hidden />
+                    </Link>
+                  ) : null}
+                </div>
+              </Reveal>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {winnerRows.slice(0, 9).map((row, i) => {
+                  const name = row.winner?.name || 'Member';
+                  const prize = winnerPrizeLine(row);
+                  const drawLabel = row.draw_date
+                    ? new Date(row.draw_date).toLocaleString(undefined, {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })
+                    : '—';
+                  const detailHref = row.slug
+                    ? user
+                      ? `/dashboard/user/drawings/${encodeURIComponent(row.slug)}`
+                      : `/login`
+                    : '/login';
+
+                  return (
+                    <Reveal key={row.id} delay={i * 55}>
+                      <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-gradient-to-br from-[#0d0f14] via-[#0a0b10] to-[#060709] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)] transition hover:border-amber-400/25">
+                        <div
+                          className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-amber-500/[0.07] blur-2xl transition group-hover:bg-amber-500/[0.12]"
+                          aria-hidden
+                        />
+                        <div className="relative">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-amber-200/95">
+                            <Trophy className="h-3.5 w-3.5" aria-hidden />
+                            Win
+                          </span>
+                        </div>
+                        <div className="relative mt-4 flex gap-3">
+                          <div
+                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.1] bg-gradient-to-br from-amber-500/20 to-amber-600/5 text-sm font-bold text-amber-100 shadow-inner"
+                            aria-hidden
+                          >
+                            {winnerInitials(name)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold text-brand-heading">{name}</p>
+                            <p className="mt-0.5 text-xs leading-relaxed text-brand-muted">
+                              <span className="text-brand-subtle">Won</span>{' '}
+                              <span className="font-medium text-brand-heading/95">
+                                &ldquo;{row.title || 'Drawing'}&rdquo;
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="relative mt-4 flex flex-1 flex-col gap-2 rounded-xl border border-white/[0.06] bg-black/30 p-3">
+                          <div className="flex items-start gap-2 text-sm">
+                            <Award className="mt-0.5 h-4 w-4 shrink-0 text-amber-300/80" aria-hidden />
+                            <div className="min-w-0">
+                              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                                Prize
+                              </p>
+                              <p className="mt-0.5 font-medium leading-snug text-brand-heading">{prize}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2 border-t border-white/[0.05] pt-2 text-sm">
+                            <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-brand-subtle" aria-hidden />
+                            <div className="min-w-0">
+                              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                                Draw date
+                              </p>
+                              <p className="mt-0.5 text-brand-muted">{drawLabel}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <Link
+                          href={detailHref}
+                          className="relative mt-4 inline-flex w-full items-center justify-center gap-1 rounded-xl border border-white/[0.1] bg-white/[0.04] py-2.5 text-sm font-semibold text-brand-heading transition hover:border-amber-400/30 hover:bg-amber-500/10 hover:text-amber-50"
+                        >
+                          <Sparkles className="h-4 w-4 text-amber-300/90" aria-hidden />
+                          {user ? 'View drawing' : 'Sign in to explore'}
+                          <ChevronRight className="h-4 w-4 opacity-70" aria-hidden />
+                        </Link>
+                      </article>
+                    </Reveal>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
         <section className="border-b border-brand-border-muted px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
             <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
@@ -715,57 +894,6 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-
-        <section className="border-b border-brand-border-muted px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">
-            <Reveal>
-              <div className="mb-8 max-w-2xl">
-                <h2 className="text-2xl font-semibold tracking-tight text-brand-heading sm:text-3xl">
-                  Recent drawing winners
-                </h2>
-                <p className="prose-landing mt-3 leading-[1.65]">
-                  Latest completed drawings and the members who won them.
-                </p>
-              </div>
-            </Reveal>
-
-            {winnersLoading ? (
-              <div className="space-y-2 animate-pulse">
-                <div className="h-12 rounded-xl border border-white/[0.08] bg-black/[0.25]" />
-                <div className="h-12 rounded-xl border border-white/[0.08] bg-black/[0.25]" />
-              </div>
-            ) : winnerRows.length === 0 ? (
-              <div className="rounded-xl border border-white/[0.08] bg-black/25 p-4 text-sm text-brand-muted">
-                Winners will appear here once drawings are completed.
-              </div>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-white/[0.08] bg-black/[0.2]">
-                <table className="w-full min-w-[680px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-white/[0.06] text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                      <th className="px-4 py-3 sm:px-5">Drawing</th>
-                      <th className="px-4 py-3 sm:px-5">Winner</th>
-                      <th className="px-4 py-3 sm:px-5">Prize</th>
-                      <th className="px-4 py-3 sm:px-5">Draw date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
-                    {winnerRows.slice(0, 10).map((row) => (
-                      <tr key={row.id} className="hover:bg-white/[0.02]">
-                        <td className="px-4 py-3.5 sm:px-5 text-brand-heading">{row.title || '—'}</td>
-                        <td className="px-4 py-3.5 sm:px-5 text-brand-muted">{row.winner?.name || 'Member'}</td>
-                        <td className="px-4 py-3.5 sm:px-5 text-brand-muted">{row.prize_title || '—'}</td>
-                        <td className="px-4 py-3.5 sm:px-5 text-brand-muted">
-                          {row.draw_date ? new Date(row.draw_date).toLocaleDateString() : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
         </section>
 
