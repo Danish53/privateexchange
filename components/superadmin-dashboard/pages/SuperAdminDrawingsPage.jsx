@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar, Gift, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { openDateInputPicker } from '@/lib/openDateInputPicker';
 import { useAuth } from '@/components/auth-context';
 
 const STATUS_OPTIONS = ['pending', 'active', 'completed'];
@@ -211,12 +212,7 @@ export default function SuperAdminDrawingsPage() {
   }, [loadTokens]);
 
   const openDrawDatePicker = () => {
-    const input = drawDateInputRef.current;
-    if (!input) return;
-    input.focus();
-    if (typeof input.showPicker === 'function') {
-      input.showPicker();
-    }
+    openDateInputPicker(drawDateInputRef.current);
   };
 
   const onSubmitCreate = async (event) => {
@@ -494,7 +490,7 @@ export default function SuperAdminDrawingsPage() {
               <div className="grid gap-3 sm:grid-cols-1">
                 <label className="space-y-1.5 cursor-pointer" onClick={openDrawDatePicker}>
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Draw date</span>
-                  <input required ref={drawDateInputRef} min={nowInputMin} type="datetime-local" name="draw_date" value={formData.draw_date} onChange={onFormField} onClick={openDrawDatePicker} onFocus={openDrawDatePicker} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
+                  <input required ref={drawDateInputRef} min={nowInputMin} type="datetime-local" name="draw_date" value={formData.draw_date} onChange={onFormField} onClick={openDrawDatePicker} onFocus={openDrawDatePicker} className="w-full cursor-pointer rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
               </div>
 

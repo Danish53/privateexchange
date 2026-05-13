@@ -248,31 +248,41 @@ export default function DrawingDetailPage() {
             </div>
           </section>
 
-          <div className="mt-6 flex flex-wrap justify-end gap-2">
-            <Link
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                if ((Number(drawing.total_entries || 0) > 0) && Number(drawing.joined_count || 0) >= Number(drawing.total_entries || 0)) {
-                  setJoinError('Drawing capacity is full. Join is closed.');
-                  setJoinSuccess('');
-                  setShowJoinModal(true);
-                  return;
-                }
-                void loadJoinPreview();
-              }}
-              className={`btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold ${
-                (Number(drawing.total_entries || 0) > 0) && Number(drawing.joined_count || 0) >= Number(drawing.total_entries || 0)
-                  ? 'pointer-events-none opacity-50'
-                  : ''
-              }`}
-            >
-              <Wallet className="h-4 w-4" strokeWidth={2} aria-hidden />
-              {(Number(drawing.total_entries || 0) > 0) && Number(drawing.joined_count || 0) >= Number(drawing.total_entries || 0)
-                ? 'Join closed'
-                : 'Join'}
-            </Link>
-          </div>
+          {drawing.status === 'active' ? (
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    Number(drawing.total_entries || 0) > 0 &&
+                    Number(drawing.joined_count || 0) >= Number(drawing.total_entries || 0)
+                  ) {
+                    setJoinError('Drawing capacity is full. Join is closed.');
+                    setJoinSuccess('');
+                    setShowJoinModal(true);
+                    return;
+                  }
+                  void loadJoinPreview();
+                }}
+                className={`btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold ${
+                  Number(drawing.total_entries || 0) > 0 &&
+                  Number(drawing.joined_count || 0) >= Number(drawing.total_entries || 0)
+                    ? 'pointer-events-none opacity-50'
+                    : ''
+                }`}
+              >
+                <Wallet className="h-4 w-4" strokeWidth={2} aria-hidden />
+                {Number(drawing.total_entries || 0) > 0 &&
+                Number(drawing.joined_count || 0) >= Number(drawing.total_entries || 0)
+                  ? 'Join closed'
+                  : 'Join'}
+              </button>
+            </div>
+          ) : (
+            <p className="mt-6 text-sm text-brand-muted">
+              This drawing is no longer open for joins. You can still review the details above.
+            </p>
+          )}
         </article>
       ) : (
         <div className="rounded-2xl border border-white/[0.08] bg-black/[0.25] p-6 text-sm text-brand-muted">
@@ -287,7 +297,7 @@ export default function DrawingDetailPage() {
       ) : null}
 
       {showJoinModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#07080c] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:p-6">
             <h3 className="text-lg font-semibold text-brand-heading">Confirm drawing join</h3>
             <p className="mt-1 text-sm text-brand-muted">

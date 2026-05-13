@@ -3,7 +3,6 @@ import { loadRequestActor } from '@/lib/authHelpers';
 import { connectDB } from '@/lib/db';
 import Drawing from '@/lib/models/Drawing';
 import DrawingJoin from '@/lib/models/DrawingJoin';
-import mongoose from 'mongoose';
 import '@/lib/models/Token';
 
 export const runtime = 'nodejs';
@@ -71,10 +70,14 @@ export async function GET(request, { params }) {
     }
 
     await connectDB();
-    const userObjectId = new mongoose.Types.ObjectId(auth.userId);
+    // Active: any member. Completed with an announced winner: any member (read-only recap).
+    // Completed without a winner remains restricted (not listed in this query shape for typical flows).
     const drawing = await Drawing.findOne({
       slug,
-      $or: [{ status: 'active' }, { status: 'completed', winner_user_id: userObjectId }],
+      $or: [
+        { status: 'active' },
+        { status: 'completed', winner_user_id: { $ne: null } },
+      ],
     })
       .populate('reward_token_id', 'name symbol slug')
       .populate('entry_token_id', 'name symbol slug')

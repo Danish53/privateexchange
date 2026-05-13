@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/components/auth-context';
 import { AdminDataTableSkeleton } from '@/components/ui/content-skeletons';
 import { cn } from '@/lib/utils';
+import { openDateInputPicker } from '@/lib/openDateInputPicker';
 import { formatNumberSmart } from '@/lib/numberFormat';
 
 const TYPE_LABELS = {
@@ -105,6 +106,8 @@ export default function SuperAdminTransactionsPage() {
   const [tokenFilter, setTokenFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const dateFromInputRef = useRef(null);
+  const dateToInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [rows, setRows] = useState([]);
@@ -407,17 +410,23 @@ export default function SuperAdminTransactionsPage() {
             ))}
           </select>
           <input
+            ref={dateFromInputRef}
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+            onClick={() => openDateInputPicker(dateFromInputRef.current)}
+            onFocus={() => openDateInputPicker(dateFromInputRef.current)}
+            className="cursor-pointer rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
             aria-label="From date"
           />
           <input
+            ref={dateToInputRef}
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+            onClick={() => openDateInputPicker(dateToInputRef.current)}
+            onFocus={() => openDateInputPicker(dateToInputRef.current)}
+            className="cursor-pointer rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
             aria-label="To date"
           />
         </div>

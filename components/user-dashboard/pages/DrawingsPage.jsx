@@ -217,7 +217,7 @@ export default function DrawingsPage() {
 
         {loading ? (
           <Panel title="Active drawings" subtitle="Loading your pools…">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
@@ -243,7 +243,7 @@ export default function DrawingsPage() {
             title="Active drawings"
             subtitle="Open pools you can join, plus drawings you participated in that have finished."
           >
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               {rows.map((draw) => {
                 const total = Number(draw.total_entries || 0);
                 const joined = Number(draw.joined_count || 0);
@@ -264,67 +264,56 @@ export default function DrawingsPage() {
                 return (
                   <article
                     key={draw.id || draw.slug}
-                    className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-gradient-to-br from-[#0d0f14] via-[#0a0b10] to-[#060709] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)] transition ${
+                    className={`flex min-w-0 flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-black/20 p-4 sm:p-5 ${
                       isWinner
-                        ? 'border-emerald-400/35 ring-1 ring-emerald-400/15'
+                        ? 'border-emerald-500/35'
                         : isActive
-                          ? 'border-white/[0.1] hover:border-cyan-400/30'
-                          : 'border-white/[0.08] hover:border-white/[0.14]'
+                          ? 'border-brand-accent/30'
+                          : 'border-brand-border-muted'
                     }`}
                   >
-                    <div
-                      className={`pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full blur-2xl transition ${
-                        isWinner
-                          ? 'bg-emerald-500/[0.12]'
-                          : isActive
-                            ? 'bg-cyan-500/[0.08] group-hover:bg-cyan-500/[0.14]'
-                            : 'bg-white/[0.04]'
-                      }`}
-                      aria-hidden
-                    />
-
-                    <div className="relative flex flex-wrap items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {isActive ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/25 bg-cyan-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-cyan-100/95">
-                          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-accent/35 bg-brand-accent/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--brand-accent-hover)]">
+                          <Sparkles className="h-3.5 w-3.5 shrink-0 text-brand-accent" aria-hidden />
                           Live pool
                         </span>
                       ) : isWinner ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/12 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-emerald-100">
-                          <Trophy className="h-3.5 w-3.5" aria-hidden />
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-200">
+                          <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />
                           You won
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.05] px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
                           Ended
                         </span>
                       )}
                     </div>
 
-                    <div className="relative mt-4 overflow-hidden rounded-xl border border-white/[0.08] bg-black/40">
+                    <div className="relative z-0 mt-3 overflow-hidden rounded-lg border border-brand-border-muted bg-black/30">
                       {cover ? (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={imageSrc(cover)}
                             alt={draw.title || 'Drawing'}
-                            className="aspect-[21/9] w-full object-cover sm:aspect-[2.2/1]"
+                            className="h-32 w-full object-cover sm:h-36"
                           />
                         </>
                       ) : (
-                        <div className="flex aspect-[21/9] items-center justify-center bg-gradient-to-br from-brand-accent/10 to-transparent sm:aspect-[2.2/1]">
-                          <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-brand-accent/25 bg-brand-accent/10 text-brand-accent">
-                            <Gift className="h-7 w-7" strokeWidth={1.6} aria-hidden />
+                        <div className="flex h-32 items-center justify-center bg-brand-accent/[0.06] sm:h-36">
+                          <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-brand-accent/30 bg-brand-accent/10 text-brand-accent">
+                            <Gift className="h-6 w-6" strokeWidth={1.6} aria-hidden />
                           </span>
                         </div>
                       )}
                     </div>
 
-                    <div className="relative mt-4 min-w-0">
-                      <h3 className="text-lg font-semibold tracking-tight text-brand-heading">{draw.title}</h3>
+                    <div className="mt-3 min-w-0">
+                      <h3 className="truncate text-base font-semibold text-brand-heading sm:text-lg">{draw.title}</h3>
                       <p className="mt-1 text-sm text-brand-muted">
                         <span className="text-brand-subtle">Prize</span>{' '}
-                        <span className="font-medium text-brand-heading/95">{draw.prize_title || '—'}</span>
+                        <span className="font-medium text-brand-heading">{draw.prize_title || '—'}</span>
                       </p>
                       {draw.description ? (
                         <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-brand-muted">{draw.description}</p>
@@ -332,76 +321,83 @@ export default function DrawingsPage() {
                     </div>
 
                     {isWinner ? (
-                      <div className="relative mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-2.5 text-xs font-medium leading-relaxed text-emerald-100">
-                        Congratulations — you were selected for this drawing. Open the detail page for full information.
+                      <div className="mt-3 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-2 text-xs leading-relaxed text-emerald-100">
+                        You were selected for this drawing. Open details for full information.
                       </div>
                     ) : null}
 
                     {total > 0 ? (
-                      <div className="relative mt-4">
-                        <div className="mb-1 flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                          <span className="inline-flex items-center gap-1">
-                            <Users className="h-3.5 w-3.5" aria-hidden />
-                            Pool fill
+                      <div className="mt-3">
+                        <div className="mb-1 flex items-center justify-between gap-2 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                          <span className="inline-flex min-w-0 items-center gap-1">
+                            <Users className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-brand-accent' : ''}`} aria-hidden />
+                            <span className="truncate">Pool fill</span>
                           </span>
-                          <span className="tabular-nums text-brand-muted">
+                          <span className="shrink-0 tabular-nums text-brand-muted">
                             {joined.toLocaleString()} / {total.toLocaleString()}
                           </span>
                         </div>
                         <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
                           <div
                             className={`h-full rounded-full transition-all ${
-                              isFull ? 'bg-amber-500/70' : 'bg-gradient-to-r from-cyan-500/70 to-brand-accent'
+                              isFull
+                                ? 'bg-amber-500/80'
+                                : isActive
+                                  ? 'bg-gradient-to-r from-brand-accent/80 to-[color:var(--brand-accent-hover)]'
+                                  : 'bg-white/20'
                             }`}
                             style={{ width: `${fillPct ?? 0}%` }}
                           />
                         </div>
                       </div>
                     ) : (
-                      <p className="relative mt-3 text-xs text-brand-muted">
-                        <span className="font-semibold text-brand-heading">{joined.toLocaleString()}</span> members joined
-                        · no fixed cap
+                      <p className="mt-3 text-xs text-brand-muted">
+                        <span className="font-semibold text-brand-heading">{joined.toLocaleString()}</span> joined · no
+                        cap
                       </p>
                     )}
 
-                    <div className="relative mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <div className="flex gap-2.5 rounded-xl border border-white/[0.06] bg-black/30 p-3">
-                        <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300/80" aria-hidden />
-                        <div className="min-w-0">
-                          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                    <dl className="mt-3 space-y-2.5 rounded-lg border border-brand-border-muted bg-black/25 px-3 py-3 text-sm">
+                      <div className="flex gap-2.5">
+                        <Calendar
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${isActive ? 'text-brand-accent' : 'text-brand-subtle'}`}
+                          aria-hidden
+                        />
+                        <div className="min-w-0 flex-1">
+                          <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
                             Draw date
-                          </p>
-                          <p className="mt-0.5 text-sm font-medium text-brand-heading">{drawWhen}</p>
+                          </dt>
+                          <dd className="mt-0.5 break-words font-medium text-brand-heading">{drawWhen}</dd>
                         </div>
                       </div>
-                      <div className="flex gap-2.5 rounded-xl border border-white/[0.06] bg-black/30 p-3">
+                      <div className="flex gap-2.5 border-t border-white/[0.06] pt-2.5">
                         <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" aria-hidden />
-                        <div className="min-w-0">
-                          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                        <div className="min-w-0 flex-1">
+                          <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
                             Entry
-                          </p>
-                          <p className="mt-0.5 truncate text-sm font-medium text-brand-heading">
+                          </dt>
+                          <dd className="mt-0.5 break-words font-medium text-brand-heading">
                             {[String(draw.entry_cost ?? ''), entrySym !== '—' ? entrySym : '']
                               .filter(Boolean)
                               .join(' ') || '—'}
-                          </p>
+                          </dd>
                         </div>
                       </div>
-                      <div className="flex gap-2.5 rounded-xl border border-white/[0.06] bg-black/30 p-3 sm:col-span-2">
-                        <Award className="mt-0.5 h-4 w-4 shrink-0 text-amber-300/85" aria-hidden />
-                        <div className="min-w-0">
-                          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                      <div className="flex gap-2.5 border-t border-white/[0.06] pt-2.5">
+                        <Award className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent/90" aria-hidden />
+                        <div className="min-w-0 flex-1">
+                          <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
                             Reward
-                          </p>
-                          <p className="mt-0.5 text-sm font-medium text-brand-heading">{rewardText}</p>
+                          </dt>
+                          <dd className="mt-0.5 break-words font-medium text-brand-heading">{rewardText}</dd>
                         </div>
                       </div>
-                    </div>
+                    </dl>
 
-                    <div className="relative mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
                       <Link
                         href={`/dashboard/user/drawings/${encodeURIComponent(draw.slug)}`}
-                        className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl border border-white/[0.1] bg-white/[0.03] py-2.5 text-sm font-semibold text-brand-heading transition hover:border-brand-accent/35 hover:bg-brand-accent/10 sm:flex-initial sm:px-5"
+                        className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-brand-border-muted bg-black/30 py-2.5 text-sm font-semibold text-brand-heading transition hover:border-brand-accent/40 hover:bg-brand-accent/10 sm:flex-initial sm:px-4"
                       >
                         View details
                         <ChevronRight className="h-4 w-4 opacity-70" aria-hidden />
@@ -418,11 +414,11 @@ export default function DrawingsPage() {
                             }
                             void loadJoinPreview(draw.slug);
                           }}
-                          className={`btn-primary inline-flex flex-1 items-center justify-center rounded-xl py-2.5 text-sm font-semibold sm:flex-initial sm:px-6 ${
+                          className={`btn-primary inline-flex flex-1 items-center justify-center rounded-lg py-2.5 text-sm font-semibold sm:flex-initial sm:px-5 ${
                             isFull ? 'pointer-events-none opacity-50' : ''
                           }`}
                         >
-                          {isFull ? 'Join closed' : 'Join drawing'}
+                          {isFull ? 'Join closed' : 'Join'}
                         </button>
                       ) : null}
                     </div>
@@ -447,7 +443,7 @@ export default function DrawingsPage() {
 
         <Panel title="Recent winners" subtitle="Latest completed drawings and who won each pool.">
           {winnersLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
@@ -470,7 +466,7 @@ export default function DrawingsPage() {
               No winners announced yet. Completed drawings with a selected winner will appear here.
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               {winnerRows.map((row) => {
                 const isYou = user?.id && row.winner?.id && String(user.id) === String(row.winner.id);
                 const name = row.winner?.name || 'Member';
@@ -486,71 +482,66 @@ export default function DrawingsPage() {
                 return (
                   <article
                     key={row.id}
-                    className={`group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-[#0d0f14] via-[#0a0b10] to-[#060709] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)] transition hover:border-amber-400/25 ${
-                      isYou
-                        ? 'border-amber-400/35 ring-1 ring-amber-400/20'
-                        : 'border-white/[0.1]'
+                    className={`relative z-0 flex min-w-0 flex-col overflow-hidden rounded-xl border bg-black/20 p-4 sm:p-5 ${
+                      isYou ? 'border-brand-accent/35' : 'border-brand-border-muted'
                     }`}
                   >
-                    <div
-                      className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-amber-500/[0.07] blur-2xl transition group-hover:bg-amber-500/[0.12]"
-                      aria-hidden
-                    />
-                    <div className="relative flex items-start justify-between gap-3">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-amber-200/95">
-                        <Trophy className="h-3.5 w-3.5" aria-hidden />
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--brand-accent-hover)]">
+                        <Trophy className="h-3.5 w-3.5 shrink-0 text-brand-accent" aria-hidden />
                         Win
                       </span>
                       {isYou ? (
-                        <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-200">
+                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-200">
                           You
                         </span>
                       ) : null}
                     </div>
 
-                    <div className="relative mt-4 flex gap-4">
+                    <div className="mt-3 flex min-w-0 gap-3">
                       <div
-                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/[0.1] bg-gradient-to-br from-amber-500/20 to-amber-600/5 text-base font-bold text-amber-100 shadow-inner"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-brand-border-muted bg-brand-accent/10 text-sm font-bold text-brand-accent"
                         aria-hidden
                       >
                         {winnerInitials(name)}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-lg font-semibold tracking-tight text-brand-heading">{name}</p>
+                        <p className="truncate font-semibold text-brand-heading">{name}</p>
                         <p className="mt-0.5 text-xs leading-relaxed text-brand-muted">
-                          <span className="text-brand-subtle">won drawing</span>{' '}
-                          <span className="font-medium text-brand-heading/95">&ldquo;{row.title || 'Untitled'}&rdquo;</span>
+                          <span className="text-brand-subtle">Won</span>{' '}
+                          <span className="font-medium text-brand-heading">&ldquo;{row.title || 'Untitled'}&rdquo;</span>
                         </p>
                       </div>
                     </div>
 
-                    <div className="relative mt-4 grid gap-2 rounded-xl border border-white/[0.06] bg-black/30 p-3.5">
-                      <div className="flex items-start gap-2 text-sm">
-                        <Award className="mt-0.5 h-4 w-4 shrink-0 text-amber-300/80" aria-hidden />
+                    <dl className="mt-3 space-y-2 rounded-lg border border-brand-border-muted bg-black/25 px-3 py-3 text-sm">
+                      <div className="flex gap-2">
+                        <Award className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" aria-hidden />
                         <div className="min-w-0">
-                          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Prize</p>
-                          <p className="mt-0.5 font-medium text-brand-heading">{prize}</p>
+                          <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">Prize</dt>
+                          <dd className="mt-0.5 break-words font-medium text-brand-heading">{prize}</dd>
                         </div>
                       </div>
-                      <div className="flex items-start gap-2 border-t border-white/[0.05] pt-2 text-sm">
+                      <div className="flex gap-2 border-t border-white/[0.06] pt-2">
                         <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-brand-subtle" aria-hidden />
                         <div className="min-w-0">
-                          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                          <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
                             Draw completed
-                          </p>
-                          <p className="mt-0.5 text-brand-muted">{drawLabel}</p>
+                          </dt>
+                          <dd className="mt-0.5 break-words text-brand-muted">{drawLabel}</dd>
                         </div>
                       </div>
-                    </div>
+                    </dl>
 
                     {detailHref ? (
                       <Link
                         href={detailHref}
-                        className="relative mt-4 inline-flex w-full items-center justify-center gap-1 rounded-xl border border-white/[0.1] bg-white/[0.04] py-2.5 text-sm font-semibold text-brand-heading transition hover:border-amber-400/30 hover:bg-amber-500/10 hover:text-amber-50"
+                        scroll
+                        className="mt-3 inline-flex w-full min-w-0 items-center justify-center gap-1 rounded-lg border border-brand-border-muted bg-black/30 py-2.5 text-sm font-semibold text-brand-heading transition hover:border-brand-accent/40 hover:bg-brand-accent/10"
                       >
-                        <Sparkles className="h-4 w-4 text-amber-300/90" aria-hidden />
-                        View drawing
-                        <ChevronRight className="h-4 w-4 opacity-70" aria-hidden />
+                        <Sparkles className="h-4 w-4 shrink-0 text-brand-accent" aria-hidden />
+                        <span className="truncate">View drawing</span>
+                        <ChevronRight className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
                       </Link>
                     ) : null}
                   </article>
@@ -562,7 +553,7 @@ export default function DrawingsPage() {
       </div>
 
       {showJoinModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#07080c] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:p-6">
             <h3 className="text-lg font-semibold text-brand-heading">Confirm drawing join</h3>
             <p className="mt-1 text-sm text-brand-muted">

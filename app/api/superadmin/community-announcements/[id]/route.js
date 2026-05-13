@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import { loadRequestActor } from '@/lib/authHelpers';
+import { normalizeSuperadminAnnouncementBody } from '@/lib/communityAnnouncementNormalize';
 import CommunityAnnouncement from '@/lib/models/CommunityAnnouncement';
 
 export const runtime = 'nodejs';
@@ -42,84 +43,6 @@ async function requireSuperadmin(request) {
   return auth;
 }
 
-const TYPES = [
-  'drawing_launch',
-  'drawing_result',
-  'maintenance',
-  'wallet_token',
-  'membership',
-  'security',
-  'policy',
-  'promotion',
-  'general',
-];
-const AUDIENCES = ['all_users', 'vip_only', 'non_vip_only'];
-const PRIORITIES = ['normal', 'high', 'critical'];
-
-function parseAnnouncementBody(body) {
-  const title = String(body.title || '').trim();
-  const type = String(body.type || 'general').trim();
-  const audience = String(body.audience || 'all_users').trim();
-  const priority = String(body.priority || 'normal').trim();
-  const summary = String(body.summary || '').trim();
-  const details = String(body.details || '').trim();
-  const startsAtRaw = String(body.startsAt || '').trim();
-  const endsAtRaw = body.endsAt === null || body.endsAt === undefined ? '' : String(body.endsAt).trim();
-  const ctaLabel = String(body?.cta?.label || '').trim();
-  const ctaUrl = String(body?.cta?.url || '').trim();
-  const channels = {
-    dashboardBanner: Boolean(body?.channels?.dashboardBanner),
-    inAppNotice: Boolean(body?.channels?.inAppNotice),
-    emailNotice: Boolean(body?.channels?.emailNotice),
-  };
-
-  if (!title || !summary || !details || !startsAtRaw) {
-    return { error: 'Title, summary, details and publish start are required.' };
-  }
-  if (!TYPES.includes(type)) {
-    return { error: 'Invalid announcement type.' };
-  }
-  if (!AUDIENCES.includes(audience)) {
-    return { error: 'Invalid audience type.' };
-  }
-  if (!PRIORITIES.includes(priority)) {
-    return { error: 'Invalid priority type.' };
-  }
-  if (!channels.dashboardBanner && !channels.inAppNotice && !channels.emailNotice) {
-    return { error: 'Select at least one delivery channel.' };
-  }
-  if ((ctaLabel && !ctaUrl) || (!ctaLabel && ctaUrl)) {
-    return { error: 'Action label and action URL should be filled together.' };
-  }
-
-  const startsAt = new Date(startsAtRaw);
-  if (Number.isNaN(startsAt.getTime())) {
-    return { error: 'Invalid publish start date/time.' };
-  }
-  let endsAt = null;
-  if (endsAtRaw) {
-    endsAt = new Date(endsAtRaw);
-    if (Number.isNaN(endsAt.getTime()) || endsAt.getTime() <= startsAt.getTime()) {
-      return { error: 'End date/time must be after publish start.' };
-    }
-  }
-
-  return {
-    data: {
-      title,
-      type,
-      audience,
-      priority,
-      summary,
-      details,
-      startsAt,
-      endsAt,
-      cta: { label: ctaLabel, url: ctaUrl },
-      channels,
-    },
-  };
-}
-
 export async function PATCH(request, { params }) {
   try {
     const auth = await requireSuperadmin(request);
@@ -131,7 +54,7 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const parsed = parseAnnouncementBody(body);
+    const parsed = normalizeSuperadminAnnouncementBody(body);
     if (parsed.error) {
       return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
     }

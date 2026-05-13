@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { loadRequestActor } from '@/lib/authHelpers';
+import { normalizeSuperadminAnnouncementBody } from '@/lib/communityAnnouncementNormalize';
 import CommunityAnnouncement from '@/lib/models/CommunityAnnouncement';
 
 export const runtime = 'nodejs';
@@ -68,71 +69,14 @@ export async function POST(request) {
     if ('error' in auth) return auth.error;
 
     const body = await request.json().catch(() => ({}));
-    const title = String(body.title || '').trim();
-    const type = String(body.type || 'general').trim();
-    const audience = String(body.audience || 'all_users').trim();
-    const priority = String(body.priority || 'normal').trim();
-    const summary = String(body.summary || '').trim();
-    const details = String(body.details || '').trim();
-    const startsAtRaw = String(body.startsAt || '').trim();
-    const endsAtRaw = String(body.endsAt || '').trim();
-    const ctaLabel = String(body?.cta?.label || '').trim();
-    const ctaUrl = String(body?.cta?.url || '').trim();
-    const channels = {
-      dashboardBanner: Boolean(body?.channels?.dashboardBanner),
-      inAppNotice: Boolean(body?.channels?.inAppNotice),
-      emailNotice: Boolean(body?.channels?.emailNotice),
-    };
-
-    if (!title || !summary || !details || !startsAtRaw) {
-      return NextResponse.json(
-        { ok: false, error: 'Title, summary, details and publish start are required.' },
-        { status: 400 }
-      );
-    }
-    if (!['drawing_launch', 'drawing_result', 'maintenance', 'wallet_token', 'membership', 'security', 'policy', 'promotion', 'general'].includes(type)) {
-      return NextResponse.json({ ok: false, error: 'Invalid announcement type.' }, { status: 400 });
-    }
-    if (!['all_users', 'vip_only', 'non_vip_only'].includes(audience)) {
-      return NextResponse.json({ ok: false, error: 'Invalid audience type.' }, { status: 400 });
-    }
-    if (!['normal', 'high', 'critical'].includes(priority)) {
-      return NextResponse.json({ ok: false, error: 'Invalid priority type.' }, { status: 400 });
-    }
-    if (!channels.dashboardBanner && !channels.inAppNotice && !channels.emailNotice) {
-      return NextResponse.json({ ok: false, error: 'Select at least one delivery channel.' }, { status: 400 });
-    }
-    if ((ctaLabel && !ctaUrl) || (!ctaLabel && ctaUrl)) {
-      return NextResponse.json(
-        { ok: false, error: 'Action label and action URL should be filled together.' },
-        { status: 400 }
-      );
-    }
-
-    const startsAt = new Date(startsAtRaw);
-    if (Number.isNaN(startsAt.getTime())) {
-      return NextResponse.json({ ok: false, error: 'Invalid publish start date/time.' }, { status: 400 });
-    }
-    let endsAt = null;
-    if (endsAtRaw) {
-      endsAt = new Date(endsAtRaw);
-      if (Number.isNaN(endsAt.getTime()) || endsAt.getTime() <= startsAt.getTime()) {
-        return NextResponse.json({ ok: false, error: 'End date/time must be after publish start.' }, { status: 400 });
-      }
+    const parsed = normalizeSuperadminAnnouncementBody(body);
+    if (parsed.error) {
+      return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
     }
 
     await connectDB();
     const created = await CommunityAnnouncement.create({
-      title,
-      type,
-      audience,
-      priority,
-      summary,
-      details,
-      startsAt,
-      endsAt,
-      cta: { label: ctaLabel, url: ctaUrl },
-      channels,
+      ...parsed.data,
       createdBy: auth.userId,
     });
 

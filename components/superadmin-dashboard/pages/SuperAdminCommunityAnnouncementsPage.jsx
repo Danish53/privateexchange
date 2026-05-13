@@ -1,20 +1,33 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Megaphone, Pencil, Send, Trash2, Users } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { CalendarClock, Megaphone, Pencil, Send, Trash2 } from 'lucide-react';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 import { useAuth } from '@/components/auth-context';
+import { openDateInputPicker } from '@/lib/openDateInputPicker';
+
+const TYPE_LABELS_ALL = {
+  // drawing_launch: 'Drawing launch',
+  // drawing_result: 'Drawing result / winner',
+  // maintenance: 'Maintenance / downtime',
+  // wallet_token: 'Wallet / token update',
+  // membership: 'Membership / VIP update',
+  // security: 'Security notice',
+  // policy: 'Policy / terms update',
+  promotion: 'Campaigns / Events',
+  // general: 'General platform notice',
+};
 
 const ANNOUNCEMENT_TYPES = [
-  { value: 'drawing_launch', label: 'Drawing launch' },
-  { value: 'drawing_result', label: 'Drawing result / winner' },
-  { value: 'maintenance', label: 'Maintenance / downtime' },
-  { value: 'wallet_token', label: 'Wallet / token update' },
-  { value: 'membership', label: 'Membership / VIP update' },
-  { value: 'security', label: 'Security notice' },
-  { value: 'policy', label: 'Policy / terms update' },
-  { value: 'promotion', label: 'Campaign / promotion' },
-  { value: 'general', label: 'General platform notice' },
+  // { value: 'drawing_launch', label: TYPE_LABELS_ALL.drawing_launch },
+  // { value: 'drawing_result', label: TYPE_LABELS_ALL.drawing_result },
+  // { value: 'maintenance', label: TYPE_LABELS_ALL.maintenance },
+  // { value: 'wallet_token', label: TYPE_LABELS_ALL.wallet_token },
+  // { value: 'membership', label: TYPE_LABELS_ALL.membership },
+  // { value: 'security', label: TYPE_LABELS_ALL.security },
+  // { value: 'policy', label: TYPE_LABELS_ALL.policy },
+  { value: 'promotion', label: TYPE_LABELS_ALL.promotion },
+  // { value: 'general', label: TYPE_LABELS_ALL.general },
 ];
 
 const AUDIENCE_OPTIONS = [
@@ -23,33 +36,29 @@ const AUDIENCE_OPTIONS = [
   { value: 'non_vip_only', label: 'Non-VIP users only' },
 ];
 
-const PRIORITY_OPTIONS = [
-  { value: 'normal', label: 'Normal' },
-  { value: 'high', label: 'High' },
-  { value: 'critical', label: 'Critical' },
-];
-
-const CHANNEL_OPTIONS = [
-  { key: 'dashboardBanner', label: 'Dashboard banner' },
-  { key: 'inAppNotice', label: 'In-app notice' },
-  { key: 'emailNotice', label: 'Email notice' },
-];
-
-const INITIAL_FORM = {
-  title: '',
-  type: 'general',
-  audience: 'all_users',
-  priority: 'normal',
-  summary: '',
-  details: '',
-  startsAt: '',
-  endsAt: '',
-  actionLabel: '',
-  actionUrl: '',
+const DEFAULT_CHANNELS = {
   dashboardBanner: true,
   inAppNotice: true,
   emailNotice: false,
 };
+
+const INITIAL_FORM = {
+  title: '',
+  type: 'promotion',
+  audience: 'all_users',
+  priority: 'normal',
+  details: '',
+  startsAt: '',
+};
+
+function audienceDisplay(value) {
+  const opt = AUDIENCE_OPTIONS.find((o) => o.value === value);
+  return opt ? opt.label : value || 'All users';
+}
+
+function typeDisplay(value) {
+  return TYPE_LABELS_ALL[value] || value || '—';
+}
 
 function rowToForm(row) {
   const toLocal = (iso) => {
@@ -64,15 +73,8 @@ function rowToForm(row) {
     type: row.type || 'general',
     audience: row.audience || 'all_users',
     priority: row.priority || 'normal',
-    summary: row.summary || '',
     details: row.details || '',
     startsAt: toLocal(row.startsAt),
-    endsAt: toLocal(row.endsAt),
-    actionLabel: row.cta?.label || '',
-    actionUrl: row.cta?.url || '',
-    dashboardBanner: Boolean(row.channels?.dashboardBanner),
-    inAppNotice: Boolean(row.channels?.inAppNotice),
-    emailNotice: Boolean(row.channels?.emailNotice),
   };
 }
 
@@ -83,10 +85,10 @@ export default function SuperAdminCommunityAnnouncementsPage() {
   const [success, setSuccess] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [preview, setPreview] = useState(null);
   const [rows, setRows] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const eventDateInputRef = useRef(null);
 
   useEffect(() => {
     const loadAnnouncements = async () => {
@@ -112,16 +114,11 @@ export default function SuperAdminCommunityAnnouncementsPage() {
     void loadAnnouncements();
   }, [ready, token]);
 
-  const minStartDateTime = useMemo(() => {
-    const now = new Date();
-    now.setSeconds(0, 0);
-    const tzOffset = now.getTimezoneOffset() * 60_000;
-    return new Date(now.getTime() - tzOffset).toISOString().slice(0, 16);
-  }, []);
-
   const onField = (event) => {
-    const { name, value, type, checked } = event.target;
-    setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    const { name, value } = event.target;
+    setError('');
+    setSuccess('');
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const onSubmit = async (event) => {
@@ -129,52 +126,31 @@ export default function SuperAdminCommunityAnnouncementsPage() {
     setError('');
     setSuccess('');
 
-    if (!form.title.trim() || !form.summary.trim() || !form.details.trim() || !form.startsAt) {
-      setError('Title, summary, details and publish start are required.');
+    if (!form.title.trim() || !form.details.trim() || !form.startsAt) {
+      setError('Title, details, and event date are required.');
       return;
     }
-    if (form.endsAt && new Date(form.endsAt).getTime() <= new Date(form.startsAt).getTime()) {
-      setError('End date/time must be after publish start.');
-      return;
-    }
-    if (!form.dashboardBanner && !form.inAppNotice && !form.emailNotice) {
-      setError('Select at least one delivery channel.');
-      return;
-    }
-    if ((form.actionLabel && !form.actionUrl) || (!form.actionLabel && form.actionUrl)) {
-      setError('Action label and action URL should be filled together.');
-      return;
-    }
-
-    const payload = {
-      title: form.title.trim(),
-      type: form.type,
-      audience: form.audience,
-      priority: form.priority,
-      summary: form.summary.trim(),
-      details: form.details.trim(),
-      startsAt: new Date(form.startsAt).toISOString(),
-      endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
-      cta:
-        form.actionLabel && form.actionUrl
-          ? { label: form.actionLabel.trim(), url: form.actionUrl.trim() }
-          : null,
-      channels: CHANNEL_OPTIONS.filter((c) => form[c.key]).map((c) => c.label),
-    };
 
     if (!token) {
       setError('Unauthorized. Please login again.');
       return;
     }
 
-    const body = JSON.stringify({
-      ...payload,
-      channels: {
-        dashboardBanner: form.dashboardBanner,
-        inAppNotice: form.inAppNotice,
-        emailNotice: form.emailNotice,
-      },
-    });
+    const existing = editingId ? rows.find((r) => r.id === editingId) : null;
+    const summary = form.details.trim().slice(0, 280) || form.title.trim().slice(0, 280);
+
+    const payload = {
+      title: form.title.trim(),
+      type: form.type,
+      audience: form.audience,
+      priority: form.priority,
+      summary,
+      details: form.details.trim(),
+      startsAt: new Date(form.startsAt).toISOString(),
+      endsAt: existing?.endsAt ? existing.endsAt : null,
+      cta: { label: '', url: '' },
+      channels: { ...DEFAULT_CHANNELS },
+    };
 
     setIsSaving(true);
     try {
@@ -187,7 +163,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body,
+        body: JSON.stringify(payload),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
@@ -202,10 +178,10 @@ export default function SuperAdminCommunityAnnouncementsPage() {
           setRows((prev) => [saved, ...prev]);
         }
       }
-      setPreview(payload);
       setSuccess(json.message || (editingId ? 'Announcement updated successfully.' : 'Announcement created successfully.'));
       setForm(INITIAL_FORM);
       setEditingId(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       setError(editingId ? 'Network error while updating announcement.' : 'Network error while creating announcement.');
     } finally {
@@ -216,7 +192,6 @@ export default function SuperAdminCommunityAnnouncementsPage() {
   const startEdit = (row) => {
     setError('');
     setSuccess('');
-    setPreview(null);
     setForm(rowToForm(row));
     setEditingId(row.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -227,7 +202,6 @@ export default function SuperAdminCommunityAnnouncementsPage() {
     setForm(INITIAL_FORM);
     setError('');
     setSuccess('');
-    setPreview(null);
   };
 
   const onDelete = async (row) => {
@@ -255,6 +229,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
         cancelEdit();
       }
       setSuccess(json.message || 'Announcement deleted successfully.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       setError('Network error while deleting announcement.');
     } finally {
@@ -266,16 +241,53 @@ export default function SuperAdminCommunityAnnouncementsPage() {
     <div className="space-y-6">
       <div className="border-b border-white/[0.06] pb-6">
         <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
-          Community Announcements
+          Community announcements
         </h1>
         <p className="mt-1 max-w-3xl text-sm text-brand-muted">
-          Create, update, or remove platform announcements for drawings, maintenance, token updates, membership
-          notices, and user-wide alerts.
+          Create and manage notices: title, type, audience, message, and event date (when the campaign or event is).
         </p>
       </div>
 
-      {error ? <FeedbackMessage tone="error" title="Validation error" message={error} /> : null}
-      {success ? <FeedbackMessage tone="success" title="Success" message={success} /> : null}
+      <div className="space-y-3" aria-live="polite" aria-relevant="additions text">
+        {error ? (
+          <FeedbackMessage
+            tone="error"
+            title="Error"
+            message={error}
+            className="border-2 border-rose-400/40 shadow-lg shadow-black/20"
+          />
+        ) : null}
+        {success ? (
+          <FeedbackMessage
+            tone="success"
+            title="Success"
+            message={success}
+            className="border-2 border-emerald-400/40 shadow-lg shadow-black/20"
+          />
+        ) : null}
+        {error || success ? (
+          <div className="flex flex-wrap gap-2 text-xs">
+            {error ? (
+              <button
+                type="button"
+                onClick={() => setError('')}
+                className="rounded-lg border border-white/15 px-2 py-1 font-semibold text-brand-muted hover:text-brand-heading"
+              >
+                Dismiss error
+              </button>
+            ) : null}
+            {success ? (
+              <button
+                type="button"
+                onClick={() => setSuccess('')}
+                className="rounded-lg border border-white/15 px-2 py-1 font-semibold text-brand-muted hover:text-brand-heading"
+              >
+                Dismiss message
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       <form
         onSubmit={onSubmit}
@@ -288,12 +300,10 @@ export default function SuperAdminCommunityAnnouncementsPage() {
             </span>
             <div>
               <h2 className="text-base font-semibold text-brand-heading">
-                {editingId ? 'Edit announcement' : 'Announcement composer'}
+                {editingId ? 'Edit announcement' : 'New announcement'}
               </h2>
               <p className="mt-0.5 text-xs text-brand-muted">
-                {editingId
-                  ? 'You are editing an existing announcement. Save to apply changes.'
-                  : 'Fill details and publish to the database.'}
+                {editingId ? 'Update the fields below, then save.' : 'Fill every field, then publish.'}
               </p>
             </div>
           </div>
@@ -314,7 +324,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
               className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
             >
               <Send className="h-4 w-4" strokeWidth={2} aria-hidden />
-              {isSaving ? (editingId ? 'Saving...' : 'Publishing...') : editingId ? 'Save changes' : 'Publish announcement'}
+              {isSaving ? (editingId ? 'Saving…' : 'Publishing…') : editingId ? 'Save changes' : 'Publish'}
             </button>
           </div>
         </div>
@@ -326,13 +336,13 @@ export default function SuperAdminCommunityAnnouncementsPage() {
               name="title"
               value={form.title}
               onChange={onField}
-              placeholder="Example: Drawing #42 joins now open"
+              placeholder="Announcement title"
               className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
             />
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Type</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Type *</span>
             <select
               name="type"
               value={form.type}
@@ -348,7 +358,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Audience</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Audience *</span>
             <select
               name="audience"
               value={form.audience}
@@ -363,245 +373,98 @@ export default function SuperAdminCommunityAnnouncementsPage() {
             </select>
           </label>
 
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Priority</span>
-            <select
-              name="priority"
-              value={form.priority}
-              onChange={onField}
-              className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
-            >
-              {PRIORITY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1.5 sm:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Summary *</span>
-            <input
-              name="summary"
-              value={form.summary}
-              onChange={onField}
-              placeholder="One-line summary users will read first."
-              className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
-            />
-          </label>
-
           <label className="space-y-1.5 sm:col-span-2">
             <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Details *</span>
             <textarea
-              rows={5}
+              rows={6}
               name="details"
               value={form.details}
               onChange={onField}
-              placeholder="Full details of the announcement..."
+              placeholder="Full message members will read…"
               className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
             />
           </label>
-        </div>
 
-        <div className="mt-5 grid gap-4 rounded-xl border border-white/[0.08] bg-black/20 p-4 sm:grid-cols-2">
-          <p className="sm:col-span-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-            Schedule
-          </p>
-
-          <label className="space-y-1.5">
+          <label
+            className="block cursor-pointer space-y-1.5 sm:col-span-2"
+            onClick={() => openDateInputPicker(eventDateInputRef.current)}
+          >
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">
               <CalendarClock className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-              Publish start *
+              Event date *
             </span>
             <input
+              ref={eventDateInputRef}
               type="datetime-local"
-              min={editingId ? undefined : minStartDateTime}
               name="startsAt"
               value={form.startsAt}
               onChange={onField}
-              className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
+              onClick={() => openDateInputPicker(eventDateInputRef.current)}
+              onFocus={() => openDateInputPicker(eventDateInputRef.current)}
+              className="w-full cursor-pointer rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
             />
           </label>
-
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Publish end</span>
-            <input
-              type="datetime-local"
-              name="endsAt"
-              value={form.endsAt}
-              onChange={onField}
-              className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
-            />
-          </label>
-        </div>
-
-        <div className="mt-5 grid gap-4 rounded-xl border border-white/[0.08] bg-black/20 p-4 sm:grid-cols-2">
-          <p className="sm:col-span-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-            Call to action (optional)
-          </p>
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Action label</span>
-            <input
-              name="actionLabel"
-              value={form.actionLabel}
-              onChange={onField}
-              placeholder="View drawing"
-              className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Action URL</span>
-            <input
-              name="actionUrl"
-              value={form.actionUrl}
-              onChange={onField}
-              placeholder="/dashboard/user/drawings"
-              className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
-            />
-          </label>
-        </div>
-
-        <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/20 p-4">
-          <p className="inline-flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-            <Users className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-            Delivery channels
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            {CHANNEL_OPTIONS.map((channel) => (
-              <label
-                key={channel.key}
-                className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-brand-muted transition hover:border-white/[0.12]"
-              >
-                <input
-                  type="checkbox"
-                  name={channel.key}
-                  checked={Boolean(form[channel.key])}
-                  onChange={onField}
-                  className="h-4 w-4 rounded border-white/[0.16] bg-black/40 text-brand-accent"
-                />
-                <span className="text-brand-heading">{channel.label}</span>
-              </label>
-            ))}
-          </div>
         </div>
       </form>
 
-      {/* <div className="rounded-2xl border border-white/[0.08] bg-black/[0.22] p-5 sm:p-6">
-        <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">
-          <AlertTriangle className="h-4 w-4 text-amber-300" strokeWidth={2} aria-hidden />
-          Suggested announcement use-cases
-        </p>
-        <div className="mt-3 grid gap-2 text-sm text-brand-muted sm:grid-cols-2">
-          <p>- Drawing launch / joins open / winner declared</p>
-          <p>- Scheduled maintenance / temporary downtime</p>
-          <p>- Wallet credit delay or transfer issue notice</p>
-          <p>- Token listing or token status change</p>
-          <p>- Membership tier / VIP policy updates</p>
-          <p>- Security warning (phishing / password reset advisory)</p>
-        </div>
-      </div> */}
-
       <div className="rounded-2xl border border-white/[0.08] bg-black/[0.22] p-5 sm:p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-brand-subtle">Recent announcements</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-brand-subtle">All announcements</h3>
         {isLoading ? (
           <div className="mt-3 space-y-2 animate-pulse">
             <div className="h-14 rounded-xl border border-white/[0.08] bg-white/[0.03]" />
             <div className="h-14 rounded-xl border border-white/[0.08] bg-white/[0.03]" />
           </div>
         ) : rows.length === 0 ? (
-          <p className="mt-3 text-sm text-brand-muted">No announcements created yet.</p>
+          <p className="mt-3 text-sm text-brand-muted">No announcements yet.</p>
         ) : (
-          <div className="mt-3 space-y-3">
+          <div className="mt-3 space-y-4">
             {rows.map((row) => (
               <div
                 key={row.id}
-                className="rounded-xl border border-white/[0.08] bg-black/35 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]"
+                className="rounded-xl border border-brand-border-muted bg-black/35 p-4 sm:p-5"
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <p className="min-w-0 flex-1 text-sm font-semibold text-brand-heading">{row.title || '—'}</p>
-                  <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                    <span className="rounded-md border border-white/[0.12] bg-black/35 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-brand-subtle">
-                      {row.type || 'general'}
-                    </span>
-                    <span
-                      className={`rounded-md border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] ${
-                        row.priority === 'critical'
-                          ? 'border-rose-500/35 bg-rose-500/[0.14] text-rose-200'
-                          : row.priority === 'high'
-                            ? 'border-amber-500/35 bg-amber-500/[0.14] text-amber-200'
-                            : 'border-emerald-500/35 bg-emerald-500/[0.12] text-emerald-200'
-                      }`}
-                    >
-                      {row.priority || 'normal'}
-                    </span>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-semibold text-brand-heading">{row.title || '—'}</p>
+                    <p className="mt-2 text-xs text-brand-muted">
+                      <span className="text-brand-subtle">Type</span>{' '}
+                      <span className="text-brand-heading">{typeDisplay(row.type)}</span>
+                      <span className="mx-2 text-brand-border-muted">·</span>
+                      <span className="text-brand-subtle">Audience</span>{' '}
+                      <span className="text-brand-heading">{audienceDisplay(row.audience)}</span>
+                    </p>
+                    <p className="mt-2 text-xs text-brand-muted">
+                      <span className="text-brand-subtle">Event date</span>{' '}
+                      <span className="font-medium text-brand-heading">
+                        {row.startsAt ? new Date(row.startsAt).toLocaleString() : '—'}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-1.5">
                     <button
                       type="button"
                       onClick={() => startEdit(row)}
                       disabled={Boolean(deletingId)}
-                      className="inline-flex items-center gap-1 rounded-md border border-white/[0.12] bg-black/40 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.06em] text-brand-heading transition hover:border-brand-accent/40 hover:text-brand-accent disabled:opacity-50"
+                      className="inline-flex items-center gap-1 rounded-lg border border-white/[0.12] bg-black/40 px-3 py-1.5 text-xs font-semibold text-brand-heading transition hover:border-brand-accent/40 hover:text-brand-accent disabled:opacity-50"
                     >
-                      <Pencil className="h-3 w-3" aria-hidden />
+                      <Pencil className="h-3.5 w-3.5" aria-hidden />
                       Edit
                     </button>
                     <button
                       type="button"
                       onClick={() => void onDelete(row)}
                       disabled={deletingId === row.id || Boolean(deletingId)}
-                      className="inline-flex items-center gap-1 rounded-md border border-rose-500/30 bg-rose-500/[0.1] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.06em] text-rose-200 transition hover:bg-rose-500/[0.18] disabled:opacity-50"
+                      className="inline-flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/[0.1] px-3 py-1.5 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/[0.18] disabled:opacity-50"
                     >
-                      <Trash2 className="h-3 w-3" aria-hidden />
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
                       {deletingId === row.id ? '…' : 'Delete'}
                     </button>
                   </div>
                 </div>
-
-                <p className="mt-1 text-xs text-brand-muted">
-                  Audience: <span className="text-brand-heading">{row.audience || 'all_users'}</span>
-                </p>
-
-                <div className="mt-2 grid gap-1 text-xs text-brand-muted sm:grid-cols-2">
-                  <p>
-                    Start: <span className="text-brand-heading">{row.startsAt ? new Date(row.startsAt).toLocaleString() : '—'}</span>
-                  </p>
-                  <p>
-                    End: <span className="text-brand-heading">{row.endsAt ? new Date(row.endsAt).toLocaleString() : 'Not set'}</span>
-                  </p>
-                  <p className="sm:col-span-2">
-                    Created: <span className="text-brand-heading">{row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}</span>
-                  </p>
+                <div className="mt-3 rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-brand-subtle">Message</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-brand-muted">{row.details || '—'}</p>
                 </div>
-
-                <div className="mt-2 rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2">
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-brand-subtle">Summary</p>
-                  <p className="mt-1 text-sm text-brand-muted">{row.summary || '—'}</p>
-                </div>
-
-                <div className="mt-2 rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2">
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-brand-subtle">Details</p>
-                  <p className="mt-1 text-sm text-brand-muted whitespace-pre-wrap">{row.details || '—'}</p>
-                </div>
-
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-brand-subtle">Channels:</span>
-                  {row.channels?.dashboardBanner ? (
-                    <span className="rounded-md border border-white/[0.12] bg-black/30 px-2 py-0.5 text-brand-heading">Dashboard</span>
-                  ) : null}
-                  {row.channels?.inAppNotice ? (
-                    <span className="rounded-md border border-white/[0.12] bg-black/30 px-2 py-0.5 text-brand-heading">In-app</span>
-                  ) : null}
-                  {row.channels?.emailNotice ? (
-                    <span className="rounded-md border border-white/[0.12] bg-black/30 px-2 py-0.5 text-brand-heading">Email</span>
-                  ) : null}
-                </div>
-
-                {row.cta?.label || row.cta?.url ? (
-                  <div className="mt-2 rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-xs text-brand-muted">
-                    CTA:{' '}
-                    <span className="text-brand-heading">
-                      {row.cta?.label || '—'} {row.cta?.url ? `(${row.cta.url})` : ''}
-                    </span>
-                  </div>
-                ) : null}
               </div>
             ))}
           </div>
