@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import User from '@/lib/models/User';
 import { loadRequestActor, requireUsersModule } from '@/lib/authHelpers';
 import { mergeAdminPermissions, userHasUsersPermission } from '@/lib/adminPermissions';
+import { setManualUserMembership } from '@/lib/userMembershipAssignmentService';
 
 export const runtime = 'nodejs';
 
@@ -77,8 +78,9 @@ export async function PATCH(request, context) {
     const profileKeys = ['name', 'phone', 'country', 'timezone', 'emailVerified', 'role', 'email', 'isVip'];
     const touchesProfile = profileKeys.some((k) => body[k] !== undefined);
     const touchesAdminPerms = body.adminPermissions !== undefined;
+    const touchesMembership = body.manualMembershipTierId !== undefined;
 
-    if (!touchesProfile && !touchesAdminPerms) {
+    if (!touchesProfile && !touchesAdminPerms && !touchesMembership) {
       return NextResponse.json({ ok: false, error: 'No updates provided.' }, { status: 400 });
     }
 
@@ -171,6 +173,29 @@ export async function PATCH(request, context) {
     }
 
     await target.save();
+
+    if (touchesMembership) {
+      if (!isSuper) {
+        return NextResponse.json(
+          { ok: false, error: 'Only a super admin can assign membership tiers.' },
+          { status: 403 }
+        );
+      }
+      if (roleAfterPatch !== 'user') {
+        return NextResponse.json(
+          { ok: false, error: 'Manual membership applies only to user (member) accounts.' },
+          { status: 400 }
+        );
+      }
+      const m = await setManualUserMembership({
+        userId: String(target._id),
+        tierId: body.manualMembershipTierId,
+        assignedByUserId: act.userId,
+      });
+      if (!m.ok) {
+        return NextResponse.json({ ok: false, error: m.error }, { status: 400 });
+      }
+    }
 
     /**
      * Write adminPermissions via the native collection so new nested paths (e.g. walletsView)

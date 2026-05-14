@@ -93,10 +93,6 @@ export default function AuthShell({
         </div>
 
         {footer ? <div className="mt-8 text-center text-sm">{footer}</div> : null}
-
-        <p className="mt-4 text-center text-[0.6875rem] leading-relaxed text-brand-subtle">
-          Utility platform · Not investment advice · For eligible users only
-        </p>
       </div>
     </div>
   );

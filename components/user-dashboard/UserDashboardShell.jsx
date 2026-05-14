@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, User, Menu, X, ChevronDown, Plus, Megaphone } from 'lucide-react';
+import { LogOut, User, Menu, X, ChevronDown, Plus, Megaphone, Sparkles } from 'lucide-react';
 import { USER_NAV } from '@/components/user-dashboard/nav-config';
 import { emailInitials, isUserNavActive } from '@/components/user-dashboard/utils';
 import { avatarSrc } from '@/lib/avatarUrl';
@@ -199,12 +199,25 @@ export default function UserDashboardShell({ user, onLogout, children }) {
           </div>
 
           <div className="relative flex flex-shrink-0 items-center gap-2 sm:gap-3" ref={userMenuRef}>
+            {user?.isVip ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-brand-accent/45 bg-[var(--brand-accent-soft)]/12 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-brand-accent shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] sm:px-3"
+                title="VIP member"
+              >
+                <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} aria-hidden />
+                VIP
+              </span>
+            ) : null}
             <div className="hidden text-right md:block">
               <p className="max-w-[220px] truncate text-xs font-medium text-brand-heading lg:max-w-[280px]">
                 {user.email}
               </p>
               <p className="text-[0.625rem] font-medium uppercase tracking-[0.14em] text-brand-subtle">
-                User
+                {user?.isVip ? (
+                  <span className="text-brand-accent/95">VIP member</span>
+                ) : (
+                  'User'
+                )}
               </p>
             </div>
 

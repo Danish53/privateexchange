@@ -25,11 +25,13 @@ import {
   Pencil,
   X,
   Wallet,
+  Crown,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { AdminDataTableSkeleton } from '@/components/ui/content-skeletons';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { cn } from '@/lib/utils';
+import { formatCurrencySmart } from '@/lib/numberFormat';
 import { mergeAdminPermissions, hasAnyWalletsPermission } from '@/lib/adminPermissions';
 import { avatarSrc } from '@/lib/avatarUrl';
 
@@ -122,6 +124,7 @@ export default function SuperAdminUsersPage() {
   const [busyId, setBusyId] = useState(null);
   const [draft, setDraftState] = useState(null);
   const draftRef = useRef(null);
+  const membershipLoadRef = useRef(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -230,6 +233,7 @@ export default function SuperAdminUsersPage() {
 
   const openEdit = useCallback(
     (u) => {
+      membershipLoadRef.current = null;
       setEditError('');
       setDraft({
         id: u.id,
@@ -241,10 +245,60 @@ export default function SuperAdminUsersPage() {
         role: u.role === 'admin' ? 'admin' : 'user',
         emailVerified: !!u.emailVerified,
         adminPermissions: mergeAdminPermissions(u.adminPermissions),
+        membershipTiersList: null,
+        manualMembershipTierId: undefined,
+        _membershipReady: false,
       });
     },
     [setDraft]
   );
+
+  useEffect(() => {
+    if (!token || !draft?.id || !isSuperAdmin || draft.role !== 'user') return undefined;
+    if (membershipLoadRef.current === draft.id) return undefined;
+    membershipLoadRef.current = draft.id;
+    let cancelled = false;
+    const uid = draft.id;
+    (async () => {
+      try {
+        const [tr, ar] = await Promise.all([
+          fetch('/api/superadmin/membership-tiers', {
+            cache: 'no-store',
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`/api/superadmin/users/${encodeURIComponent(uid)}/membership-assignment`, {
+            cache: 'no-store',
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+        const tj = await tr.json().catch(() => ({}));
+        const aj = await ar.json().catch(() => ({}));
+        if (cancelled) return;
+        const tiers = Array.isArray(tj.tiers) ? tj.tiers : [];
+        const assignedId =
+          aj?.ok && aj.assignment && aj.assignment.tierId ? String(aj.assignment.tierId) : null;
+        setDraft((d) => {
+          if (!d || d.id !== uid) return d;
+          return {
+            ...d,
+            membershipTiersList: tiers,
+            manualMembershipTierId: assignedId,
+            _membershipReady: true,
+          };
+        });
+      } catch {
+        if (!cancelled) {
+          setDraft((d) => {
+            if (!d || d.id !== uid) return d;
+            return { ...d, membershipTiersList: [], _membershipReady: true };
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, draft?.id, draft?.role, isSuperAdmin]);
 
   const saveEdit = useCallback(async () => {
     const d = draftRef.current;
@@ -267,6 +321,9 @@ export default function SuperAdminUsersPage() {
         if (d.role === 'admin') {
           payload.adminPermissions = mergeAdminPermissions(d.adminPermissions);
         }
+      }
+      if (isSuperAdmin && d.role === 'user' && d._membershipReady) {
+        payload.manualMembershipTierId = d.manualMembershipTierId ?? null;
       }
       const res = await fetch(`/api/superadmin/users/${d.id}`, {
         method: 'PATCH',
@@ -945,6 +1002,7 @@ export default function SuperAdminUsersPage() {
                     value={draft.role}
                     onChange={(e) => {
                       const nextRole = e.target.value === 'admin' ? 'admin' : 'user';
+                      membershipLoadRef.current = null;
                       setDraft((d) => {
                         if (!d) return d;
                         if (nextRole === 'admin') {
@@ -952,9 +1010,18 @@ export default function SuperAdminUsersPage() {
                             ...d,
                             role: 'admin',
                             adminPermissions: d.adminPermissions || mergeAdminPermissions(),
+                            membershipTiersList: null,
+                            manualMembershipTierId: undefined,
+                            _membershipReady: false,
                           };
                         }
-                        return { ...d, role: 'user' };
+                        return {
+                          ...d,
+                          role: 'user',
+                          membershipTiersList: null,
+                          manualMembershipTierId: undefined,
+                          _membershipReady: false,
+                        };
                       });
                     }}
                     className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
@@ -1044,6 +1111,72 @@ export default function SuperAdminUsersPage() {
                       disabled={editSaving}
                     />
                   </div>
+                </div>
+              ) : null}
+              {isSuperAdmin && draft.role === 'user' ? (
+                <div className="space-y-3 rounded-xl border border-white/[0.08] bg-black/25 p-4">
+                  <div className="flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-brand-accent" strokeWidth={2} aria-hidden />
+                    <div>
+                      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                        Membership
+                      </p>
+                    </div>
+                  </div>
+                  {!draft._membershipReady && draft.membershipTiersList === null ? (
+                    <p className="flex items-center gap-2 text-sm text-brand-muted">
+                      <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
+                      Loading tiers…
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {/* <button
+                        type="button"
+                        disabled={editSaving}
+                        onClick={() =>
+                          setDraft((d) => (d ? { ...d, manualMembershipTierId: null } : d))
+                        }
+                        className={cn(
+                          'w-full rounded-xl border px-3 py-2.5 text-left text-sm transition',
+                          draft.manualMembershipTierId === null
+                            ? 'border-brand-accent/40 bg-[var(--brand-accent-soft)]/15 text-brand-heading'
+                            : 'border-white/[0.08] bg-black/30 text-brand-muted hover:border-white/[0.12]'
+                        )}
+                      >
+                        <span className="font-semibold text-brand-heading">No membership tier</span>
+                        <span className="mt-0.5 block text-xs text-brand-muted">Clear manual assignment</span>
+                      </button> */}
+                      <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                        {(draft.membershipTiersList || []).map((tier) => {
+                          const selected = draft.manualMembershipTierId === tier.id;
+                          return (
+                            <button
+                              key={tier.id}
+                              type="button"
+                              disabled={editSaving}
+                              onClick={() =>
+                                setDraft((d) => (d ? { ...d, manualMembershipTierId: tier.id } : d))
+                              }
+                              className={cn(
+                                'w-full rounded-xl border px-3 py-2.5 text-left text-sm transition',
+                                selected
+                                  ? 'border-brand-accent/40 bg-[var(--brand-accent-soft)]/15 text-brand-heading'
+                                  : 'border-white/[0.08] bg-black/30 text-brand-muted hover:border-white/[0.12]'
+                              )}
+                            >
+                              <span className="font-semibold text-brand-heading">{tier.name}</span>
+                              <span className="mt-0.5 block text-xs text-brand-muted">
+                                Min {formatCurrencySmart(tier.minValueUsd, 'USD')}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {draft._membershipReady && (draft.membershipTiersList || []).length === 0 ? (
+                        <p className="text-xs text-brand-muted">No tiers configured yet — add them under Membership.</p>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               ) : null}
               <label className="flex cursor-pointer items-center gap-2 text-sm text-brand-muted">

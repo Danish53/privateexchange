@@ -1,12 +1,7 @@
 'use client';
 
-import SuperAdminPageFrame from '@/components/superadmin-dashboard/SuperAdminPageFrame';
+import SuperAdminMembershipPage from '@/components/superadmin-dashboard/pages/SuperAdminMembershipPage';
 
-export default function SuperAdminMembershipPage() {
-  return (
-    <SuperAdminPageFrame
-      title="Membership"
-      description="Member and VIP tiers, fee schedules, and privilege rules."
-    />
-  );
+export default function Page() {
+  return <SuperAdminMembershipPage />;
 }

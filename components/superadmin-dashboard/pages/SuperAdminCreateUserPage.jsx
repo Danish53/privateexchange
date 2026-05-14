@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Loader2, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Loader2, CheckCircle2, Crown } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import PasswordField from '@/components/auth/PasswordField';
 import { cn } from '@/lib/utils';
+import { formatCurrencySmart } from '@/lib/numberFormat';
 import { DEFAULT_ADMIN_PERMISSIONS, mergeAdminPermissions } from '@/lib/adminPermissions';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 
@@ -41,6 +42,35 @@ export default function SuperAdminCreateUserPage() {
   const [success, setSuccess] = useState('');
   const [emailSent, setEmailSent] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [membershipTiers, setMembershipTiers] = useState([]);
+  const [membershipTiersLoading, setMembershipTiersLoading] = useState(false);
+  const [manualMembershipTierId, setManualMembershipTierId] = useState(null);
+
+  const loadMembershipTiers = useCallback(async () => {
+    if (!token || !isSuperAdmin) return;
+    setMembershipTiersLoading(true);
+    try {
+      const res = await fetch('/api/superadmin/membership-tiers', {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      setMembershipTiers(Array.isArray(data.tiers) ? data.tiers : []);
+    } catch {
+      setMembershipTiers([]);
+    } finally {
+      setMembershipTiersLoading(false);
+    }
+  }, [token, isSuperAdmin]);
+
+  useEffect(() => {
+    if (isSuperAdmin && role === 'user') {
+      void loadMembershipTiers();
+    } else {
+      setMembershipTiers([]);
+      setManualMembershipTierId(null);
+    }
+  }, [isSuperAdmin, role, loadMembershipTiers]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -72,6 +102,9 @@ export default function SuperAdminCreateUserPage() {
           ...(isSuperAdmin && role === 'admin'
             ? { adminPermissions: mergeAdminPermissions(adminPermissions) }
             : {}),
+          ...(isSuperAdmin && role === 'user' && manualMembershipTierId
+            ? { manualMembershipTierId }
+            : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -86,6 +119,7 @@ export default function SuperAdminCreateUserPage() {
       setPassword('');
       setConfirm('');
       setIsVip(false);
+      setManualMembershipTierId(null);
     } catch {
       setError('Network error.');
     } finally {
@@ -121,14 +155,13 @@ export default function SuperAdminCreateUserPage() {
           aria-hidden
         />
 
-        <div className="relative mx-auto max-w-md">
+        <div className="relative mx-auto max-w-xxl">
           <div className="mb-6 flex items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-accent/25 bg-[var(--brand-accent-soft)]/50 text-brand-accent">
               <UserPlus className="h-5 w-5" strokeWidth={2} aria-hidden />
             </span>
             <div>
               <p className="text-sm font-semibold text-brand-heading">Account type</p>
-              <p className="text-xs text-brand-muted">User or admin only · not superadmin</p>
             </div>
           </div>
 
@@ -258,20 +291,50 @@ export default function SuperAdminCreateUserPage() {
             ) : null}
             {(isSuperAdmin ? role : 'user') === 'user' ? (
               <div className="space-y-2 rounded-xl border border-white/[0.06] bg-black/25 p-4">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                  User flags
-                </p>
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-brand-border-muted bg-black/30 px-3 py-2.5 text-sm text-brand-muted transition hover:border-white/[0.08]">
-                  <input
-                    id="sa-user-isvip"
-                    type="checkbox"
-                    checked={isVip}
-                    onChange={(e) => setIsVip(e.target.checked)}
-                    disabled={loading}
-                    className="h-4 w-4 rounded border-brand-border-muted bg-black/40 text-brand-accent focus:ring-brand-accent/30 disabled:opacity-40"
-                  />
-                  <span className="font-medium text-brand-heading">VIP user (isVip)</span>
-                </label>
+                {isSuperAdmin ? (
+                  <div className="mt-3">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-brand-accent" strokeWidth={2} aria-hidden />
+                      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                        Membership
+                      </p>
+                    </div>
+                    {membershipTiersLoading ? (
+                      <p className="mt-2 flex items-center gap-2 text-sm text-brand-muted">
+                        <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
+                        Loading tiers…
+                      </p>
+                    ) : (
+                      <div className="mt-2 max-h-44 space-y-2 overflow-y-auto pr-1">
+                        {membershipTiers.map((tier) => {
+                          const selected = manualMembershipTierId === tier.id;
+                          return (
+                            <button
+                              key={tier.id}
+                              type="button"
+                              disabled={loading}
+                              onClick={() => setManualMembershipTierId(tier.id)}
+                              className={cn(
+                                'w-full rounded-xl border px-3 py-2.5 text-left text-sm transition',
+                                selected
+                                  ? 'border-brand-accent/40 bg-[var(--brand-accent-soft)]/15 text-brand-heading'
+                                  : 'border-white/[0.08] bg-black/30 text-brand-muted hover:border-white/[0.12]'
+                              )}
+                            >
+                              <span className="font-semibold text-brand-heading">{tier.name}</span>
+                              <span className="mt-0.5 block text-xs text-brand-muted">
+                                Min {formatCurrencySmart(tier.minValueUsd, 'USD')}
+                              </span>
+                            </button>
+                          );
+                        })}
+                        {!membershipTiersLoading && membershipTiers.length === 0 ? (
+                          <p className="text-xs text-brand-muted">No tiers yet — create them under Membership.</p>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             ) : null}
             <div>

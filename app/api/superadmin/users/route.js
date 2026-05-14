@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import User from '@/lib/models/User';
+import MembershipTier from '@/lib/models/MembershipTier';
+import { connectDB } from '@/lib/db';
 import { requireAnyUsersModuleAccess, requireUsersModule, serializeUser } from '@/lib/authHelpers';
 import { provisionVerifiedUser } from '@/lib/superadminProvisionUser';
 import { mergeAdminPermissions } from '@/lib/adminPermissions';
+import { setManualUserMembership } from '@/lib/userMembershipAssignmentService';
+import mongoose from 'mongoose';
 
 export const runtime = 'nodejs';
 
@@ -118,6 +122,18 @@ export async function POST(request) {
       role = 'user';
     }
 
+    if (auth.isSuperAdmin && role === 'user' && body.manualMembershipTierId != null && body.manualMembershipTierId !== '') {
+      const tid = String(body.manualMembershipTierId).trim();
+      if (!mongoose.isValidObjectId(tid)) {
+        return NextResponse.json({ ok: false, error: 'Invalid membership tier id.' }, { status: 400 });
+      }
+      await connectDB();
+      const tierOk = await MembershipTier.exists({ _id: tid });
+      if (!tierOk) {
+        return NextResponse.json({ ok: false, error: 'Membership tier not found.' }, { status: 400 });
+      }
+    }
+
     const result = await provisionVerifiedUser(request, {
       email: body.email,
       password: body.password,
@@ -132,6 +148,21 @@ export async function POST(request) {
 
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
+    }
+
+    if (auth.isSuperAdmin && result.user.role === 'user' && body.manualMembershipTierId != null && body.manualMembershipTierId !== '') {
+      const tid = String(body.manualMembershipTierId).trim();
+      const m = await setManualUserMembership({
+        userId: String(result.user._id),
+        tierId: tid,
+        assignedByUserId: auth.userId,
+      });
+      if (!m.ok) {
+        return NextResponse.json(
+          { ok: false, error: m.error || 'User was created but membership could not be saved.' },
+          { status: 500 }
+        );
+      }
     }
 
     const mailResult = result.credentialsEmailSent;
