@@ -20,7 +20,7 @@ export default function SuperAdminMembershipCreatePage() {
       ready={Boolean(ready && token)}
       error={error}
       setError={setError}
-      onSave={async ({ name, minValueUsd, benefits }) => {
+      onSave={async (payload) => {
         if (!token) {
           setError('Sign in again to continue.');
           return;
@@ -34,7 +34,7 @@ export default function SuperAdminMembershipCreatePage() {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ name, minValueUsd, benefits }),
+            body: JSON.stringify(payload),
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data.ok) {

@@ -47,6 +47,16 @@ function formatTokenQty(n) {
   return formatNumberSmart(x, { maxFractionDigits: 8, minFractionDigits: 0 });
 }
 
+/** Tier flags from API (`serializeMembershipTier` snake_case). */
+function membershipTierFeatureList(tier) {
+  const out = [];
+  if (tier?.transfer_fee) out.push({ id: 'tf', label: 'Waived transfer fees' });
+  if (tier?.vip_drawings) out.push({ id: 'vd', label: 'VIP drawings' });
+  if (tier?.executive_events) out.push({ id: 'ee', label: 'Executive events' });
+  if (tier?.priority_support) out.push({ id: 'ps', label: 'Priority support' });
+  return out;
+}
+
 export default function MembershipPage() {
   const { token, ready, refreshUser } = useAuth();
   const {
@@ -273,6 +283,29 @@ export default function MembershipPage() {
                         {formatCurrencySmart(tier.minValueUsd, 'USD')}
                       </p>
                     </div>
+
+                    {membershipTierFeatureList(tier).length > 0 ? (
+                      <div className="relative mt-4">
+                        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                          Included with this tier
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {membershipTierFeatureList(tier).map((f) => (
+                            <span
+                              key={f.id}
+                              className={cn(
+                                'inline-flex items-center rounded-full border px-3 py-1 text-[0.65rem] font-semibold',
+                                isInactive
+                                  ? 'border-white/[0.06] bg-black/25 text-brand-subtle'
+                                  : 'border-brand-accent/35 bg-[var(--brand-accent-soft)]/12 text-brand-accent'
+                              )}
+                            >
+                              {f.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
 
                     <div className="relative mt-4 flex flex-wrap gap-2">
                       <span

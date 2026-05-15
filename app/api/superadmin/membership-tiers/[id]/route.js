@@ -77,6 +77,10 @@ export async function PATCH(request, { params }) {
     tier.slug = nextSlug;
     tier.minValueUsd = parsed.data.minValueUsd;
     tier.benefits = parsed.data.benefits;
+    tier.transferFee = parsed.data.transferFee;
+    tier.vipDrawings = parsed.data.vipDrawings;
+    tier.executiveEvents = parsed.data.executiveEvents;
+    tier.prioritySupport = parsed.data.prioritySupport;
     await tier.save();
 
     return NextResponse.json({

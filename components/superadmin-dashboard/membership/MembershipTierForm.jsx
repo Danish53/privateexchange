@@ -6,6 +6,43 @@ import { ArrowLeft, Plus, X } from 'lucide-react';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 import { cn } from '@/lib/utils';
 
+function TierFeatureSwitch({ id, label, description, checked, onChange, disabled }) {
+  return (
+    <label
+      htmlFor={id}
+      className={cn(
+        'flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-white/[0.12] bg-black/45 px-4 py-3.5 transition hover:bg-black/55',
+        disabled && 'pointer-events-none cursor-not-allowed opacity-55'
+      )}
+    >
+      <div className="min-w-0 pr-2">
+        <span className="text-sm font-medium text-brand-heading">{label}</span>
+        {description ? <p className="mt-0.5 text-xs leading-snug text-brand-muted">{description}</p> : null}
+      </div>
+      <input
+        id={id}
+        type="checkbox"
+        role="switch"
+        className="peer sr-only"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span
+        className={cn(
+          'relative flex h-9 w-[3.75rem] shrink-0 items-center rounded-full border p-1 transition-colors duration-200',
+          'justify-start border-white/[0.18] bg-black/55',
+          'peer-checked:justify-end peer-checked:border-brand-accent/60 peer-checked:bg-brand-accent/35',
+          'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-accent/40'
+        )}
+        aria-hidden
+      >
+        <span className="pointer-events-none block h-7 w-7 rounded-full bg-white shadow-md ring-1 ring-black/15" />
+      </span>
+    </label>
+  );
+}
+
 /**
  * @param {{
  *   backHref?: string;
@@ -15,12 +52,24 @@ import { cn } from '@/lib/utils';
  *   initialName?: string;
  *   initialMinUsd?: string;
  *   initialBenefits?: string[];
+ *   initialTransferFee?: boolean;
+ *   initialVipDrawings?: boolean;
+ *   initialExecutiveEvents?: boolean;
+ *   initialPrioritySupport?: boolean;
  *   submitLabel: string;
  *   saving: boolean;
  *   ready: boolean;
  *   error: string;
  *   setError: (msg: string) => void;
- *   onSave: (payload: { name: string; minValueUsd: number; benefits: string[] }) => Promise<void>;
+ *   onSave: (payload: {
+ *     name: string;
+ *     minValueUsd: number;
+ *     benefits: string[];
+ *     transfer_fee: boolean;
+ *     vip_drawings: boolean;
+ *     executive_events: boolean;
+ *     priority_support: boolean;
+ *   }) => Promise<void>;
  * }} props
  */
 export default function MembershipTierForm({
@@ -31,6 +80,10 @@ export default function MembershipTierForm({
   initialName = '',
   initialMinUsd = '',
   initialBenefits = [],
+  initialTransferFee = false,
+  initialVipDrawings = false,
+  initialExecutiveEvents = false,
+  initialPrioritySupport = false,
   submitLabel,
   saving,
   ready,
@@ -40,6 +93,10 @@ export default function MembershipTierForm({
 }) {
   const [name, setName] = useState(initialName);
   const [minUsd, setMinUsd] = useState(initialMinUsd);
+  const [transferFee, setTransferFee] = useState(Boolean(initialTransferFee));
+  const [vipDrawings, setVipDrawings] = useState(Boolean(initialVipDrawings));
+  const [executiveEvents, setExecutiveEvents] = useState(Boolean(initialExecutiveEvents));
+  const [prioritySupport, setPrioritySupport] = useState(Boolean(initialPrioritySupport));
   const [benefitDraft, setBenefitDraft] = useState('');
   const [benefits, setBenefits] = useState(() =>
     Array.isArray(initialBenefits) ? [...initialBenefits] : []
@@ -51,9 +108,24 @@ export default function MembershipTierForm({
     [initialBenefits]
   );
 
+  const initialFlagsKey = useMemo(
+    () =>
+      JSON.stringify({
+        t: !!initialTransferFee,
+        v: !!initialVipDrawings,
+        e: !!initialExecutiveEvents,
+        p: !!initialPrioritySupport,
+      }),
+    [initialTransferFee, initialVipDrawings, initialExecutiveEvents, initialPrioritySupport]
+  );
+
   useEffect(() => {
     setName(initialName);
     setMinUsd(initialMinUsd);
+    setTransferFee(Boolean(initialTransferFee));
+    setVipDrawings(Boolean(initialVipDrawings));
+    setExecutiveEvents(Boolean(initialExecutiveEvents));
+    setPrioritySupport(Boolean(initialPrioritySupport));
     try {
       const parsed = JSON.parse(initialBenefitsKey);
       setBenefits(Array.isArray(parsed) ? parsed.map((b) => String(b ?? '')) : []);
@@ -61,7 +133,7 @@ export default function MembershipTierForm({
       setBenefits([]);
     }
     setBenefitDraft('');
-  }, [initialName, initialMinUsd, initialBenefitsKey]);
+  }, [initialName, initialMinUsd, initialBenefitsKey, initialFlagsKey, initialTransferFee, initialVipDrawings, initialExecutiveEvents, initialPrioritySupport]);
 
   const addBenefit = useCallback(() => {
     const t = benefitDraft.trim();
@@ -99,7 +171,15 @@ export default function MembershipTierForm({
     }
 
     try {
-      await onSave({ name: trimmed, minValueUsd: minNum, benefits });
+      await onSave({
+        name: trimmed,
+        minValueUsd: minNum,
+        benefits,
+        transfer_fee: transferFee,
+        vip_drawings: vipDrawings,
+        executive_events: executiveEvents,
+        priority_support: prioritySupport,
+      });
     } catch {
       /* parent sets error */
     }
@@ -121,14 +201,14 @@ export default function MembershipTierForm({
 
       <form
         onSubmit={handleSubmit}
-        className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[var(--brand-surface)]/50 p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] sm:p-8"
+        className="relative rounded-2xl border border-white/[0.08] bg-[var(--brand-surface)]/50 p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] sm:p-8"
       >
         <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_10%_0%,rgba(201,162,39,0.09),transparent_55%)]"
+          className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_70%_50%_at_10%_0%,rgba(201,162,39,0.09),transparent_55%)]"
           aria-hidden
         />
 
-        <div className="relative mx-auto max-w-xl space-y-6">
+        <div className="relative z-10 mx-auto max-w-xl space-y-6">
           <FeedbackMessage tone="error" message={error} />
 
           <div>
@@ -171,6 +251,61 @@ export default function MembershipTierForm({
               />
             </div>
           </div>
+
+          <fieldset className="rounded-xl border-2 border-brand-accent/35 bg-black/35 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+            <legend className="px-1 text-xs font-bold uppercase tracking-[0.14em] text-brand-accent">
+              Tier features
+            </legend>
+            <p className="mb-3 text-xs leading-relaxed text-brand-muted">
+              Toggle what this membership includes. Values are stored on the tier and shown on the member membership page.
+            </p>
+            <div className="space-y-2">
+              <TierFeatureSwitch
+                id="tier-flag-transfer-fee"
+                label="Waived transfer fees"
+                description="When on, members see this tier as including transfer-fee relief."
+                checked={transferFee}
+                onChange={(v) => {
+                  setTransferFee(v);
+                  setError('');
+                }}
+                disabled={saving}
+              />
+              <TierFeatureSwitch
+                id="tier-flag-vip-drawings"
+                label="VIP drawings"
+                description="Access to VIP-only drawings."
+                checked={vipDrawings}
+                onChange={(v) => {
+                  setVipDrawings(v);
+                  setError('');
+                }}
+                disabled={saving}
+              />
+              <TierFeatureSwitch
+                id="tier-flag-executive-events"
+                label="Executive events"
+                description="Invitations or access to executive-level events."
+                checked={executiveEvents}
+                onChange={(v) => {
+                  setExecutiveEvents(v);
+                  setError('');
+                }}
+                disabled={saving}
+              />
+              <TierFeatureSwitch
+                id="tier-flag-priority-support"
+                label="Priority support"
+                description="Faster or prioritized member support."
+                checked={prioritySupport}
+                onChange={(v) => {
+                  setPrioritySupport(v);
+                  setError('');
+                }}
+                disabled={saving}
+              />
+            </div>
+          </fieldset>
 
           <div>
             <span className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">Benefits</span>
