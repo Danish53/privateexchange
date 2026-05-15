@@ -93,7 +93,9 @@ export default function CommunityAnnouncementsPage() {
           <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand-accent/30 bg-brand-accent/[0.1] px-3 py-1.5 text-xs font-semibold text-[color:var(--brand-accent-hover)]">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-accent shadow-[0_0_8px_var(--brand-accent-glow)]" />
-              {user?.isVip ? 'VIP audience' : 'Member audience'}
+              {user?.isVip && user?.membershipEntitlements?.executive_events
+                ? 'Executive events audience'
+                : 'Member audience'}
             </span>
           </div>
         </div>

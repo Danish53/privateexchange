@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import LedgerEntry from '@/lib/models/LedgerEntry';
 import User from '@/lib/models/User';
-import { requireSuperAdmin } from '@/lib/authHelpers';
+import { requireTransactionsView } from '@/lib/authHelpers';
 
 export const runtime = 'nodejs';
 
@@ -22,7 +22,7 @@ function escapeRegex(s) {
 
 export async function GET(request) {
   try {
-    const auth = await requireSuperAdmin(request);
+    const auth = await requireTransactionsView(request);
     if ('error' in auth) return auth.error;
     await connectDB();
 

@@ -10,6 +10,17 @@ import { useAuth } from '@/components/auth-context';
 const STATUS_OPTIONS = ['pending', 'active', 'completed'];
 const REWARD_OPTIONS = ['physical', 'token', 'event_access', 'custom'];
 
+const AUDIENCE_OPTIONS = [
+  { value: 'all_users', label: 'All users' },
+  { value: 'vip_only', label: 'VIP users only' },
+  { value: 'non_vip_only', label: 'Non-VIP users only' },
+];
+
+function audienceLabel(value) {
+  const opt = AUDIENCE_OPTIONS.find((o) => o.value === value);
+  return opt ? opt.label : value || 'All users';
+}
+
 const initialFormState = {
   title: '',
   description: '',
@@ -24,6 +35,7 @@ const initialFormState = {
   entry_cost: '',
   total_entries: '0',
   draw_date: '',
+  audience: 'all_users',
 };
 
 function StatChip({ icon: Icon, label, value, hint }) {
@@ -195,6 +207,7 @@ export default function SuperAdminDrawingsPage() {
       entry_cost: row.entry_cost || '',
       total_entries: String(row.total_entries ?? 0),
       draw_date: row.draw_date ? String(row.draw_date).slice(0, 16) : '',
+      audience: row.audience || 'all_users',
     });
     setDrawingImageFile(null);
     setPrizeImageFile(null);
@@ -272,6 +285,7 @@ export default function SuperAdminDrawingsPage() {
       payload.append('entry_cost', formData.entry_cost);
       payload.append('total_entries', formData.total_entries || '0');
       payload.append('draw_date', formData.draw_date || '');
+      payload.append('audience', formData.audience || 'all_users');
       if (drawingImageFile) {
         payload.append('drawing_image', drawingImageFile);
       }
@@ -487,7 +501,26 @@ export default function SuperAdminDrawingsPage() {
                 </label>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-1">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Audience *</span>
+                  <select
+                    required
+                    name="audience"
+                    value={formData.audience}
+                    onChange={onFormField}
+                    className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
+                  >
+                    {AUDIENCE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-brand-muted">
+                    Shown only to members who match this audience and have VIP drawings on their plan.
+                  </p>
+                </label>
                 <label className="space-y-1.5 cursor-pointer" onClick={openDrawDatePicker}>
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Draw date</span>
                   <input required ref={drawDateInputRef} min={nowInputMin} type="datetime-local" name="draw_date" value={formData.draw_date} onChange={onFormField} onClick={openDrawDatePicker} onFocus={openDrawDatePicker} className="w-full cursor-pointer rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
@@ -578,6 +611,9 @@ export default function SuperAdminDrawingsPage() {
                   Prize
                 </th>
                 <th className="whitespace-nowrap px-4 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
+                  Audience
+                </th>
+                <th className="whitespace-nowrap px-4 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
                   Reward type
                 </th>
                 <th className="whitespace-nowrap px-4 py-3.5 text-right text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
@@ -619,6 +655,9 @@ export default function SuperAdminDrawingsPage() {
                   </td>
                   <td className="px-4 py-4 align-middle">
                     <span className="font-medium text-brand-accent">{row.prize_title || '—'}</span>
+                  </td>
+                  <td className="px-4 py-4 align-middle">
+                    <span className="text-sm text-brand-muted">{audienceLabel(row.audience)}</span>
                   </td>
                   <td className="px-4 py-4 align-middle">
                     <span className="capitalize text-brand-muted">{row.reward_type === "event_access" ? "Event Access" : row.reward_type || '—'}</span>

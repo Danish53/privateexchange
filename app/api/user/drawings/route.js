@@ -5,6 +5,8 @@ import Drawing from '@/lib/models/Drawing';
 import DrawingJoin from '@/lib/models/DrawingJoin';
 import mongoose from 'mongoose';
 import '@/lib/models/Token';
+import { getMemberMembershipEntitlements } from '@/lib/membershipEntitlements';
+import { buildDrawingAudienceFilter, canMemberViewDrawing } from '@/lib/drawingAudience';
 
 export const runtime = 'nodejs';
 
@@ -49,6 +51,7 @@ function serializeDrawing(doc) {
     is_winner: Boolean(d.is_winner),
     draw_date: d.draw_date ? new Date(d.draw_date).toISOString() : '',
     status: d.status || 'active',
+    audience: d.audience || 'all_users',
   };
 }
 
@@ -65,9 +68,17 @@ export async function GET(request) {
     }
 
     await connectDB();
+    const entitlements = await getMemberMembershipEntitlements(auth.userId);
+
     const userObjectId = new mongoose.Types.ObjectId(auth.userId);
+    const audienceFilter = buildDrawingAudienceFilter(entitlements.isVip);
     const drawings = await Drawing.find({
-      $or: [{ status: 'active' }, { status: 'completed', winner_user_id: userObjectId }],
+      $and: [
+        audienceFilter,
+        {
+          $or: [{ status: 'active' }, { status: 'completed', winner_user_id: userObjectId }],
+        },
+      ],
     })
       .populate('reward_token_id', 'name symbol slug')
       .populate('entry_token_id', 'name symbol slug')
@@ -80,15 +91,26 @@ export async function GET(request) {
       { $group: { _id: '$drawingId', count: { $sum: 1 } } },
     ]);
     const countMap = new Map(joinedCounts.map((r) => [String(r._id), Number(r.count || 0)]));
-    const enriched = drawings.map((d) => ({
-      ...d,
-      joined_count: countMap.get(String(d._id)) || 0,
-      is_winner: d.winner_user_id ? String(d.winner_user_id) === String(auth.userId) : false,
-    }));
+    const enriched = drawings
+      .map((d) => ({
+        ...d,
+        joined_count: countMap.get(String(d._id)) || 0,
+        is_winner: d.winner_user_id ? String(d.winner_user_id) === String(auth.userId) : false,
+      }))
+      .filter((d) => {
+        const isWinnerRecap =
+          d.status === 'completed' &&
+          d.winner_user_id &&
+          String(d.winner_user_id) === String(auth.userId);
+        if (isWinnerRecap) return true;
+        return canMemberViewDrawing(d, entitlements);
+      });
 
     return NextResponse.json({
       ok: true,
       drawings: enriched.map((d) => serializeDrawing(d)),
+      tier_drawings_enabled: entitlements.tierVipDrawingsEnabled,
+      vip_drawings_access: entitlements.vipDrawingsAccess,
     });
   } catch (e) {
     console.error('user/drawings GET', e);

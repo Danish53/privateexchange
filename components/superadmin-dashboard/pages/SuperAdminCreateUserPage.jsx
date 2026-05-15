@@ -287,6 +287,58 @@ export default function SuperAdminCreateUserPage() {
                 <p className="text-[0.65rem] leading-relaxed text-brand-muted">
                   Adjust includes view. View-only shows balances in the table; adjust unlocks the Manage panel.
                 </p>
+                <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                  Settings module
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <PermToggle
+                    id="new-ap-tokens"
+                    label="Manage tokens"
+                    checked={adminPermissions.manageTokens}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, manageTokens: v }))}
+                    disabled={loading}
+                  />
+                </div>
+                <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                  Platform modules
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <PermToggle
+                    id="new-ap-transactions"
+                    label="View transactions"
+                    checked={adminPermissions.transactionsView}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, transactionsView: v }))}
+                    disabled={loading}
+                  />
+                  <PermToggle
+                    id="new-ap-drawings"
+                    label="Manage drawings"
+                    checked={adminPermissions.drawingsManage}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, drawingsManage: v }))}
+                    disabled={loading}
+                  />
+                  <PermToggle
+                    id="new-ap-membership"
+                    label="Manage membership"
+                    checked={adminPermissions.membershipManage}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, membershipManage: v }))}
+                    disabled={loading}
+                  />
+                  <PermToggle
+                    id="new-ap-announcements"
+                    label="Community announcements"
+                    checked={adminPermissions.announcementsManage}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, announcementsManage: v }))}
+                    disabled={loading}
+                  />
+                  <PermToggle
+                    id="new-ap-support"
+                    label="Support tickets"
+                    checked={adminPermissions.supportTicketsManage}
+                    onChange={(v) => setAdminPermissions((p) => ({ ...p, supportTicketsManage: v }))}
+                    disabled={loading}
+                  />
+                </div>
               </div>
             ) : null}
             {(isSuperAdmin ? role : 'user') === 'user' ? (

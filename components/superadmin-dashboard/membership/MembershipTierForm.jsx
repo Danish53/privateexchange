@@ -11,33 +11,59 @@ function TierFeatureSwitch({ id, label, description, checked, onChange, disabled
     <label
       htmlFor={id}
       className={cn(
-        'flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-white/[0.12] bg-black/45 px-4 py-3.5 transition hover:bg-black/55',
+        'flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3.5 transition-all duration-200',
+        checked
+          ? 'border-brand-accent/55 bg-[var(--brand-accent-soft)]/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_0_24px_-6px_var(--brand-accent-glow)] hover:bg-[var(--brand-accent-soft)]/40'
+          : 'border-white/[0.12] bg-black/45 hover:bg-black/55',
         disabled && 'pointer-events-none cursor-not-allowed opacity-55'
       )}
     >
       <div className="min-w-0 pr-2">
-        <span className="text-sm font-medium text-brand-heading">{label}</span>
-        {description ? <p className="mt-0.5 text-xs leading-snug text-brand-muted">{description}</p> : null}
+        <span
+          className={cn(
+            'text-sm font-medium transition-colors duration-200',
+            checked ? 'text-brand-accent' : 'text-brand-heading'
+          )}
+        >
+          {label}
+        </span>
+        {description ? (
+          <p
+            className={cn(
+              'mt-0.5 text-xs leading-snug transition-colors duration-200',
+              checked ? 'text-brand-accent/75' : 'text-brand-muted'
+            )}
+          >
+            {description}
+          </p>
+        ) : null}
       </div>
       <input
         id={id}
         type="checkbox"
         role="switch"
-        className="peer sr-only"
+        className="sr-only"
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
       />
       <span
         className={cn(
-          'relative flex h-9 w-[3.75rem] shrink-0 items-center rounded-full border p-1 transition-colors duration-200',
-          'justify-start border-white/[0.18] bg-black/55',
-          'peer-checked:justify-end peer-checked:border-brand-accent/60 peer-checked:bg-brand-accent/35',
-          'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-accent/40'
+          'relative flex h-9 w-[3.75rem] shrink-0 items-center rounded-full border p-1 transition-all duration-200',
+          checked
+            ? 'justify-end border-brand-accent bg-brand-accent/50 shadow-[0_0_12px_-2px_var(--brand-accent-glow)]'
+            : 'justify-start border-white/[0.18] bg-black/55'
         )}
         aria-hidden
       >
-        <span className="pointer-events-none block h-7 w-7 rounded-full bg-white shadow-md ring-1 ring-black/15" />
+        <span
+          className={cn(
+            'pointer-events-none block h-7 w-7 rounded-full shadow-md ring-1 transition-all duration-200',
+            checked
+              ? 'bg-gradient-to-br from-amber-100 via-brand-accent to-amber-200/90 ring-brand-accent/40'
+              : 'bg-white ring-black/15'
+          )}
+        />
       </span>
     </label>
   );

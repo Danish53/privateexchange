@@ -6,6 +6,12 @@ import {
   mergeAdminPermissions,
   hasAnyUsersModulePermission,
   hasAnyWalletsPermission,
+  hasAnySettingsPermission,
+  hasAnyTransactionsPermission,
+  hasAnyDrawingsPermission,
+  hasAnyMembershipPermission,
+  hasAnyAnnouncementsPermission,
+  hasAnySupportTicketsPermission,
 } from '@/lib/adminPermissions';
 import UserDashboardSkeleton from '@/components/ui/UserDashboardSkeleton';
 
@@ -35,6 +41,24 @@ export default function PlatformAccessGuard({ user, children }) {
     }
     if (hasAnyWalletsPermission(user)) {
       set.add('/dashboard/superadmin/wallets');
+    }
+    if (hasAnyTransactionsPermission(user)) {
+      set.add('/dashboard/superadmin/transactions');
+    }
+    if (hasAnyDrawingsPermission(user)) {
+      set.add('/dashboard/superadmin/drawings');
+    }
+    if (hasAnyMembershipPermission(user)) {
+      set.add('/dashboard/superadmin/membership');
+    }
+    if (hasAnyAnnouncementsPermission(user)) {
+      set.add('/dashboard/superadmin/community-announcements');
+    }
+    if (hasAnySupportTicketsPermission(user)) {
+      set.add('/dashboard/superadmin/support-tickets');
+    }
+    if (hasAnySettingsPermission(user)) {
+      set.add('/dashboard/superadmin/settings');
     }
     return set;
   }, [user]);

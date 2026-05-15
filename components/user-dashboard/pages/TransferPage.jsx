@@ -18,6 +18,7 @@ export default function TransferPage() {
   const [loadingTokens, setLoadingTokens] = useState(true);
   const [loadingFee, setLoadingFee] = useState(true);
   const [transferFee, setTransferFee] = useState({ amount: 0.5, type: 'fixed' });
+  const [feeWaivedByMembership, setFeeWaivedByMembership] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipient, setRecipient] = useState(null);
   const [recipientError, setRecipientError] = useState('');
@@ -73,6 +74,7 @@ export default function TransferPage() {
         if (Number.isFinite(nextAmount) && nextAmount >= 0) {
           setTransferFee({ amount: nextAmount, type: nextType });
         }
+        setFeeWaivedByMembership(Boolean(json?.feeWaived));
       } catch {
         // keep defaults
       } finally {
@@ -82,10 +84,13 @@ export default function TransferPage() {
     loadFee();
   }, [token]);
 
-  const isVipUser = user?.isVip === true;
+  const transferFeeWaived =
+    (user?.isVip === true &&
+      (feeWaivedByMembership || user?.membershipEntitlements?.transfer_fee === true)) ||
+    false;
   const amountNum = Number(amount);
   const normalizedAmount = Number.isFinite(amountNum) && amountNum > 0 ? amountNum : 0;
-  const feeAmount = isVipUser
+  const feeAmount = transferFeeWaived
     ? 0
     : transferFee.type === 'percentage'
       ? (normalizedAmount * transferFee.amount) / 100
@@ -197,8 +202,8 @@ export default function TransferPage() {
               Transfer
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Send tokens to another user by email or username. Fees follow the schedule below; VIP members may have
-              the standard transfer fee waived under program rules.
+              Send tokens to another user by email. Fees follow the schedule below; members on a plan with waived
+              transfer fees pay no platform transfer fee.
             </p>
           </div>
           <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
@@ -224,8 +229,8 @@ export default function TransferPage() {
                   {loadingFee ? <Skeleton className="h-8 w-24" /> : `${feeDisplay}`}
                 </p>
                 <p className="mt-2 text-xs font-medium text-brand-muted">
-                  {isVipUser
-                    ? 'VIP user: transfer fee is waived for your account.'
+                  {transferFeeWaived
+                    ? 'Your membership plan includes waived transfer fees.'
                     : 'Transfer fee applies as configured by platform settings.'}
                 </p>
               </div>
@@ -375,10 +380,10 @@ export default function TransferPage() {
                   </div> : ""
                 }
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-brand-muted">VIP fee</span>
+                  <span className="text-brand-muted">Fee waiver</span>
                   <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300/95">
                     <ShieldCheck className="h-4 w-4" strokeWidth={2} aria-hidden />
-                    {isVipUser ? 'Eligible' : 'Not eligible'}
+                    {transferFeeWaived ? 'Eligible' : 'Not eligible'}
                   </span>
                 </div>
                 <div className="border-t border-dashed border-white/[0.08] pt-3">
@@ -393,8 +398,8 @@ export default function TransferPage() {
                     }
                   </div>
                   <p className="mt-1 text-xs text-brand-subtle">
-                    {isVipUser
-                      ? 'Standard transfer fee waived for VIP user.'
+                    {transferFeeWaived
+                      ? 'Transfer fee waived by your membership plan.'
                       : `Includes ${transferFee.type} transfer fee (${feeDisplay}).`}
                   </p>
                 </div>

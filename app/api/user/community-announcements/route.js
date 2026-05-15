@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import { loadRequestActor } from '@/lib/authHelpers';
 import CommunityAnnouncement from '@/lib/models/CommunityAnnouncement';
 import { buildAnnouncementAudienceFilter } from '@/lib/communityAnnouncements';
+import { getMemberMembershipEntitlements } from '@/lib/membershipEntitlements';
 
 export const runtime = 'nodejs';
 
@@ -44,7 +45,10 @@ export async function GET(request) {
 
     await connectDB();
 
-    const rows = await CommunityAnnouncement.find(buildAnnouncementAudienceFilter(auth.user))
+    const entitlements = await getMemberMembershipEntitlements(auth.userId);
+    const rows = await CommunityAnnouncement.find(
+      buildAnnouncementAudienceFilter(auth.user, entitlements.executiveEventsAccess)
+    )
       .sort({ createdAt: -1, startsAt: -1 })
       .limit(50)
       .lean();

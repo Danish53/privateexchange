@@ -4,6 +4,8 @@ import { connectDB } from '@/lib/db';
 import Drawing from '@/lib/models/Drawing';
 import DrawingJoin from '@/lib/models/DrawingJoin';
 import '@/lib/models/Token';
+import { getMemberMembershipEntitlements } from '@/lib/membershipEntitlements';
+import { canMemberViewDrawing } from '@/lib/drawingAudience';
 
 export const runtime = 'nodejs';
 
@@ -70,6 +72,7 @@ export async function GET(request, { params }) {
     }
 
     await connectDB();
+    const entitlements = await getMemberMembershipEntitlements(auth.userId);
     // Active: any member. Completed with an announced winner: any member (read-only recap).
     // Completed without a winner remains restricted (not listed in this query shape for typical flows).
     const drawing = await Drawing.findOne({
@@ -84,6 +87,21 @@ export async function GET(request, { params }) {
       .lean();
     if (!drawing) {
       return NextResponse.json({ ok: false, error: 'Drawing not found.' }, { status: 404 });
+    }
+
+    const isWinnerRecap =
+      drawing.status === 'completed' &&
+      drawing.winner_user_id &&
+      String(drawing.winner_user_id) === String(auth.userId);
+    if (!isWinnerRecap && !canMemberViewDrawing(drawing, entitlements)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'You do not have access to this drawing for your membership or audience.',
+          code: 'DRAWING_ACCESS_DENIED',
+        },
+        { status: 403 }
+      );
     }
 
     const [joinedCount, joinedByMe] = await Promise.all([

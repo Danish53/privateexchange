@@ -4,6 +4,7 @@ import { loadRequestActor } from '@/lib/authHelpers';
 import CommunityAnnouncement from '@/lib/models/CommunityAnnouncement';
 import CommunityAnnouncementView from '@/lib/models/CommunityAnnouncementView';
 import { buildAnnouncementAudienceFilter } from '@/lib/communityAnnouncements';
+import { getMemberMembershipEntitlements } from '@/lib/membershipEntitlements';
 
 export const runtime = 'nodejs';
 
@@ -19,7 +20,10 @@ export async function POST(request) {
     }
 
     await connectDB();
-    const announcements = await CommunityAnnouncement.find(buildAnnouncementAudienceFilter(auth.user))
+    const entitlements = await getMemberMembershipEntitlements(auth.userId);
+    const announcements = await CommunityAnnouncement.find(
+      buildAnnouncementAudienceFilter(auth.user, entitlements.executiveEventsAccess)
+    )
       .select('_id')
       .lean();
     if (!announcements.length) {

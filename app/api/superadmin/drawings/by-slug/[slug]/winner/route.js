@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
-import { loadRequestActor } from '@/lib/authHelpers';
+import { requireDrawingsManage } from '@/lib/authHelpers';
 import Drawing from '@/lib/models/Drawing';
 import DrawingJoin from '@/lib/models/DrawingJoin';
 import Wallet from '@/lib/models/Wallet';
@@ -14,11 +14,8 @@ export const runtime = 'nodejs';
 export async function POST(request, { params }) {
   let session;
   try {
-    const auth = await loadRequestActor(request);
+    const auth = await requireDrawingsManage(request);
     if ('error' in auth) return auth.error;
-    if (auth.user?.role !== 'superadmin') {
-      return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
-    }
 
     const p = await params;
     const slug = String(p?.slug || '').trim().toLowerCase();

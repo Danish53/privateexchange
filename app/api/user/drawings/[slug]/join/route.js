@@ -8,6 +8,8 @@ import Wallet from '@/lib/models/Wallet';
 import WalletTokenBalance from '@/lib/models/WalletTokenBalance';
 import LedgerEntry from '@/lib/models/LedgerEntry';
 import { ensureWalletForMemberUser } from '@/lib/walletService';
+import { getMemberMembershipEntitlements } from '@/lib/membershipEntitlements';
+import { canMemberViewDrawing } from '@/lib/drawingAudience';
 
 export const runtime = 'nodejs';
 
@@ -27,6 +29,23 @@ export async function POST(request, { params }) {
     }
 
     await connectDB();
+
+    const entitlements = await getMemberMembershipEntitlements(auth.userId);
+    const drawingAccessCheck = await Drawing.findOne({ slug, status: 'active' }).lean();
+    if (!drawingAccessCheck) {
+      return NextResponse.json({ ok: false, error: 'Drawing not found.' }, { status: 404 });
+    }
+    if (!canMemberViewDrawing(drawingAccessCheck, entitlements)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'You do not have access to this drawing for your membership or audience.',
+          code: 'DRAWING_ACCESS_DENIED',
+        },
+        { status: 403 }
+      );
+    }
+
     // Ensure base wallet rows exist before opening a transaction.
     await ensureWalletForMemberUser(auth.userId);
     const MAX_RETRIES = 3;

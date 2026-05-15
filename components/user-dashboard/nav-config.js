@@ -9,6 +9,7 @@ import {
   ArrowDown,
   Coins,
   Megaphone,
+  Headphones,
 } from 'lucide-react';
 
 export const USER_NAV = [
@@ -65,6 +66,12 @@ export const USER_NAV = [
     label: 'Announcements',
     description: 'Community',
     icon: Megaphone,
+  },
+  {
+    href: '/dashboard/user/support',
+    label: 'Support',
+    description: 'Tickets',
+    icon: Headphones,
   },
   {
     href: '/dashboard/user/profile',

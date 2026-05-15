@@ -11,8 +11,18 @@ import {
   TrendingUp,
   Settings,
   UserCircle,
+  Headphones,
 } from 'lucide-react';
-import { hasAnyUsersModulePermission, hasAnyWalletsPermission, hasAnySettingsPermission } from '@/lib/adminPermissions';
+import {
+  hasAnyUsersModulePermission,
+  hasAnyWalletsPermission,
+  hasAnySettingsPermission,
+  hasAnyTransactionsPermission,
+  hasAnyDrawingsPermission,
+  hasAnyMembershipPermission,
+  hasAnyAnnouncementsPermission,
+  hasAnySupportTicketsPermission,
+} from '@/lib/adminPermissions';
 
 /** Main operations — aligned with platform admin scope (proposal). */
 export const SUPERADMIN_NAV_MAIN = [
@@ -65,17 +75,23 @@ export const SUPERADMIN_NAV_MAIN = [
     icon: Megaphone,
   },
   {
+    href: '/dashboard/superadmin/support-tickets',
+    label: 'Support tickets',
+    description: 'Member help requests',
+    icon: Headphones,
+  },
+  {
     href: '/dashboard/superadmin/payments',
     label: 'Payments',
     description: 'Rails & settlements',
     icon: CreditCard,
   },
-  {
-    href: '/dashboard/superadmin/kpi',
-    label: 'KPI tracker',
-    description: 'Targets & performance',
-    icon: TrendingUp,
-  },
+  // {
+  //   href: '/dashboard/superadmin/kpi',
+  //   label: 'KPI tracker',
+  //   description: 'Targets & performance',
+  //   icon: TrendingUp,
+  // },
   {
     href: '/dashboard/superadmin/settings',
     label: 'Settings',
@@ -118,6 +134,11 @@ export function getSuperadminNavSections(user) {
   }
   const usersNavEnabled = hasAnyUsersModulePermission(user);
   const walletsNavEnabled = hasAnyWalletsPermission(user);
+  const transactionsNavEnabled = hasAnyTransactionsPermission(user);
+  const drawingsNavEnabled = hasAnyDrawingsPermission(user);
+  const membershipNavEnabled = hasAnyMembershipPermission(user);
+  const announcementsNavEnabled = hasAnyAnnouncementsPermission(user);
+  const supportNavEnabled = hasAnySupportTicketsPermission(user);
   const settingsNavEnabled = hasAnySettingsPermission(user);
 
   const main = SUPERADMIN_NAV_MAIN.map((item) => {
@@ -129,6 +150,21 @@ export function getSuperadminNavSections(user) {
     }
     if (item.href === '/dashboard/superadmin/wallets') {
       return { ...item, disabled: !walletsNavEnabled };
+    }
+    if (item.href === '/dashboard/superadmin/transactions') {
+      return { ...item, disabled: !transactionsNavEnabled };
+    }
+    if (item.href === '/dashboard/superadmin/drawings') {
+      return { ...item, disabled: !drawingsNavEnabled };
+    }
+    if (item.href === '/dashboard/superadmin/membership') {
+      return { ...item, disabled: !membershipNavEnabled };
+    }
+    if (item.href === '/dashboard/superadmin/community-announcements') {
+      return { ...item, disabled: !announcementsNavEnabled };
+    }
+    if (item.href === '/dashboard/superadmin/support-tickets') {
+      return { ...item, disabled: !supportNavEnabled };
     }
     if (item.href === '/dashboard/superadmin/settings') {
       return { ...item, disabled: !settingsNavEnabled };

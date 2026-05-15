@@ -6,6 +6,7 @@ import { CheckCircle2, Crown, Pencil, Plus, Shield, Sparkles, Trash2 } from 'luc
 import { useAuth } from '@/components/auth-context';
 import { formatCurrencySmart } from '@/lib/numberFormat';
 import { cn } from '@/lib/utils';
+import MembershipTierFeatures from '@/components/membership/MembershipTierFeatures';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 
 function StatChip({ icon: Icon, label, value, hint }) {
@@ -21,15 +22,6 @@ function StatChip({ icon: Icon, label, value, hint }) {
       </div>
     </div>
   );
-}
-
-function adminTierFeatureChips(tier) {
-  const out = [];
-  if (tier?.transfer_fee) out.push({ id: 'tf', label: 'Waived transfer fees' });
-  if (tier?.vip_drawings) out.push({ id: 'vd', label: 'VIP drawings' });
-  if (tier?.executive_events) out.push({ id: 'ee', label: 'Executive events' });
-  if (tier?.priority_support) out.push({ id: 'ps', label: 'Priority support' });
-  return out;
 }
 
 function TierCardSkeleton() {
@@ -294,21 +286,7 @@ export default function SuperAdminMembershipPage() {
                   </p>
                 </div>
 
-                {adminTierFeatureChips(tier).length > 0 ? (
-                  <div className="relative mt-4">
-                    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Features</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {adminTierFeatureChips(tier).map((f) => (
-                        <span
-                          key={f.id}
-                          className="inline-flex items-center rounded-full border border-brand-accent/30 bg-[var(--brand-accent-soft)]/10 px-2.5 py-0.5 text-[0.62rem] font-semibold text-brand-accent"
-                        >
-                          {f.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
+                <MembershipTierFeatures tier={tier} title="Tier features" className="!mt-4" />
 
                 <div className="relative mt-4 flex flex-wrap gap-2">
                   <span className="inline-flex items-center rounded-full border border-white/[0.1] bg-black/40 px-3 py-1 text-[0.65rem] font-semibold text-brand-muted">

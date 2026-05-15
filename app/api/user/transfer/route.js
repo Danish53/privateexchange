@@ -8,15 +8,17 @@ import Wallet from '@/lib/models/Wallet';
 import WalletTokenBalance from '@/lib/models/WalletTokenBalance';
 import LedgerEntry from '@/lib/models/LedgerEntry';
 import PlatformSetting from '@/lib/models/PlatformSetting';
-import { ensureWalletForMemberUser } from '@/lib/walletService';
+import { ensureWalletForMemberUser, getWalletSummaryForUserId } from '@/lib/walletService';
 import { formatNumberSmart } from '@/lib/numberFormat';
+import { getMemberMembershipEntitlements } from '@/lib/membershipEntitlements';
+import { syncMembershipAfterWalletChange } from '@/lib/userMembershipAssignmentService';
 
 export const runtime = 'nodejs';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function feeForTransfer(baseAmount, feeSettings, isVip) {
-  if (isVip) return 0;
+function feeForTransfer(baseAmount, feeSettings, feeWaived) {
+  if (feeWaived) return 0;
   const n = Number(baseAmount);
   if (!Number.isFinite(n) || n <= 0) return 0;
   if (feeSettings.type === 'percentage') return (n * feeSettings.amount) / 100;
@@ -74,7 +76,8 @@ export async function POST(request) {
       type: settings.transferFeeType === 'percentage' ? 'percentage' : 'fixed',
     };
 
-    const feeAmount = feeForTransfer(amount, feeSettings, !!sender.isVip);
+    const entitlements = await getMemberMembershipEntitlements(auth.userId);
+    const feeAmount = feeForTransfer(amount, feeSettings, entitlements.transferFeeWaived);
     const totalDebit = amount + feeAmount;
 
     session = await mongoose.startSession();
@@ -167,6 +170,23 @@ export async function POST(request) {
 
     await session.commitTransaction();
     session.endSession();
+
+    try {
+      const [senderSummary, recipientSummary] = await Promise.all([
+        getWalletSummaryForUserId(auth.userId),
+        getWalletSummaryForUserId(recipient._id),
+      ]);
+      if (senderSummary.ok) {
+        await syncMembershipAfterWalletChange(auth.userId, { portfolioUsd: senderSummary.portfolioUsd });
+      }
+      if (recipientSummary.ok) {
+        await syncMembershipAfterWalletChange(recipient._id, {
+          portfolioUsd: recipientSummary.portfolioUsd,
+        });
+      }
+    } catch (e) {
+      console.error('user/transfer syncMembershipAfterWalletChange', e);
+    }
 
     return NextResponse.json({
       ok: true,

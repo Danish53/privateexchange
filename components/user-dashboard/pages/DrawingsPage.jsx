@@ -63,6 +63,7 @@ export default function DrawingsPage() {
   const [winnerRows, setWinnerRows] = useState([]);
   const [winnersLoading, setWinnersLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [tierDrawingsEnabled, setTierDrawingsEnabled] = useState(true);
   const [error, setError] = useState('');
   const [joinPreview, setJoinPreview] = useState(null);
   const [joinPreviewLoading, setJoinPreviewLoading] = useState(false);
@@ -86,6 +87,7 @@ export default function DrawingsPage() {
           setError(json.error || 'Could not load drawings.');
           return;
         }
+        setTierDrawingsEnabled(json.tier_drawings_enabled !== false);
         setRows(Array.isArray(json.drawings) ? json.drawings : []);
       } catch {
         setError('Network error while loading drawings.');
@@ -428,14 +430,26 @@ export default function DrawingsPage() {
             </div>
           </Panel>
         ) : (
-          <Panel title="Active drawings" subtitle="No pools are open at the moment.">
+          <Panel
+            title="Active drawings"
+            subtitle="No pools are open at the moment."
+          >
             <div className="flex flex-col items-center rounded-2xl border border-white/[0.08] bg-black/20 px-6 py-10 text-center">
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.1] bg-white/[0.04] text-brand-muted">
                 <Sparkles className="h-7 w-7" strokeWidth={1.5} aria-hidden />
               </span>
               <p className="mt-4 max-w-md text-sm leading-relaxed text-brand-muted">
-                When the next drawing is scheduled, it will show up here with entry cost, rewards, and how full the pool
-                is — so you can join in one tap.
+                Drawings set to <span className="font-semibold text-brand-heading">All users</span> appear here for
+                every member, even without VIP. VIP-only pools require VIP status and VIP drawings on your plan.
+                {!tierDrawingsEnabled ? (
+                  <>
+                    {' '}
+                    <Link href="/dashboard/user/membership" className="font-semibold text-brand-accent hover:underline">
+                      View membership
+                    </Link>{' '}
+                    for exclusive pools.
+                  </>
+                ) : null}
               </p>
             </div>
           </Panel>

@@ -13,7 +13,8 @@ const STORAGE_KEY = '759_user';
 
 const AuthContext = createContext(null);
 
-/** @typedef {{ id: string; email: string; name?: string; role: string; displayName?: string; phone?: string; country?: string; timezone?: string; avatarUrl?: string; isVip?: boolean; createdAt?: string; adminPermissions?: { usersView: boolean; usersCreate: boolean; usersEdit: boolean; usersDelete: boolean; walletsView: boolean; walletsAdjust: boolean } }} AuthUser */
+/** @typedef {{ is_vip?: boolean; transfer_fee?: boolean; vip_drawings?: boolean; executive_events?: boolean; priority_support?: boolean; has_assignment?: boolean; tier_id?: string | null; tier_name?: string; tier_slug?: string }} MembershipEntitlements */
+/** @typedef {{ id: string; email: string; name?: string; role: string; displayName?: string; phone?: string; country?: string; timezone?: string; avatarUrl?: string; isVip?: boolean; membershipEntitlements?: MembershipEntitlements; createdAt?: string; adminPermissions?: { usersView: boolean; usersCreate: boolean; usersEdit: boolean; usersDelete: boolean; walletsView: boolean; walletsAdjust: boolean } }} AuthUser */
 
 /**
  * @typedef {{ token: string; user: AuthUser }} AuthState

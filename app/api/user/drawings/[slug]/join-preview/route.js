@@ -6,6 +6,8 @@ import DrawingJoin from '@/lib/models/DrawingJoin';
 import Wallet from '@/lib/models/Wallet';
 import WalletTokenBalance from '@/lib/models/WalletTokenBalance';
 import { ensureWalletForMemberUser } from '@/lib/walletService';
+import { getMemberMembershipEntitlements } from '@/lib/membershipEntitlements';
+import { canMemberViewDrawing } from '@/lib/drawingAudience';
 
 export const runtime = 'nodejs';
 
@@ -30,6 +32,18 @@ export async function GET(request, { params }) {
       .lean();
     if (!drawing) {
       return NextResponse.json({ ok: false, error: 'Drawing not found.' }, { status: 404 });
+    }
+
+    const entitlements = await getMemberMembershipEntitlements(auth.userId);
+    if (!canMemberViewDrawing(drawing, entitlements)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'You do not have access to this drawing for your membership or audience.',
+          code: 'DRAWING_ACCESS_DENIED',
+        },
+        { status: 403 }
+      );
     }
     if (!drawing.entry_token_id) {
       return NextResponse.json({ ok: false, error: 'Entry token is not configured for this drawing.' }, { status: 400 });

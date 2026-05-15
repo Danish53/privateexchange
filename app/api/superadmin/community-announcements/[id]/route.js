@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
-import { loadRequestActor } from '@/lib/authHelpers';
+import { requireAnnouncementsManage } from '@/lib/authHelpers';
 import { normalizeSuperadminAnnouncementBody } from '@/lib/communityAnnouncementNormalize';
 import CommunityAnnouncement from '@/lib/models/CommunityAnnouncement';
 
@@ -34,18 +34,9 @@ function serializeAnnouncement(doc) {
   };
 }
 
-async function requireSuperadmin(request) {
-  const auth = await loadRequestActor(request);
-  if ('error' in auth) return auth;
-  if (auth.user?.role !== 'superadmin') {
-    return { error: NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 }) };
-  }
-  return auth;
-}
-
 export async function PATCH(request, { params }) {
   try {
-    const auth = await requireSuperadmin(request);
+    const auth = await requireAnnouncementsManage(request);
     if ('error' in auth) return auth.error;
 
     const id = String(params?.id || '').trim();
@@ -83,7 +74,7 @@ export async function PATCH(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const auth = await requireSuperadmin(request);
+    const auth = await requireAnnouncementsManage(request);
     if ('error' in auth) return auth.error;
 
     const id = String(params?.id || '').trim();

@@ -6,6 +6,7 @@ import { useAuth } from '@/components/auth-context';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { formatCurrencySmart, formatNumberSmart } from '@/lib/numberFormat';
 import { cn } from '@/lib/utils';
+import MembershipTierFeatures from '@/components/membership/MembershipTierFeatures';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 
 function TierCardSkeleton() {
@@ -47,18 +48,20 @@ function formatTokenQty(n) {
   return formatNumberSmart(x, { maxFractionDigits: 8, minFractionDigits: 0 });
 }
 
-/** Tier flags from API (`serializeMembershipTier` snake_case). */
-function membershipTierFeatureList(tier) {
-  const out = [];
-  if (tier?.transfer_fee) out.push({ id: 'tf', label: 'Waived transfer fees' });
-  if (tier?.vip_drawings) out.push({ id: 'vd', label: 'VIP drawings' });
-  if (tier?.executive_events) out.push({ id: 'ee', label: 'Executive events' });
-  if (tier?.priority_support) out.push({ id: 'ps', label: 'Priority support' });
-  return out;
+/** On the active tier card, hide plan feature flags until `isVip` is true (entry tier may list flags in admin). */
+function tierForFeatureDisplay(tier, isActiveTier, isVip) {
+  if (!tier || !isActiveTier || isVip) return tier;
+  return {
+    ...tier,
+    transfer_fee: false,
+    vip_drawings: false,
+    executive_events: false,
+    priority_support: false,
+  };
 }
 
 export default function MembershipPage() {
-  const { token, ready, refreshUser } = useAuth();
+  const { token, ready, refreshUser, user } = useAuth();
   const {
     loading: walletLoading,
     error: walletError,
@@ -162,6 +165,13 @@ export default function MembershipPage() {
         </div>
 
         <FeedbackMessage tone="error" message={error} />
+
+        {assignment && !user?.isVip ? (
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3 text-sm leading-relaxed text-amber-100/95">
+            Your tier is active. VIP benefits (waived fees, drawings, executive events) unlock when your portfolio
+            reaches the next membership level and your account is marked VIP.
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -284,28 +294,16 @@ export default function MembershipPage() {
                       </p>
                     </div>
 
-                    {membershipTierFeatureList(tier).length > 0 ? (
-                      <div className="relative mt-4">
-                        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                          Included with this tier
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {membershipTierFeatureList(tier).map((f) => (
-                            <span
-                              key={f.id}
-                              className={cn(
-                                'inline-flex items-center rounded-full border px-3 py-1 text-[0.65rem] font-semibold',
-                                isInactive
-                                  ? 'border-white/[0.06] bg-black/25 text-brand-subtle'
-                                  : 'border-brand-accent/35 bg-[var(--brand-accent-soft)]/12 text-brand-accent'
-                              )}
-                            >
-                              {f.label}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
+                    <MembershipTierFeatures
+                      tier={tierForFeatureDisplay(tier, isActive, Boolean(user?.isVip))}
+                      title={
+                        isActive && !user?.isVip
+                          ? 'Unlocks when you reach VIP'
+                          : 'Included with this tier'
+                      }
+                      muted={isInactive || (isActive && !user?.isVip)}
+                      className="!mt-4"
+                    />
 
                     <div className="relative mt-4 flex flex-wrap gap-2">
                       <span

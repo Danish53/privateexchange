@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import User from '@/lib/models/User';
 import { requireAuthUser, serializeUser } from '@/lib/authHelpers';
+import {
+  getMemberMembershipEntitlements,
+  serializeMembershipEntitlements,
+} from '@/lib/membershipEntitlements';
 
 export const runtime = 'nodejs';
 
@@ -22,9 +26,18 @@ export async function GET(request) {
       );
     }
 
+    const base = serializeUser(user);
+    if (user.role === 'user') {
+      const entitlements = await getMemberMembershipEntitlements(auth.userId);
+      return NextResponse.json({
+        ok: true,
+        user: { ...base, membershipEntitlements: serializeMembershipEntitlements(entitlements) },
+      });
+    }
+
     return NextResponse.json({
       ok: true,
-      user: serializeUser(user),
+      user: base,
     });
   } catch (e) {
     console.error('me', e);

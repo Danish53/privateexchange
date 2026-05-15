@@ -8,6 +8,10 @@ import {
   syncAutomaticMembershipForUser,
 } from '@/lib/userMembershipAssignmentService';
 import { getWalletSummaryForUserId } from '@/lib/walletService';
+import {
+  getMemberMembershipEntitlements,
+  serializeMembershipEntitlements,
+} from '@/lib/membershipEntitlements';
 
 export const runtime = 'nodejs';
 
@@ -34,7 +38,14 @@ export async function GET(request) {
       assignment = await getUserMembershipAssignmentLean(auth.userId);
     }
 
-    return NextResponse.json({ ok: true, tiers, assignment });
+    let entitlements = null;
+    if (auth.user?.role === 'user') {
+      entitlements = serializeMembershipEntitlements(
+        await getMemberMembershipEntitlements(auth.userId)
+      );
+    }
+
+    return NextResponse.json({ ok: true, tiers, assignment, entitlements });
   } catch (e) {
     console.error('user/membership-overview GET', e);
     return NextResponse.json({ ok: false, error: 'Failed to load membership.' }, { status: 500 });

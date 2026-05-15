@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { loadRequestActor } from '@/lib/authHelpers';
+import { requireMembershipManage } from '@/lib/authHelpers';
 import { allocateMembershipTierSlug } from '@/lib/membershipTierSlug';
 import { normalizeTierBody } from '@/lib/membershipTierNormalize';
 import { serializeMembershipTier } from '@/lib/membershipTierSerialize';
@@ -8,18 +8,9 @@ import MembershipTier from '@/lib/models/MembershipTier';
 
 export const runtime = 'nodejs';
 
-async function requireSuperadmin(request) {
-  const auth = await loadRequestActor(request);
-  if ('error' in auth) return auth;
-  if (auth.user?.role !== 'superadmin') {
-    return { error: NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 }) };
-  }
-  return auth;
-}
-
 export async function GET(request) {
   try {
-    const auth = await requireSuperadmin(request);
+    const auth = await requireMembershipManage(request);
     if ('error' in auth) return auth.error;
 
     await connectDB();
@@ -37,7 +28,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await requireSuperadmin(request);
+    const auth = await requireMembershipManage(request);
     if ('error' in auth) return auth.error;
 
     const body = await request.json().catch(() => ({}));

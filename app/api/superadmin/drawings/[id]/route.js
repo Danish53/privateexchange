@@ -3,9 +3,10 @@ import path from 'path';
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { loadRequestActor } from '@/lib/authHelpers';
+import { requireDrawingsManage } from '@/lib/authHelpers';
 import Drawing from '@/lib/models/Drawing';
 import Token from '@/lib/models/Token';
+import { normalizeDrawingAudience } from '@/lib/drawingAudience';
 
 export const runtime = 'nodejs';
 
@@ -25,18 +26,9 @@ function slugify(value) {
     .replace(/(^-|-$)/g, '');
 }
 
-async function requireSuperadmin(request) {
-  const auth = await loadRequestActor(request);
-  if ('error' in auth) return auth;
-  if (auth.user?.role !== 'superadmin') {
-    return { error: NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 }) };
-  }
-  return auth;
-}
-
 export async function PATCH(request, { params }) {
   try {
-    const auth = await requireSuperadmin(request);
+    const auth = await requireDrawingsManage(request);
     if ('error' in auth) return auth.error;
     await connectDB();
 
@@ -63,6 +55,8 @@ export async function PATCH(request, { params }) {
     const totalEntriesRaw = String(formData.get('total_entries') || '').trim();
     const rewardType = String(formData.get('reward_type') || 'physical').trim();
     const drawDateRaw = String(formData.get('draw_date') || '').trim();
+    const audienceRaw = String(formData.get('audience') || drawing.audience || 'all_users').trim();
+    const audience = normalizeDrawingAudience(audienceRaw);
     const totalEntries = Number.parseInt(totalEntriesRaw || '0', 10);
 
     if (!title || !description || !prizeTitle || !prizeDescription || !entryTokenId || !entryCost || !drawDateRaw || !totalEntriesRaw || !rewardTokenAmount) {
@@ -73,6 +67,9 @@ export async function PATCH(request, { params }) {
     }
     if (!['physical', 'token', 'event_access', 'custom'].includes(rewardType)) {
       return NextResponse.json({ ok: false, error: 'Invalid reward type.' }, { status: 400 });
+    }
+    if (!audience) {
+      return NextResponse.json({ ok: false, error: 'Invalid audience.' }, { status: 400 });
     }
     if (!Number.isFinite(totalEntries) || totalEntries < 0) {
       return NextResponse.json({ ok: false, error: 'Total entries must be zero or greater.' }, { status: 400 });
@@ -116,6 +113,7 @@ export async function PATCH(request, { params }) {
     drawing.entry_token_id = entryTokenId;
     drawing.entry_cost = entryCost;
     drawing.total_entries = totalEntries;
+    drawing.audience = audience;
     if (drawDateRaw) {
       const drawDate = new Date(drawDateRaw);
       if (Number.isNaN(drawDate.getTime()) || drawDate.getTime() <= Date.now()) {
@@ -190,7 +188,7 @@ export async function PATCH(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const auth = await requireSuperadmin(request);
+    const auth = await requireDrawingsManage(request);
     if ('error' in auth) return auth.error;
     await connectDB();
 

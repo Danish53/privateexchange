@@ -1111,6 +1111,46 @@ export default function SuperAdminUsersPage() {
                       disabled={editSaving}
                     />
                   </div>
+                  <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                    Platform modules
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <PermToggle
+                      id="edit-ap-transactions"
+                      label="View transactions"
+                      checked={mergeAdminPermissions(draft.adminPermissions).transactionsView}
+                      onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { transactionsView: v }))}
+                      disabled={editSaving}
+                    />
+                    <PermToggle
+                      id="edit-ap-drawings"
+                      label="Manage drawings"
+                      checked={mergeAdminPermissions(draft.adminPermissions).drawingsManage}
+                      onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { drawingsManage: v }))}
+                      disabled={editSaving}
+                    />
+                    <PermToggle
+                      id="edit-ap-membership"
+                      label="Manage membership"
+                      checked={mergeAdminPermissions(draft.adminPermissions).membershipManage}
+                      onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { membershipManage: v }))}
+                      disabled={editSaving}
+                    />
+                    <PermToggle
+                      id="edit-ap-announcements"
+                      label="Community announcements"
+                      checked={mergeAdminPermissions(draft.adminPermissions).announcementsManage}
+                      onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { announcementsManage: v }))}
+                      disabled={editSaving}
+                    />
+                    <PermToggle
+                      id="edit-ap-support"
+                      label="Support tickets"
+                      checked={mergeAdminPermissions(draft.adminPermissions).supportTicketsManage}
+                      onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { supportTicketsManage: v }))}
+                      disabled={editSaving}
+                    />
+                  </div>
                 </div>
               ) : null}
               {isSuperAdmin && draft.role === 'user' ? (

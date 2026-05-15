@@ -2,9 +2,10 @@ import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { loadRequestActor } from '@/lib/authHelpers';
+import { requireDrawingsManage } from '@/lib/authHelpers';
 import Drawing from '@/lib/models/Drawing';
 import Token from '@/lib/models/Token';
+import { normalizeDrawingAudience } from '@/lib/drawingAudience';
 
 export const runtime = 'nodejs';
 
@@ -50,6 +51,7 @@ function serializeDrawing(doc) {
     total_entries: Number(d.total_entries || 0),
     draw_date: d.draw_date ? new Date(d.draw_date).toISOString() : '',
     status: d.status || 'active',
+    audience: d.audience || 'all_users',
     createdAt: d.createdAt ? new Date(d.createdAt).toISOString() : '',
     updatedAt: d.updatedAt ? new Date(d.updatedAt).toISOString() : '',
   };
@@ -57,11 +59,8 @@ function serializeDrawing(doc) {
 
 export async function GET(request) {
   try {
-    const auth = await loadRequestActor(request);
+    const auth = await requireDrawingsManage(request);
     if ('error' in auth) return auth.error;
-    if (auth.user?.role !== 'superadmin') {
-      return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
-    }
 
     await connectDB();
     const drawings = await Drawing.find({}).sort({ createdAt: -1 }).lean();
@@ -78,11 +77,8 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await loadRequestActor(request);
+    const auth = await requireDrawingsManage(request);
     if ('error' in auth) return auth.error;
-    if (auth.user?.role !== 'superadmin') {
-      return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
-    }
 
     await connectDB();
 
@@ -98,6 +94,8 @@ export async function POST(request) {
     const entryCost = String(formData.get('entry_cost') || '').trim();
     const totalEntriesRaw = String(formData.get('total_entries') || '').trim();
     const drawDateRaw = String(formData.get('draw_date') || '').trim();
+    const audienceRaw = String(formData.get('audience') || 'all_users').trim();
+    const audience = normalizeDrawingAudience(audienceRaw);
     const totalEntries = Number.parseInt(totalEntriesRaw || '0', 10);
 
     if (!title || !description || !prizeTitle || !prizeDescription || !entryTokenId || !entryCost || !drawDateRaw || !totalEntriesRaw || !rewardTokenAmount) {
@@ -109,6 +107,9 @@ export async function POST(request) {
 
     if (!['physical', 'token', 'event_access', 'custom'].includes(rewardType)) {
       return NextResponse.json({ ok: false, error: 'Invalid reward type.' }, { status: 400 });
+    }
+    if (!audience) {
+      return NextResponse.json({ ok: false, error: 'Invalid audience.' }, { status: 400 });
     }
     if (!Number.isFinite(totalEntries) || totalEntries < 0) {
       return NextResponse.json({ ok: false, error: 'Total entries must be zero or greater.' }, { status: 400 });
@@ -224,6 +225,7 @@ export async function POST(request) {
       total_entries: totalEntries,
       draw_date: drawDateRaw ? new Date(drawDateRaw) : null,
       status: 'active',
+      audience,
       created_by: auth.userId,
     });
 
