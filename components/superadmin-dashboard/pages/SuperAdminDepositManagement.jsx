@@ -6,6 +6,8 @@ import { useAuth } from '@/components/auth-context';
 import { cn } from '@/lib/utils';
 import { DepositRequestsTableSkeleton } from '@/components/ui/content-skeletons';
 import { formatNumberSmart } from '@/lib/numberFormat';
+import DepositApproveModal from '@/components/superadmin-dashboard/DepositApproveModal';
+
 
 function formatDateTime(iso) {
   if (!iso) return '—';
@@ -21,7 +23,7 @@ function formatDateTime(iso) {
 
 function formatAmount(n) {
   if (typeof n !== 'number' || Number.isNaN(n)) return '—';
-  return formatNumberSmart(n, { maxFractionDigits: 2 });
+  return formatNumberSmart(n, { maxFractionDigits: 8 });
 }
 
 function StatusBadge({ status }) {
@@ -43,10 +45,18 @@ function StatusBadge({ status }) {
   );
 }
 
-function PaymentMethodBadge({ method }) {
+function PaymentMethodBadge({ method, payCurrency }) {
+  const cryptoLabel =
+    payCurrency === 'btc'
+      ? 'BTC'
+      : payCurrency === 'eth'
+        ? 'ERC20'
+        : payCurrency === 'sol'
+          ? 'SOL'
+          : 'Crypto';
   const map = {
     paypal: { label: 'PayPal', className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
-    crypto: { label: 'Crypto', className: 'border-purple-500/35 bg-purple-500/[0.1] text-purple-100' },
+    crypto: { label: cryptoLabel, className: 'border-amber-500/35 bg-amber-500/[0.1] text-amber-100' },
   };
   const m = map[method] || { label: method, className: 'border-white/10 bg-white/5 text-brand-muted' };
   return (
@@ -68,6 +78,14 @@ export default function SuperAdminDepositManagement() {
   const [error, setError] = useState('');
   const [processing, setProcessing] = useState({});
 
+  const [approveTarget, setApproveTarget] = useState(null);
+  const [activeTokens, setActiveTokens] = useState([]);
+  const [loadingTokens, setLoadingTokens] = useState(false);
+  const [creditToken, setCreditToken] = useState('');
+  const [creditAmount, setCreditAmount] = useState('');
+  const [modalError, setModalError] = useState('');
+  const [approveSaving, setApproveSaving] = useState(false);
+
   const loadDeposits = useCallback(async () => {
     if (!token) {
       setLoading(false);
@@ -76,7 +94,7 @@ export default function SuperAdminDepositManagement() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('/api/superadmin/deposits?status=pending&paymentMethod=paypal&limit=50', {
+      const res = await fetch('/api/superadmin/deposits?pendingReview=true&limit=50', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json().catch(() => ({}));
@@ -94,14 +112,56 @@ export default function SuperAdminDepositManagement() {
     }
   }, [token]);
 
+  const loadTokens = useCallback(async () => {
+    setLoadingTokens(true);
+    try {
+      const res = await fetch('/api/superadmin/tokens');
+      const json = await res.json().catch(() => ({}));
+      if (json.success && Array.isArray(json.data)) {
+        setActiveTokens(json.data);
+      } else {
+        setActiveTokens([]);
+      }
+    } catch {
+      setActiveTokens([]);
+    } finally {
+      setLoadingTokens(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!ready) return;
     loadDeposits();
-  }, [ready, loadDeposits]);
+    loadTokens();
+  }, [ready, loadDeposits, loadTokens]);
 
-  const handleAction = async (depositId, action) => {
+  const openApproveModal = (deposit) => {
+    setApproveTarget(deposit);
+    setModalError('');
+    const usd = activeTokens.find((t) => String(t.symbol).toUpperCase() === 'USD');
+    const defaultSym = usd
+      ? 'USD'
+      : String(deposit.token || activeTokens[0]?.symbol || 'USD').toUpperCase();
+    setCreditToken(defaultSym);
+    setCreditAmount(
+      deposit.amount != null && !Number.isNaN(Number(deposit.amount))
+        ? String(deposit.amount)
+        : ''
+    );
+  };
+
+  const closeApproveModal = () => {
+    if (approveSaving) return;
+    setApproveTarget(null);
+    setModalError('');
+    setCreditToken('');
+    setCreditAmount('');
+  };
+
+  const handleReject = async (depositId) => {
     if (!token) return;
-    setProcessing((prev) => ({ ...prev, [depositId]: action }));
+    setProcessing((prev) => ({ ...prev, [depositId]: 'cancel' }));
+    setError('');
     try {
       const res = await fetch(`/api/superadmin/deposits/${depositId}`, {
         method: 'PATCH',
@@ -109,18 +169,59 @@ export default function SuperAdminDepositManagement() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action: 'cancel' }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(json.error || `Failed to ${action} deposit`);
+        throw new Error(json.error || 'Failed to reject deposit');
       }
-      // Remove from list
       setDeposits((prev) => prev.filter((d) => d.id !== depositId));
     } catch (err) {
       setError(err.message);
     } finally {
       setProcessing((prev) => ({ ...prev, [depositId]: undefined }));
+    }
+  };
+
+  const handleConfirmApprove = async () => {
+    if (!token || !approveTarget) return;
+    const amt = Number(String(creditAmount).replace(/,/g, ''));
+    if (!creditToken) {
+      setModalError('Select a token to credit.');
+      return;
+    }
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setModalError('Enter a valid positive amount.');
+      return;
+    }
+
+    setModalError('');
+    setApproveSaving(true);
+    const depositId = approveTarget.id;
+
+    try {
+      const res = await fetch(`/api/superadmin/deposits/${depositId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: 'approve',
+          creditToken,
+          creditAmount: amt,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to approve deposit');
+      }
+      setDeposits((prev) => prev.filter((d) => d.id !== depositId));
+      closeApproveModal();
+    } catch (err) {
+      setModalError(err.message);
+    } finally {
+      setApproveSaving(false);
     }
   };
 
@@ -139,7 +240,7 @@ export default function SuperAdminDepositManagement() {
         <div>
           <h2 className="text-lg font-semibold text-brand-heading">Pending Deposits</h2>
           <p className="mt-1 text-sm text-brand-muted">
-            Review and approve or reject deposit requests from users.
+            Review PayPal and manual crypto deposit requests from users.
           </p>
         </div>
         <button
@@ -157,7 +258,7 @@ export default function SuperAdminDepositManagement() {
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-rose-300" />
             <div>
-              <p className="font-medium text-rose-100">Error loading deposits</p>
+              <p className="font-medium text-rose-100">Error</p>
               <p className="mt-1 text-sm text-rose-200/80">{error}</p>
             </div>
           </div>
@@ -197,6 +298,9 @@ export default function SuperAdminDepositManagement() {
                     Method
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+                    Proof
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
                     Created
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
@@ -233,7 +337,33 @@ export default function SuperAdminDepositManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <PaymentMethodBadge method={deposit.paymentMethod} />
+                      <PaymentMethodBadge
+                        method={deposit.paymentMethod}
+                        payCurrency={deposit.payCurrency}
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="max-w-[220px] space-y-1 text-xs">
+                        {deposit.transactionHash ? (
+                          <p className="truncate font-mono text-brand-muted" title={deposit.transactionHash}>
+                            TX: {deposit.transactionHash}
+                          </p>
+                        ) : null}
+                        {deposit.proofImageUrl ? (
+                          <a
+                            href={deposit.proofImageUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-accent hover:underline"
+                          >
+                            View screenshot
+                          </a>
+                        ) : (
+                          !deposit.transactionHash && (
+                            <span className="text-brand-subtle">—</span>
+                          )
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="whitespace-nowrap text-xs text-brand-muted">
@@ -246,20 +376,16 @@ export default function SuperAdminDepositManagement() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleAction(deposit.id, 'approve')}
-                          disabled={processing[deposit.id]}
+                          onClick={() => openApproveModal(deposit)}
+                          disabled={processing[deposit.id] || approveSaving}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.12] px-3 py-1.5 text-xs font-semibold text-emerald-100 transition hover:border-emerald-500/50 hover:bg-emerald-500/[0.18] disabled:opacity-50"
                         >
-                          {processing[deposit.id] === 'approve' ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Check className="h-3 w-3" />
-                          )}
+                          <Check className="h-3 w-3" />
                           Approve
                         </button>
                         <button
-                          onClick={() => handleAction(deposit.id, 'cancel')}
-                          disabled={processing[deposit.id]}
+                          onClick={() => handleReject(deposit.id)}
+                          disabled={processing[deposit.id] || approveSaving}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/[0.12] px-3 py-1.5 text-xs font-semibold text-rose-100 transition hover:border-rose-500/50 hover:bg-rose-500/[0.18] disabled:opacity-50"
                         >
                           {processing[deposit.id] === 'cancel' ? (
@@ -278,6 +404,22 @@ export default function SuperAdminDepositManagement() {
           </div>
         </div>
       )}
+
+      {approveTarget ? (
+        <DepositApproveModal
+          deposit={approveTarget}
+          tokens={activeTokens}
+          loadingTokens={loadingTokens}
+          creditToken={creditToken}
+          setCreditToken={setCreditToken}
+          creditAmount={creditAmount}
+          setCreditAmount={setCreditAmount}
+          modalError={modalError}
+          saving={approveSaving}
+          onClose={closeApproveModal}
+          onConfirm={handleConfirmApprove}
+        />
+      ) : null}
     </div>
   );
 }

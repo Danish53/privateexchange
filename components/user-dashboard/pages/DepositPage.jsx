@@ -29,24 +29,18 @@ import {
   Calculator,
   ArrowRight,
   RefreshCw,
-  X
+  X,
 } from 'lucide-react';
 import { formatNumberSmart } from '@/lib/numberFormat';
 import Panel from '@/components/user-dashboard/Panel';
+import ManualCryptoDepositFlow, {
+  CryptoDepositAddressPanel,
+} from '@/components/user-dashboard/ManualCryptoDepositFlow';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { useAuth } from '@/components/auth-context';
 import { DepositRequestsTableSkeleton } from '@/components/ui/content-skeletons';
 import { useToast } from '@/components/ui/toast-context';
 import { cn } from '@/lib/utils';
-
-const CRYPTO_PAY_CURRENCIES = [
-  { value: 'usdttrc20', label: 'USDT (TRC20)' },
-  { value: 'usdtbsc', label: 'USDT (BEP20)' },
-  { value: 'btc', label: 'BTC' },
-  { value: 'eth', label: 'ETH' },
-  { value: 'ltc', label: 'LTC' },
-];
-
 
 const DEPOSIT_METHODS = [
   {
@@ -247,7 +241,11 @@ export default function DepositPage() {
   const [loadingActiveTokens, setLoadingActiveTokens] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState('paypal');
   const [selectedToken, setSelectedToken] = useState('USD');
-  const [selectedPayCurrency, setSelectedPayCurrency] = useState(CRYPTO_PAY_CURRENCIES[0].value);
+  const [cryptoOptions, setCryptoOptions] = useState([]);
+  const [selectedCryptoId, setSelectedCryptoId] = useState('');
+  const [transactionRef, setTransactionRef] = useState('');
+  const [proofFile, setProofFile] = useState(null);
+  const [proofPreview, setProofPreview] = useState('');
   const [amount, setAmount] = useState('');
   const [step, setStep] = useState('select'); // 'select' or 'confirm'
   const [copied, setCopied] = useState(false);
@@ -255,7 +253,6 @@ export default function DepositPage() {
   const [paymentError, setPaymentError] = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState('');
   const [depositResult, setDepositResult] = useState(null);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [methodFilter, setMethodFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -305,6 +302,24 @@ export default function DepositPage() {
     loadMyDeposits();
   }, [token, loadMyDeposits]);
 
+  useEffect(() => {
+    const loadCryptoConfig = async () => {
+      try {
+        const res = await fetch('/api/user/deposit/crypto-config');
+        const json = await res.json().catch(() => ({}));
+        if (res.ok && Array.isArray(json.options) && json.options.length > 0) {
+          setCryptoOptions(json.options);
+          setSelectedCryptoId((prev) => prev || json.options[0].id);
+        }
+      } catch {
+        // config optional until crypto method selected
+      }
+    };
+    loadCryptoConfig();
+  }, []);
+
+  const selectedCrypto =
+    cryptoOptions.find((o) => o.id === selectedCryptoId) || cryptoOptions[0] || null;
 
   function formatDateTime(iso) {
     if (!iso) return '—';
@@ -395,33 +410,8 @@ export default function DepositPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getInvoiceQrPayload = () => {
-    const payAddress = depositResult?.payment?.payAddress || '';
-    const payCurrency = depositResult?.payment?.payCurrency || '';
-    const payAmount = depositResult?.payment?.payAmount;
-    return [
-      `Address: ${payAddress}`,
-      payCurrency ? `Currency: ${payCurrency}` : '',
-      payAmount ? `Amount: ${payAmount}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-  };
-
-  const getInvoiceQrUrl = () =>
-    `https://quickchart.io/qr?size=280&text=${encodeURIComponent(getInvoiceQrPayload())}`;
-
-  const getNetworkLabel = (payCurrency) => {
-    const value = String(payCurrency || '').toLowerCase();
-    if (value === 'usdttrc20') return 'TRON (TRC20)';
-    if (value === 'usdtbsc') return 'BNB Smart Chain (BEP20)';
-    if (value === 'btc') return 'Bitcoin';
-    if (value === 'eth') return 'Ethereum';
-    if (value === 'ltc') return 'Litecoin';
-    return 'Selected payment network';
-  };
-
   const selectedMethodData = DEPOSIT_METHODS.find(m => m.id === selectedMethod);
+  const isCryptoMethod = selectedMethod === 'crypto';
   // Static USD token object (always USD for deposits)
   const usdToken = {
     symbol: 'USD',
@@ -510,6 +500,14 @@ export default function DepositPage() {
 
   const handleContinue = () => {
     if (step === 'select') {
+      if (isCryptoMethod) {
+        if (!selectedCryptoId) {
+          toast.error('Please select a cryptocurrency.', { title: 'Crypto Required' });
+          return;
+        }
+        setStep('confirm');
+        return;
+      }
       if (!amount || parseFloat(amount) < selectedMethodData?.minAmount) {
         toast.error(`Please enter amount at least $${selectedMethodData?.minAmount}.`, {
           title: 'Invalid Amount',
@@ -539,6 +537,110 @@ export default function DepositPage() {
     setStripeInlineError('');
     setStripeStatusNote('');
     setCardholderName('');
+    setTransactionRef('');
+    setProofFile(null);
+    setProofPreview('');
+  };
+
+  const handleProofFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Screenshot must be 5MB or smaller.', { title: 'File Too Large' });
+      return;
+    }
+    setProofFile(file);
+    setProofPreview(URL.createObjectURL(file));
+  };
+
+  const uploadProofImage = async () => {
+    if (!proofFile || !token) return '';
+    const formData = new FormData();
+    formData.append('file', proofFile);
+    const res = await fetch('/api/user/deposit/proof', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.ok) {
+      throw new Error(json.error || 'Failed to upload payment screenshot.');
+    }
+    return json.url || '';
+  };
+
+  const handleCryptoDepositSubmit = async () => {
+    if (!selectedCryptoId) {
+      const msg = 'Please select a cryptocurrency.';
+      setPaymentError(msg);
+      toast.error(msg, { title: 'Payment Error' });
+      return;
+    }
+    if (!amount || parseFloat(amount) < selectedMethodData?.minAmount) {
+      const msg = `Please enter amount at least $${selectedMethodData?.minAmount}.`;
+      setPaymentError(msg);
+      toast.error(msg, { title: 'Invalid Amount' });
+      return;
+    }
+    const tx = transactionRef.trim();
+    if (!tx && !proofFile) {
+      const msg = 'Enter transaction ID/hash or upload a payment screenshot.';
+      setPaymentError(msg);
+      toast.error(msg, { title: 'Proof Required' });
+      return;
+    }
+    if (!token) {
+      const msg = 'You must be logged in to make a deposit.';
+      setPaymentError(msg);
+      toast.error(msg, { title: 'Payment Error' });
+      return;
+    }
+
+    setProcessingPayment(true);
+    setPaymentError('');
+    setPaymentSuccess('');
+
+    try {
+      let proofImageUrl = '';
+      if (proofFile) {
+        proofImageUrl = await uploadProofImage();
+      }
+
+      const response = await fetch('/api/user/deposit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount: parseFloat(amount),
+          token: 'USD',
+          paymentMethod: 'crypto',
+          payCurrency: selectedCryptoId,
+          transactionHash: tx,
+          proofImageUrl,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Deposit request failed');
+      }
+
+      setDepositResult(data.deposit);
+      toast.success(
+        data.message || 'Deposit request submitted. Admin will review shortly.',
+        { title: 'Request Submitted' }
+      );
+      loadMyDeposits();
+      resetDepositFlow();
+    } catch (err) {
+      const msg = err.message || 'Failed to submit deposit request.';
+      setPaymentError(msg);
+      toast.error(msg, { title: 'Payment Error' });
+    } finally {
+      setProcessingPayment(false);
+    }
   };
 
   const handlePayment = async () => {
@@ -573,7 +675,6 @@ export default function DepositPage() {
           amount: parseFloat(amount),
           token: 'USD', // Always USD for deposits
           paymentMethod: selectedMethod,
-          ...(selectedMethod === 'crypto' ? { payCurrency: selectedPayCurrency } : {}),
         }),
       });
 
@@ -602,15 +703,6 @@ export default function DepositPage() {
         setProcessingPayment(false);
         return;
       }
-      if (selectedMethod === 'crypto' && data?.deposit?.payment?.payAddress) {
-        toast.success('Invoice generated. Send payment to the shown address.', {
-          title: 'Crypto Invoice Ready',
-        });
-        setShowInvoiceModal(true);
-        setProcessingPayment(false);
-        return;
-      }
-
       if (selectedMethod === 'paypal') {
         toast.success(successMsg, { title: 'Deposit Submitted' });
         resetDepositFlow();
@@ -714,7 +806,44 @@ export default function DepositPage() {
         </div>
       </Panel> */}
 
-      {/* Amount Input */}
+      {isCryptoMethod && (
+        <Panel title="Select Cryptocurrency" subtitle="Choose the network you will send from">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {cryptoOptions.length === 0 ? (
+              <p className="text-sm text-brand-subtle">Loading crypto options...</p>
+            ) : (
+              cryptoOptions.map((coin) => (
+                <button
+                  key={coin.id}
+                  type="button"
+                  onClick={() => setSelectedCryptoId(coin.id)}
+                  className={cn(
+                    'rounded-xl border p-4 text-left transition-all',
+                    selectedCryptoId === coin.id
+                      ? 'border-2 border-amber-500 bg-amber-500/10 text-white'
+                      : 'border-white/10 bg-white/5 hover:border-white/20'
+                  )}
+                >
+                  <p className="text-lg font-semibold text-white">{coin.name}</p>
+                  <p className="mt-1 text-sm text-amber-200/80">{coin.network}</p>
+                </button>
+              ))
+            )}
+          </div>
+          {selectedCrypto ? (
+            <CryptoDepositAddressPanel
+              selectedCrypto={selectedCrypto}
+              copied={copied}
+              onCopyAddress={handleCopy}
+            />
+          ) : null}
+          <p className="mt-4 text-sm text-brand-subtle">
+            After sending crypto, continue to enter amount and payment proof (hash or screenshot).
+          </p>
+        </Panel>
+      )}
+
+      {!isCryptoMethod ? (
       <Panel title="Enter Amount" subtitle="How much do you want to deposit?">
         <div className="space-y-4">
           <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-4">
@@ -787,6 +916,7 @@ export default function DepositPage() {
           </div>
         </div>
       </Panel>
+      ) : null}
 
       <div className="flex items-center justify-between pt-4">
         <Link
@@ -799,7 +929,11 @@ export default function DepositPage() {
         <button
           type="button"
           onClick={handleContinue}
-          disabled={!amount || parseFloat(amount) < selectedMethodData?.minAmount}
+          disabled={
+            isCryptoMethod
+              ? !selectedCryptoId
+              : !amount || parseFloat(amount) < selectedMethodData?.minAmount
+          }
           className="inline-flex items-center gap-2 rounded-xl bg-brand-accent px-8 py-3 font-semibold text-white hover:bg-brand-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continue to Payment
@@ -811,9 +945,16 @@ export default function DepositPage() {
 
   const renderConfirmStep = () => (
     <div className="space-y-6">
-      <Panel title="Confirm Deposit" subtitle="Review your transaction">
+      <Panel
+        title={isCryptoMethod ? 'Complete crypto deposit' : 'Confirm Deposit'}
+        subtitle={
+          isCryptoMethod
+            ? 'Enter amount and payment proof after sending crypto'
+            : 'Review your transaction'
+        }
+      >
         <div className="space-y-6">
-          {/* Transaction Summary */}
+          {selectedMethod !== 'crypto' ? (
           <div className="rounded-xl border border-white/10 bg-white/5 p-6">
             <h4 className="text-lg font-semibold text-white">Transaction Details</h4>
             <div className="mt-4 space-y-3">
@@ -849,76 +990,22 @@ export default function DepositPage() {
               </div>
             </div>
           </div>
+          ) : null}
 
-          {/* Payment Instructions based on method */}
           {selectedMethod === 'crypto' && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-lg font-semibold text-white">Crypto Deposit</h4>
-                  <p className="text-sm text-amber-200/80">
-                    Generate payment invoice and transfer exact crypto amount
-                  </p>
-                </div>
-                <Coins className="h-10 w-10 text-amber-400" />
-              </div>
-              <div className="mt-4">
-                <label className="mb-2 block text-sm text-amber-200/80">Pay with</label>
-                <select
-                  value={selectedPayCurrency}
-                  onChange={(e) => setSelectedPayCurrency(e.target.value)}
-                  className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-amber-400/50"
-                >
-                  {CRYPTO_PAY_CURRENCIES.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="mt-4">
-                {/* <p className="mb-2 text-sm text-amber-200/80">Deposit Address</p>
-                <div className="flex items-center gap-2 rounded-lg bg-black/40 p-3">
-                  <code className="flex-1 font-mono text-sm text-white break-all">
-                    {depositResult?.payment?.payAddress || 'Generate invoice to get deposit address'}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(depositResult?.payment?.payAddress || '')}
-                    className="rounded-lg bg-white/10 p-2 hover:bg-white/20"
-                  >
-                    {copied ? (
-                      <Check className="h-5 w-5 text-emerald-400" />
-                    ) : (
-                      <Copy className="h-5 w-5 text-white" />
-                    )}
-                  </button>
-                </div> */}
-                {depositResult?.payment?.payAmount ? (
-                  <p className="mt-3 text-xs text-amber-200/80">
-                    Send exactly {depositResult.payment.payAmount} {depositResult.payment.payCurrency}
-                  </p>
-                ) : null}
-                <p className="mt-3 text-xs text-amber-200/60">
-                  Your wallet is credited automatically after blockchain confirmations.
-                </p>
-                <button
-                  type="button"
-                  onClick={handlePayment}
-                  disabled={processingPayment}
-                  className="mt-4 w-full rounded-xl bg-amber-500 py-3 text-base font-semibold text-black hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {processingPayment ? (
-                    <>
-                      <Loader2 className="mr-2 inline h-5 w-5 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    'Generate Crypto Payment'
-                  )}
-                </button>
-              </div>
-            </div>
+            <ManualCryptoDepositFlow
+              selectedCrypto={selectedCrypto}
+              amount={amount}
+              setAmount={setAmount}
+              selectedMethodData={selectedMethodData}
+              transactionRef={transactionRef}
+              setTransactionRef={setTransactionRef}
+              proofPreview={proofPreview}
+              onProofFileChange={handleProofFileChange}
+              paymentError={paymentError}
+              processingPayment={processingPayment}
+              onSubmit={handleCryptoDepositSubmit}
+            />
           )}
 
           {selectedMethod === 'paypal' && (
@@ -1061,7 +1148,7 @@ export default function DepositPage() {
               Deposit Funds
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Add funds to your wallet via PayPal or cryptocurrency
+              Add funds via PayPal, crypto (BTC / ETH / SOL), or card
             </p>
           </div>
         </div>
@@ -1070,101 +1157,6 @@ export default function DepositPage() {
       {renderStepProgress()}
       {step === 'select' && renderSelectStep()}
       {step === 'confirm' && renderConfirmStep()}
-
-      {showInvoiceModal && selectedMethod === 'crypto' && depositResult?.payment?.payAddress && (
-        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/70 p-4 mt-16">
-          <div className="flex min-h-[calc(90dvh-2rem)] items-center justify-center">
-            <div className="flex w-full max-w-lg max-h-[calc(90dvh-2rem)] flex-col  overflow-hidden rounded-2xl border border-amber-500/25 bg-[#111318] shadow-2xl">
-            <div className="flex items-start justify-between border-b border-white/10 px-5 py-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300/80">Payment Invoice</p>
-                <h3 className="mt-1 text-xl font-semibold text-white">Complete Crypto Deposit</h3>
-                <p className="mt-1 text-sm text-brand-subtle">
-                  Scan QR or copy details to send payment.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={resetDepositFlow}
-                className="rounded-lg border border-white/10 bg-white/5 p-2 text-white hover:bg-white/10"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4 overflow-y-auto px-5 py-5">
-              <div className="mx-auto w-fit rounded-xl bg-white p-3">
-                <img
-                  src={getInvoiceQrUrl()}
-                  alt="Deposit payment QR code"
-                  className="h-56 w-56"
-                />
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-black/40 p-4">
-                <div className="mb-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                  <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                    <p className="uppercase tracking-[0.08em] text-brand-subtle">Currency</p>
-                    <p className="mt-1 font-semibold text-white">
-                      {depositResult?.payment?.payCurrency || '—'}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                    <p className="uppercase tracking-[0.08em] text-brand-subtle">Network</p>
-                    <p className="mt-1 font-semibold text-white">
-                      {getNetworkLabel(depositResult?.payment?.payCurrency)}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs uppercase tracking-[0.1em] text-brand-subtle">Deposit Address</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <code className="flex-1 break-all font-mono text-sm text-white">
-                    {depositResult?.payment?.payAddress}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(depositResult?.payment?.payAddress || '')}
-                    className="rounded-lg bg-white/10 p-2 hover:bg-white/20"
-                  >
-                    {copied ? (
-                      <Check className="h-5 w-5 text-emerald-400" />
-                    ) : (
-                      <Copy className="h-5 w-5 text-white" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {depositResult?.payment?.payAmount ? (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-                  Send exactly <span className="font-semibold">{depositResult.payment.payAmount}</span>{' '}
-                  <span className="font-semibold">{depositResult.payment.payCurrency}</span>
-                </div>
-              ) : null}
-
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-200">Important Warning</p>
-                <p className="mt-1 text-xs leading-relaxed text-rose-100/90">
-                  Send funds only with the exact currency and network shown above. If you use a wrong
-                  network or wrong token type, funds may be permanently lost and cannot be recovered.
-                </p>
-              </div>
-
-              <p className="text-xs leading-relaxed text-brand-muted">
-                After sending payment, status usually moves from waiting to confirming and then finished.
-              </p>
-              <button
-                type="button"
-                onClick={resetDepositFlow}
-                className="w-full rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
-              >
-                OK
-              </button>
-            </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {stripeSuccessOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 p-4">

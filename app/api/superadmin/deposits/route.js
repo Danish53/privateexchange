@@ -43,8 +43,16 @@ export async function GET(request) {
     if (status && ['pending', 'completed', 'cancelled'].includes(status)) {
       filter.status = status;
     }
-    if (paymentMethod && ['paypal', 'crypto'].includes(paymentMethod)) {
+    if (paymentMethod && ['paypal', 'crypto', 'stripe'].includes(paymentMethod)) {
       filter.paymentMethod = paymentMethod;
+    }
+    const pendingReview = searchParams.get('pendingReview') === 'true';
+    if (pendingReview) {
+      filter.status = 'pending';
+      filter.$or = [
+        { paymentMethod: 'paypal' },
+        { paymentMethod: 'crypto', nowPaymentsPaymentId: { $in: [null, ''] } },
+      ];
     }
     if (userId) {
       filter.userId = userId;
@@ -76,6 +84,11 @@ export async function GET(request) {
       status: deposit.status,
       note: deposit.note,
       externalRef: deposit.externalRef,
+      payCurrency: deposit.payCurrency || '',
+      payAddress: deposit.payAddress || '',
+      transactionHash: deposit.transactionHash || '',
+      proofImageUrl: deposit.proofImageUrl || '',
+      nowPaymentsPaymentId: deposit.nowPaymentsPaymentId || '',
       approvedAt: deposit.approvedAt,
       approvedBy: deposit.approvedBy,
       createdAt: deposit.createdAt,

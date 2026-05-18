@@ -260,7 +260,7 @@ export default function SupportPage() {
             </Panel>
 
             {selected ? (
-              <Panel title="Ticket detail" subtitle={`#${selected.id.slice(-6)}`}>
+              <Panel title="Ticket detail">
                 <div className="space-y-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-lg font-semibold text-brand-heading">{selected.subject}</h3>

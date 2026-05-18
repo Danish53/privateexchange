@@ -4,13 +4,8 @@ import { connectDB } from '@/lib/db';
 import Deposit from '@/lib/models/Deposit';
 import { ensureWalletForMemberUser } from '@/lib/walletService';
 import Token from '@/lib/models/Token';
-import {
-  createNowPaymentsPayment,
-  getNowPaymentsMinAmount,
-  isNowPaymentsConfigured,
-} from '@/lib/nowpayments';
 import { getStripeClient, isStripeConfigured } from '@/lib/stripe';
-import { formatNumberSmart } from '@/lib/numberFormat';
+import { getManualCryptoOption, MANUAL_CRYPTO_IDS } from '@/lib/cryptoDepositConfig';
 
 export const runtime = 'nodejs';
 
@@ -58,6 +53,8 @@ export async function GET(request) {
       payCurrency: d.payCurrency || '',
       payAmount: d.payAmount ?? null,
       payAddress: d.payAddress || '',
+      transactionHash: d.transactionHash || '',
+      proofImageUrl: d.proofImageUrl || '',
       nowPaymentsPaymentStatus: d.nowPaymentsPaymentStatus || '',
       nowPaymentsPaymentId: d.nowPaymentsPaymentId || '',
       stripeSessionId: d.stripeSessionId || '',
@@ -82,7 +79,7 @@ export async function GET(request) {
 /**
  * POST /api/user/deposit
  * Create a deposit request.
- * Body: { amount: number, token: string, paymentMethod: 'paypal' | 'crypto' | 'stripe', payCurrency?: string }
+ * Body: { amount: number, token: string, paymentMethod: 'paypal' | 'crypto' | 'stripe', payCurrency?: string, transactionHash?: string, proofImageUrl?: string }
  */
 export async function POST(request) {
   try {
@@ -98,7 +95,7 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { amount, token, paymentMethod, payCurrency } = body;
+    const { amount, token, paymentMethod, payCurrency, transactionHash, proofImageUrl } = body;
 
     // Validate required fields
     if (!amount || typeof amount !== 'number' || amount <= 0) {
@@ -143,41 +140,41 @@ export async function POST(request) {
     let paymentDetails = null;
 
     if (isCrypto) {
-      if (!isNowPaymentsConfigured()) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error:
-              'Crypto deposits are temporarily unavailable. Configure NOWPAYMENTS_API_KEY and NOWPAYMENTS_IPN_SECRET.',
-          },
-          { status: 503 }
-        );
-      }
-
       if (!payCurrency || typeof payCurrency !== 'string' || !payCurrency.trim()) {
         return NextResponse.json(
-          { ok: false, error: 'Pay currency is required for crypto deposits.' },
+          { ok: false, error: 'Select a cryptocurrency (BTC, ETH, or SOL).' },
           { status: 400 }
         );
       }
       const normalizedPayCurrency = payCurrency.trim().toLowerCase();
+      if (!MANUAL_CRYPTO_IDS.includes(normalizedPayCurrency)) {
+        return NextResponse.json(
+          { ok: false, error: 'Invalid cryptocurrency. Choose BTC, ETH, or SOL.' },
+          { status: 400 }
+        );
+      }
 
-      try {
-        const minUsdAmount = await getNowPaymentsMinAmount({
-          currencyFrom: 'usd',
-          currencyTo: normalizedPayCurrency,
-        });
-        if (amount < minUsdAmount) {
-          return NextResponse.json(
-            {
-              ok: false,
-              error: `Minimum deposit for ${normalizedPayCurrency.toUpperCase()} is ${formatNumberSmart(minUsdAmount, { maxFractionDigits: 2 })} USD.`,
-            },
-            { status: 400 }
-          );
-        }
-      } catch (minCheckErr) {
-        console.warn('NowPayments min amount check skipped:', minCheckErr?.message || minCheckErr);
+      const cryptoOption = getManualCryptoOption(normalizedPayCurrency);
+      if (!cryptoOption?.address) {
+        return NextResponse.json(
+          { ok: false, error: 'Crypto deposit address is not configured.' },
+          { status: 503 }
+        );
+      }
+
+      const txHash =
+        typeof transactionHash === 'string' ? transactionHash.trim() : '';
+      const proofUrl =
+        typeof proofImageUrl === 'string' ? proofImageUrl.trim() : '';
+
+      if (!txHash && !proofUrl) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: 'Provide a transaction hash/ID or upload a payment screenshot.',
+          },
+          { status: 400 }
+        );
       }
 
       deposit = await Deposit.create({
@@ -186,46 +183,22 @@ export async function POST(request) {
         token: token.toUpperCase(),
         paymentMethod,
         status: 'pending',
-        note: 'Crypto deposit initiated via NowPayments',
-        externalRef: '',
+        note: `Manual crypto deposit (${cryptoOption.name} / ${cryptoOption.network}) pending admin approval`,
+        externalRef: txHash,
+        transactionHash: txHash,
+        proofImageUrl: proofUrl,
         payCurrency: normalizedPayCurrency,
+        payAddress: cryptoOption.address,
       });
 
-      try {
-        const npPayment = await createNowPaymentsPayment({
-          priceAmount: amount,
-          priceCurrency: 'usd',
-          payCurrency: normalizedPayCurrency,
-          orderId: String(deposit._id),
-          orderDescription: `User wallet deposit (${auth.userId})`,
-        });
-
-        deposit.nowPaymentsPaymentId = String(npPayment.payment_id || '');
-        deposit.nowPaymentsPaymentStatus = String(npPayment.payment_status || 'waiting');
-        deposit.payAmount =
-          typeof npPayment.pay_amount === 'number' && Number.isFinite(npPayment.pay_amount)
-            ? npPayment.pay_amount
-            : null;
-        deposit.payAddress = String(npPayment.pay_address || '');
-        deposit.externalRef = String(npPayment.payment_id || '');
-        await deposit.save();
-
-        paymentDetails = {
-          paymentId: deposit.nowPaymentsPaymentId,
-          payAddress: deposit.payAddress,
-          payAmount: deposit.payAmount,
-          payCurrency: String(npPayment.pay_currency || deposit.payCurrency || '').toUpperCase(),
-          payinExtraId: String(npPayment.payin_extra_id || ''),
-          paymentStatus: deposit.nowPaymentsPaymentStatus || 'waiting',
-        };
-      } catch (err) {
-        deposit.status = 'cancelled';
-        deposit.note = `NowPayments init failed: ${err?.message || 'unknown error'}`;
-        await deposit.save();
-        const e = new Error(err?.message || 'Failed to initialize crypto payment.');
-        e.statusCode = /minimal/i.test(String(err?.message || '')) ? 400 : 502;
-        throw e;
-      }
+      paymentDetails = {
+        payAddress: cryptoOption.address,
+        payCurrency: cryptoOption.network,
+        cryptoName: cryptoOption.name,
+        qrImage: cryptoOption.qrImage,
+        transactionHash: txHash,
+        proofImageUrl: proofUrl,
+      };
     } else if (isStripe) {
       if (!isStripeConfigured()) {
         return NextResponse.json(
@@ -312,7 +285,7 @@ export async function POST(request) {
         createdAt: deposit.createdAt,
       },
       message: isCrypto
-        ? 'Crypto payment generated. Complete payment on-chain; wallet will auto-credit after confirmation.'
+        ? 'Crypto deposit request submitted. Admin will review and credit your wallet after verification.'
         : isStripe
           ? 'Stripe payment initialized. Enter card details to complete secure payment.'
         : 'PayPal deposit request submitted. It will be processed after admin approval.',
