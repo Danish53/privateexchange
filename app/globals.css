@@ -207,12 +207,18 @@ body {
   }
 }
 
-input:not(.auth-input):focus,
+input:not(.auth-input):not(.deposit-field):focus,
 select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--brand-accent) !important;
   box-shadow: 0 0 0 2px var(--brand-accent-soft);
+}
+
+input.deposit-field:focus {
+  outline: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 button {

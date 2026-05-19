@@ -45,6 +45,12 @@ export const SUPERADMIN_NAV_MAIN = [
     icon: Wallet,
   },
   {
+    href: '/dashboard/superadmin/payments',
+    label: 'Payments',
+    description: 'Rails & settlements',
+    icon: CreditCard,
+  },
+  {
     href: '/dashboard/superadmin/transactions',
     label: 'Transactions',
     description: 'Ledger & movements',
@@ -79,12 +85,6 @@ export const SUPERADMIN_NAV_MAIN = [
     label: 'Support tickets',
     description: 'Member help requests',
     icon: Headphones,
-  },
-  {
-    href: '/dashboard/superadmin/payments',
-    label: 'Payments',
-    description: 'Rails & settlements',
-    icon: CreditCard,
   },
   // {
   //   href: '/dashboard/superadmin/kpi',

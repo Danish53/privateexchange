@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { DepositRequestsTableSkeleton } from '@/components/ui/content-skeletons';
 import { formatNumberSmart } from '@/lib/numberFormat';
 import DepositApproveModal from '@/components/superadmin-dashboard/DepositApproveModal';
+import DepositRejectModal from '@/components/superadmin-dashboard/DepositRejectModal';
+import { getCryptoDepositTokenLabel } from '@/lib/cryptoDepositConfig';
 
 
 function formatDateTime(iso) {
@@ -45,18 +47,10 @@ function StatusBadge({ status }) {
   );
 }
 
-function PaymentMethodBadge({ method, payCurrency }) {
-  const cryptoLabel =
-    payCurrency === 'btc'
-      ? 'BTC'
-      : payCurrency === 'eth'
-        ? 'ERC20'
-        : payCurrency === 'sol'
-          ? 'SOL'
-          : 'Crypto';
+function PaymentMethodBadge({ method }) {
   const map = {
     paypal: { label: 'PayPal', className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
-    crypto: { label: cryptoLabel, className: 'border-amber-500/35 bg-amber-500/[0.1] text-amber-100' },
+    crypto: { label: 'Crypto', className: 'border-amber-500/35 bg-amber-500/[0.1] text-amber-100' },
   };
   const m = map[method] || { label: method, className: 'border-white/10 bg-white/5 text-brand-muted' };
   return (
@@ -69,6 +63,13 @@ function PaymentMethodBadge({ method, payCurrency }) {
       {m.label}
     </span>
   );
+}
+
+function getAdminDepositTokenLabel(deposit) {
+  if (deposit.paymentMethod === 'crypto' && deposit.payCurrency) {
+    return getCryptoDepositTokenLabel(deposit.payCurrency) || deposit.token;
+  }
+  return deposit.token;
 }
 
 export default function SuperAdminDepositManagement() {
@@ -85,6 +86,11 @@ export default function SuperAdminDepositManagement() {
   const [creditAmount, setCreditAmount] = useState('');
   const [modalError, setModalError] = useState('');
   const [approveSaving, setApproveSaving] = useState(false);
+
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectModalError, setRejectModalError] = useState('');
+  const [rejectSaving, setRejectSaving] = useState(false);
 
   const loadDeposits = useCallback(async () => {
     if (!token) {
@@ -158,10 +164,32 @@ export default function SuperAdminDepositManagement() {
     setCreditAmount('');
   };
 
-  const handleReject = async (depositId) => {
-    if (!token) return;
+  const openRejectModal = (deposit) => {
+    setRejectTarget(deposit);
+    setRejectionReason('');
+    setRejectModalError('');
+  };
+
+  const closeRejectModal = () => {
+    if (rejectSaving) return;
+    setRejectTarget(null);
+    setRejectionReason('');
+    setRejectModalError('');
+  };
+
+  const handleConfirmReject = async () => {
+    if (!token || !rejectTarget) return;
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      setRejectModalError('Please enter a rejection reason.');
+      return;
+    }
+
+    setRejectModalError('');
+    setRejectSaving(true);
+    const depositId = rejectTarget.id;
     setProcessing((prev) => ({ ...prev, [depositId]: 'cancel' }));
-    setError('');
+
     try {
       const res = await fetch(`/api/superadmin/deposits/${depositId}`, {
         method: 'PATCH',
@@ -169,16 +197,18 @@ export default function SuperAdminDepositManagement() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ action: 'cancel' }),
+        body: JSON.stringify({ action: 'cancel', rejectionReason: reason }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(json.error || 'Failed to reject deposit');
       }
       setDeposits((prev) => prev.filter((d) => d.id !== depositId));
+      closeRejectModal();
     } catch (err) {
-      setError(err.message);
+      setRejectModalError(err.message);
     } finally {
+      setRejectSaving(false);
       setProcessing((prev) => ({ ...prev, [depositId]: undefined }));
     }
   };
@@ -333,14 +363,11 @@ export default function SuperAdminDepositManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-mono text-xs font-semibold text-brand-accent">
-                        {deposit.token}
+                        {getAdminDepositTokenLabel(deposit)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <PaymentMethodBadge
-                        method={deposit.paymentMethod}
-                        payCurrency={deposit.payCurrency}
-                      />
+                      <PaymentMethodBadge method={deposit.paymentMethod} />
                     </td>
                     <td className="px-6 py-4">
                       <div className="max-w-[220px] space-y-1 text-xs">
@@ -377,15 +404,15 @@ export default function SuperAdminDepositManagement() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => openApproveModal(deposit)}
-                          disabled={processing[deposit.id] || approveSaving}
+                          disabled={processing[deposit.id] || approveSaving || rejectSaving}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.12] px-3 py-1.5 text-xs font-semibold text-emerald-100 transition hover:border-emerald-500/50 hover:bg-emerald-500/[0.18] disabled:opacity-50"
                         >
                           <Check className="h-3 w-3" />
                           Approve
                         </button>
                         <button
-                          onClick={() => handleReject(deposit.id)}
-                          disabled={processing[deposit.id] || approveSaving}
+                          onClick={() => openRejectModal(deposit)}
+                          disabled={processing[deposit.id] || approveSaving || rejectSaving}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/[0.12] px-3 py-1.5 text-xs font-semibold text-rose-100 transition hover:border-rose-500/50 hover:bg-rose-500/[0.18] disabled:opacity-50"
                         >
                           {processing[deposit.id] === 'cancel' ? (
@@ -418,6 +445,18 @@ export default function SuperAdminDepositManagement() {
           saving={approveSaving}
           onClose={closeApproveModal}
           onConfirm={handleConfirmApprove}
+        />
+      ) : null}
+
+      {rejectTarget ? (
+        <DepositRejectModal
+          deposit={rejectTarget}
+          rejectionReason={rejectionReason}
+          setRejectionReason={setRejectionReason}
+          modalError={rejectModalError}
+          saving={rejectSaving}
+          onClose={closeRejectModal}
+          onConfirm={handleConfirmReject}
         />
       ) : null}
     </div>

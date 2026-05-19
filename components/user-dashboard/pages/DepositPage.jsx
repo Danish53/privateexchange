@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -30,6 +31,7 @@ import {
   ArrowRight,
   RefreshCw,
   X,
+  Info,
 } from 'lucide-react';
 import { formatNumberSmart } from '@/lib/numberFormat';
 import Panel from '@/components/user-dashboard/Panel';
@@ -41,6 +43,7 @@ import { useAuth } from '@/components/auth-context';
 import { DepositRequestsTableSkeleton } from '@/components/ui/content-skeletons';
 import { useToast } from '@/components/ui/toast-context';
 import { cn } from '@/lib/utils';
+import { getCryptoDepositTokenLabel } from '@/lib/cryptoDepositConfig';
 
 const DEPOSIT_METHODS = [
   {
@@ -267,6 +270,7 @@ export default function DepositPage() {
   const [myDeposits, setMyDeposits] = useState([]);
   const [depositsLoading, setDepositsLoading] = useState(false);
   const [depositsError, setDepositsError] = useState('');
+  const [rejectionInfo, setRejectionInfo] = useState(null);
 
   const loadMyDeposits = useCallback(async () => {
     if (!token) {
@@ -343,6 +347,21 @@ export default function DepositPage() {
 
   function toFixed2(n) {
     return formatNumberSmart(n, { maxFractionDigits: 2 });
+  }
+
+  function getDepositHistoryTokenLabel(row) {
+    if (row.paymentMethod === 'crypto' && row.payCurrency && row.status !== 'completed') {
+      return getCryptoDepositTokenLabel(row.payCurrency);
+    }
+    return row.token || '—';
+  }
+
+  function getRejectionReason(row) {
+    const direct = String(row.rejectionReason || '').trim();
+    if (direct) return direct;
+    const note = String(row.note || '');
+    const match = note.match(/^Rejected:\s*(.+)$/i);
+    return match ? match[1].trim() : '';
   }
 
   function DepositStatusBadge({ status }) {
@@ -853,7 +872,7 @@ export default function DepositPage() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="ml-2 flex-1 bg-transparent text-2xl font-bold text-white outline-none placeholder:text-white/30"
+              className="deposit-field ml-2 flex-1 bg-transparent text-2xl font-bold text-white outline-none placeholder:text-white/30 focus:outline-none focus:ring-0"
               min={selectedMethodData?.minAmount}
               max={selectedMethodData?.maxAmount}
               step="0.01"
@@ -1275,7 +1294,9 @@ export default function DepositPage() {
                         </span>
                       </td>
                       <td className="px-4 py-4 sm:px-6">
-                        <span className="font-mono text-xs font-semibold text-brand-accent">{row.token}</span>
+                        <span className="font-mono text-xs font-semibold text-brand-accent">
+                          {getDepositHistoryTokenLabel(row)}
+                        </span>
                       </td>
                       <td className="px-4 py-4 sm:px-6">
                         <PaymentMethodBadge method={row.paymentMethod} />
@@ -1286,7 +1307,25 @@ export default function DepositPage() {
                         </span>
                       </td>
                       <td className="px-4 py-4 sm:px-6">
-                        <DepositStatusBadge status={row.status} />
+                        <div className="flex items-center gap-2">
+                          <DepositStatusBadge status={row.status} />
+                          {row.status === 'cancelled' ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRejectionInfo(
+                                  getRejectionReason(row) ||
+                                    'No rejection reason was provided.'
+                                )
+                              }
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-200 transition hover:border-rose-500/50 hover:bg-rose-500/20"
+                              title="View rejection reason"
+                              aria-label="View rejection reason"
+                            >
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1332,7 +1371,57 @@ export default function DepositPage() {
           </div>
         )}
 
-      </Panel >
+      </Panel>
+
+      {rejectionInfo && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="rejection-reason-title"
+              onClick={() => setRejectionInfo(null)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl border border-rose-500/25 bg-[#0a0c12] p-5 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-rose-300/80">
+                      Rejected deposit
+                    </p>
+                    <h3
+                      id="rejection-reason-title"
+                      className="mt-1 text-base font-semibold text-brand-heading"
+                    >
+                      Rejection reason
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRejectionInfo(null)}
+                    className="rounded-lg border border-white/10 p-2 text-brand-subtle hover:bg-white/5 hover:text-white"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-brand-muted">
+                  {rejectionInfo}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setRejectionInfo(null)}
+                  className="mt-5 w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-brand-heading hover:bg-white/5"
+                >
+                  Close
+                </button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }

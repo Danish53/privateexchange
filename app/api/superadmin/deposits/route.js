@@ -89,6 +89,7 @@ export async function GET(request) {
       transactionHash: deposit.transactionHash || '',
       proofImageUrl: deposit.proofImageUrl || '',
       nowPaymentsPaymentId: deposit.nowPaymentsPaymentId || '',
+      rejectionReason: deposit.rejectionReason || '',
       approvedAt: deposit.approvedAt,
       approvedBy: deposit.approvedBy,
       createdAt: deposit.createdAt,

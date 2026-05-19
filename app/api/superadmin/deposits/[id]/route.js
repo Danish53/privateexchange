@@ -14,7 +14,7 @@ export const runtime = 'nodejs';
 /**
  * PATCH /api/superadmin/deposits/:id
  * Approve or cancel a pending deposit.
- * Body: { action: 'approve' | 'cancel', note?: string, creditToken?: string, creditAmount?: number }
+ * Body: { action: 'approve' | 'cancel', note?: string, rejectionReason?: string, creditToken?: string, creditAmount?: number }
  */
 export async function PATCH(request, context) {
   try {
@@ -41,7 +41,7 @@ export async function PATCH(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { action, note, creditToken, creditAmount } = body;
+    const { action, note, rejectionReason, creditToken, creditAmount } = body;
 
     if (!action || !['approve', 'cancel'].includes(action)) {
       return NextResponse.json(
@@ -74,7 +74,22 @@ export async function PATCH(request, context) {
     }
 
     const newStatus = action === 'approve' ? 'completed' : 'cancelled';
-    const adminNote = note?.trim() || (action === 'approve' ? 'Admin approved' : 'Admin cancelled');
+
+    if (action === 'cancel') {
+      const reason = String(rejectionReason || note || '').trim();
+      if (!reason) {
+        return NextResponse.json(
+          { ok: false, error: 'Rejection reason is required.' },
+          { status: 400 }
+        );
+      }
+      deposit.rejectionReason = reason;
+    }
+
+    const adminNote =
+      action === 'cancel'
+        ? `Rejected: ${deposit.rejectionReason}`
+        : note?.trim() || 'Admin approved';
 
     let creditedTokenSymbol = deposit.token.toUpperCase();
     let creditedAmount = deposit.amount;
@@ -173,6 +188,7 @@ export async function PATCH(request, context) {
         approvedAt: deposit.approvedAt,
         approvedBy: deposit.approvedBy,
         note: deposit.note,
+        rejectionReason: deposit.rejectionReason || '',
       },
       credited:
         action === 'approve'
@@ -181,7 +197,7 @@ export async function PATCH(request, context) {
       message:
         action === 'approve'
           ? `Deposit approved. ${creditedAmount} ${creditedTokenSymbol} credited to user wallet.`
-          : 'Deposit cancelled.',
+          : 'Deposit rejected.',
     });
   } catch (e) {
     console.error('superadmin/deposits/[id] PATCH', e);

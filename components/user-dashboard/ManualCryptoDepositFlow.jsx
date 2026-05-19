@@ -75,6 +75,7 @@ export default function ManualCryptoDepositFlow({
   const hasValidAmount =
     amount !== '' && !Number.isNaN(parseFloat(amount)) && parseFloat(amount) >= minAmount;
   const showSubmit = hasProof && hasValidAmount;
+  const coinLabel = selectedCrypto ? String(selectedCrypto.id).toUpperCase() : 'USD';
 
   return (
     <div className="space-y-6">
@@ -88,26 +89,27 @@ export default function ManualCryptoDepositFlow({
       ) : null}
 
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h4 className="text-lg font-semibold text-white">Deposit amount (USD)</h4>
-        <p className="mt-1 text-sm text-brand-subtle">Enter the USD amount you sent</p>
+        <h4 className="text-lg font-semibold text-white">Deposit amount ({coinLabel})</h4>
+        <p className="mt-1 text-sm text-brand-subtle">Enter the {coinLabel} amount you sent</p>
         <div className="mt-4 flex items-center rounded-xl border border-white/10 bg-black/30 p-4">
-          <span className="text-2xl font-semibold text-white">$</span>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="ml-2 flex-1 bg-transparent text-2xl font-bold text-white outline-none placeholder:text-white/30"
+            className="deposit-field flex-1 bg-transparent text-2xl font-bold text-white outline-none placeholder:text-white/30 focus:outline-none focus:ring-0"
             min={selectedMethodData?.minAmount}
             max={selectedMethodData?.maxAmount}
-            step="0.01"
+            step="any"
           />
-          <div className="ml-4 rounded-lg bg-white/10 px-3 py-2">
-            <span className="font-medium text-white">USD</span>
+          <div className="ml-4 shrink-0 rounded-lg bg-amber-500/15 px-3 py-2 ring-1 ring-amber-500/30">
+            <span className="font-semibold text-amber-100">{coinLabel}</span>
           </div>
         </div>
         {amount && !hasValidAmount ? (
-          <p className="mt-2 text-xs text-amber-200/80">Minimum deposit is ${minAmount} USD.</p>
+          <p className="mt-2 text-xs text-amber-200/80">
+            Minimum deposit is {minAmount} {coinLabel}.
+          </p>
         ) : null}
       </div>
 

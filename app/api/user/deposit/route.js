@@ -61,6 +61,7 @@ export async function GET(request) {
       stripePaymentIntentId: d.stripePaymentIntentId || '',
       stripePaymentStatus: d.stripePaymentStatus || '',
       creditedAt: d.creditedAt || null,
+      rejectionReason: d.rejectionReason || '',
       approvedAt: d.approvedAt,
       createdAt: d.createdAt,
       updatedAt: d.updatedAt,
