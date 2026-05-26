@@ -270,7 +270,7 @@ export default function SuperAdminDepositManagement() {
         <div>
           <h2 className="text-lg font-semibold text-brand-heading">Pending Deposits</h2>
           <p className="mt-1 text-sm text-brand-muted">
-            Review PayPal and manual crypto deposit requests from users.
+            Review manual crypto deposit requests from users (PayPal and Stripe credit automatically).
           </p>
         </div>
         <button

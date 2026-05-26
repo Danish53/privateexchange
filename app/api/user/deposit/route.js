@@ -5,9 +5,33 @@ import Deposit from '@/lib/models/Deposit';
 import { ensureWalletForMemberUser } from '@/lib/walletService';
 import Token from '@/lib/models/Token';
 import { getStripeClient, isStripeConfigured } from '@/lib/stripe';
+import {
+  assertPayPalEnvironmentMatch,
+  createPayPalDepositOrder,
+  extractPayPalErrorMessage,
+  isPayPalConfigured,
+} from '@/lib/paypal';
 import { getManualCryptoOption, MANUAL_CRYPTO_IDS } from '@/lib/cryptoDepositConfig';
 
 export const runtime = 'nodejs';
+
+/** Incomplete PayPal attempts — no wallet credit; superseded when user starts again. */
+async function cancelAbandonedPayPalDeposits(userId) {
+  await Deposit.updateMany(
+    {
+      userId,
+      paymentMethod: 'paypal',
+      status: 'pending',
+      $or: [{ creditedAt: null }, { creditedAt: { $exists: false } }],
+    },
+    {
+      $set: {
+        status: 'cancelled',
+        note: 'PayPal payment was not completed. Cancelled when a new PayPal deposit was started.',
+      },
+    }
+  );
+}
 
 /**
  * GET /api/user/deposit
@@ -60,6 +84,9 @@ export async function GET(request) {
       stripeSessionId: d.stripeSessionId || '',
       stripePaymentIntentId: d.stripePaymentIntentId || '',
       stripePaymentStatus: d.stripePaymentStatus || '',
+      paypalOrderId: d.paypalOrderId || '',
+      paypalCaptureId: d.paypalCaptureId || '',
+      paypalPaymentStatus: d.paypalPaymentStatus || '',
       creditedAt: d.creditedAt || null,
       rejectionReason: d.rejectionReason || '',
       approvedAt: d.approvedAt,
@@ -137,6 +164,7 @@ export async function POST(request) {
 
     const isCrypto = paymentMethod === 'crypto';
     const isStripe = paymentMethod === 'stripe';
+    const isPayPal = paymentMethod === 'paypal';
     let deposit;
     let paymentDetails = null;
 
@@ -260,16 +288,64 @@ export async function POST(request) {
         e.statusCode = 502;
         throw e;
       }
-    } else {
+    } else if (isPayPal) {
+      if (!isPayPalConfigured()) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              'PayPal deposits are temporarily unavailable. Configure PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.',
+          },
+          { status: 503 }
+        );
+      }
+
+      try {
+        assertPayPalEnvironmentMatch();
+      } catch (envErr) {
+        return NextResponse.json({ ok: false, error: envErr.message }, { status: 503 });
+      }
+
+      await cancelAbandonedPayPalDeposits(auth.userId);
+
       deposit = await Deposit.create({
         userId: auth.userId,
         amount,
         token: token.toUpperCase(),
         paymentMethod,
         status: 'pending',
-        note: 'PayPal deposit (pending admin approval)',
+        note: 'PayPal deposit initiated',
         externalRef: '',
       });
+
+      try {
+        const { orderId, status } = await createPayPalDepositOrder({
+          amount,
+          depositId: deposit._id,
+        });
+
+        deposit.paypalOrderId = orderId;
+        deposit.paypalPaymentStatus = status || 'CREATED';
+        deposit.externalRef = orderId;
+        await deposit.save();
+
+        paymentDetails = {
+          orderId,
+          paymentStatus: deposit.paypalPaymentStatus,
+        };
+      } catch (err) {
+        deposit.status = 'cancelled';
+        deposit.note = `PayPal init failed: ${extractPayPalErrorMessage(err)}`;
+        await deposit.save();
+        const e = new Error(extractPayPalErrorMessage(err));
+        e.statusCode = 502;
+        throw e;
+      }
+    } else {
+      return NextResponse.json(
+        { ok: false, error: 'Unsupported payment method.' },
+        { status: 400 }
+      );
     }
 
     // Return success with deposit details
@@ -289,7 +365,9 @@ export async function POST(request) {
         ? 'Crypto deposit request submitted. Admin will review and credit your wallet after verification.'
         : isStripe
           ? 'Stripe payment initialized. Enter card details to complete secure payment.'
-        : 'PayPal deposit request submitted. It will be processed after admin approval.',
+          : isPayPal
+            ? 'PayPal payment ready. Enter your card below to complete secure payment.'
+            : 'Deposit request submitted.',
     });
   } catch (e) {
     console.error('user/deposit POST', e);

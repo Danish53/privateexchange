@@ -1,12 +1,8 @@
-import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Deposit from '@/lib/models/Deposit';
-import Wallet from '@/lib/models/Wallet';
-import Token from '@/lib/models/Token';
-import WalletTokenBalance from '@/lib/models/WalletTokenBalance';
-import LedgerEntry from '@/lib/models/LedgerEntry';
 import { getStripeClient, getStripeWebhookSecret } from '@/lib/stripe';
+import { creditDepositById } from '@/lib/depositCredit';
 
 export const runtime = 'nodejs';
 
@@ -18,58 +14,6 @@ function statusFromEventType(type) {
     return 'succeeded';
   }
   return 'pending';
-}
-
-async function creditDeposit(depositId) {
-  const session = await mongoose.startSession();
-  try {
-    await session.withTransaction(async () => {
-      const locked = await Deposit.findById(depositId).session(session);
-      if (!locked) return;
-      if (locked.status === 'completed' && locked.creditedAt) return;
-
-      const wallet = await Wallet.findOne({ user: locked.userId }).session(session);
-      if (!wallet) throw new Error('Wallet not found.');
-
-      const tokenDoc = await Token.findOne({
-        symbol: locked.token.toUpperCase(),
-        isActive: true,
-      })
-        .select('_id symbol')
-        .session(session);
-      if (!tokenDoc) throw new Error('Token not found.');
-
-      const updatedBalanceDoc = await WalletTokenBalance.findOneAndUpdate(
-        { wallet: wallet._id, token: tokenDoc._id },
-        { $inc: { balance: locked.amount } },
-        { new: true, upsert: true, session, setDefaultsOnInsert: true }
-      );
-
-      await LedgerEntry.create(
-        [
-          {
-            userId: locked.userId,
-            type: 'deposit',
-            token: locked.token.toUpperCase(),
-            amount: locked.amount,
-            direction: 'credit',
-            note: 'Stripe deposit confirmed and credited',
-            balanceAfter: Number(updatedBalanceDoc?.balance || 0),
-            externalRef: locked.stripePaymentIntentId || locked.stripeSessionId || String(locked._id),
-          },
-        ],
-        { session, ordered: true }
-      );
-
-      locked.status = 'completed';
-      locked.creditedAt = new Date();
-      locked.note = 'Stripe payment confirmed and wallet credited';
-      locked.externalRef = locked.stripePaymentIntentId || locked.stripeSessionId || locked.externalRef || '';
-      await locked.save({ session });
-    });
-  } finally {
-    await session.endSession();
-  }
 }
 
 export async function POST(request) {
@@ -126,7 +70,10 @@ export async function POST(request) {
     }
 
     await deposit.save();
-    await creditDeposit(deposit._id);
+    await creditDepositById(deposit._id, {
+      ledgerNote: 'Stripe deposit confirmed and credited',
+      completedNote: 'Stripe payment confirmed and wallet credited',
+    });
 
     return NextResponse.json({ ok: true, status: 'completed' });
   } catch (e) {

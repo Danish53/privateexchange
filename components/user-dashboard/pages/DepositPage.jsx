@@ -44,22 +44,33 @@ import { DepositRequestsTableSkeleton } from '@/components/ui/content-skeletons'
 import { useToast } from '@/components/ui/toast-context';
 import { cn } from '@/lib/utils';
 import { getCryptoDepositTokenLabel } from '@/lib/cryptoDepositConfig';
+import dynamic from 'next/dynamic';
+
+const PayPalCardPaymentForm = dynamic(
+  () => import('@/components/user-dashboard/PayPalCardPaymentForm'),
+  { ssr: false }
+);
+
+const PayPalAccountPayButton = dynamic(
+  () => import('@/components/user-dashboard/PayPalAccountPayButton'),
+  { ssr: false }
+);
 
 const DEPOSIT_METHODS = [
   {
     id: 'paypal',
     name: 'PayPal',
-    description: 'Instant fiat deposits',
+    description: 'Secure card on your dashboard',
     status: 'Available',
     available: true,
     icon: Banknote,
     color: 'from-blue-500 to-blue-600',
     borderColor: 'border-blue-500',
     textColor: 'text-blue-400',
-    features: ['Instant processing', 'No crypto needed'],
+    features: ['Card on platform', '3D Secure', 'Instant USD credit'],
     minAmount: 10,
     maxAmount: 10000,
-    fee: '2.9% + $0.30',
+    fee: null,
   },
   {
     id: 'crypto',
@@ -239,7 +250,7 @@ function StripeCardPaymentForm({
 export default function DepositPage() {
   const { token } = useAuth();
   const toast = useToast();
-  const { loading, error, tokens, totalUsdFormatted } = useUserWallet();
+  const { loading, error, tokens, totalUsdFormatted, reload: reloadWallet } = useUserWallet();
   const [activeTokens, setActiveTokens] = useState([]);
   const [loadingActiveTokens, setLoadingActiveTokens] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState('paypal');
@@ -266,6 +277,10 @@ export default function DepositPage() {
   const [cardholderName, setCardholderName] = useState('');
   const [stripeInlineError, setStripeInlineError] = useState('');
   const [stripeStatusNote, setStripeStatusNote] = useState('');
+  const [paypalOrderId, setPaypalOrderId] = useState('');
+  const [paypalDepositId, setPaypalDepositId] = useState('');
+  const [paypalInlineError, setPaypalInlineError] = useState('');
+  const [paypalStatusNote, setPaypalStatusNote] = useState('');
 
   const [myDeposits, setMyDeposits] = useState([]);
   const [depositsLoading, setDepositsLoading] = useState(false);
@@ -543,6 +558,20 @@ export default function DepositPage() {
     }
   };
 
+  const handlePayPalPaymentComplete = useCallback(
+    (json) => {
+      const credited = json?.deposit?.amount ?? parseFloat(amount);
+      const msg =
+        json?.message ||
+        `PayPal payment successful. ${toFixed2(Number(credited) || 0)} USD credited to your wallet.`;
+      toast.success(msg, { title: 'Deposit Complete' });
+      void reloadWallet();
+      loadMyDeposits();
+      resetDepositFlow();
+    },
+    [amount, loadMyDeposits, reloadWallet, toast]
+  );
+
   const resetDepositFlow = () => {
     setStep('select');
     setAmount('');
@@ -555,6 +584,10 @@ export default function DepositPage() {
     setStripeSuccessOpen(false);
     setStripeInlineError('');
     setStripeStatusNote('');
+    setPaypalOrderId('');
+    setPaypalDepositId('');
+    setPaypalInlineError('');
+    setPaypalStatusNote('');
     setCardholderName('');
     setTransactionRef('');
     setProofFile(null);
@@ -723,8 +756,17 @@ export default function DepositPage() {
         return;
       }
       if (selectedMethod === 'paypal') {
-        toast.success(successMsg, { title: 'Deposit Submitted' });
-        resetDepositFlow();
+        const orderId = data?.deposit?.payment?.orderId;
+        if (!orderId) {
+          throw new Error('PayPal order id not received.');
+        }
+        setPaymentError('');
+        setPaymentSuccess('');
+        setPaypalInlineError('');
+        setPaypalStatusNote('');
+        setPaypalOrderId(orderId);
+        setPaypalDepositId(data?.deposit?.id || '');
+        setProcessingPayment(false);
         return;
       }
       toast.success(successMsg, { title: 'Deposit Submitted' });
@@ -774,7 +816,17 @@ export default function DepositPage() {
             <button
               key={method.id}
               type="button"
-              onClick={() => setSelectedMethod(method.id)}
+              onClick={() => {
+                setSelectedMethod(method.id);
+                setStripeClientSecret('');
+                setStripeDepositId('');
+                setPaypalOrderId('');
+                setPaypalDepositId('');
+                setPaypalInlineError('');
+                setPaypalStatusNote('');
+                setStripeInlineError('');
+                setStripeStatusNote('');
+              }}
               className={`flex items-center gap-4 rounded-xl border p-4 text-left transition-all ${selectedMethod === method.id
                 ? `border-2 ${method.borderColor} ${method.color}/10 text-white`
                 : 'border-white/10 bg-white/5 hover:border-white/20'
@@ -790,7 +842,9 @@ export default function DepositPage() {
                   <span className="rounded bg-emerald-500/10 px-2 py-1 text-emerald-400">
                     {method.status}
                   </span>
-                  <span className="text-brand-subtle">Fee: {method.fee}</span>
+                  {method.fee ? (
+                    <span className="text-brand-subtle">Fee: {method.fee}</span>
+                  ) : null}
                 </div>
               </div>
               {selectedMethod === method.id && (
@@ -919,7 +973,12 @@ export default function DepositPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-4 text-sm">
+          <div
+            className={cn(
+              'grid gap-4 text-sm',
+              selectedMethodData?.fee ? 'grid-cols-3' : 'grid-cols-2'
+            )}
+          >
             <div>
               <p className="text-brand-subtle">Min</p>
               <p className="font-medium text-white">${selectedMethodData?.minAmount}</p>
@@ -928,10 +987,12 @@ export default function DepositPage() {
               <p className="text-brand-subtle">Max</p>
               <p className="font-medium text-white">${selectedMethodData?.maxAmount}</p>
             </div>
-            <div>
-              <p className="text-brand-subtle">Fee</p>
-              <p className="font-medium text-white">{selectedMethodData?.fee}</p>
-            </div>
+            {selectedMethodData?.fee ? (
+              <div>
+                <p className="text-brand-subtle">Fee</p>
+                <p className="font-medium text-white">{selectedMethodData.fee}</p>
+              </div>
+            ) : null}
           </div>
         </div>
       </Panel>
@@ -992,10 +1053,12 @@ export default function DepositPage() {
                 <span className="text-brand-subtle">Amount</span>
                 <span className="text-xl font-bold text-white">${toFixed2(amount)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-brand-subtle">Fee</span>
-                <span className="font-medium text-white">{selectedMethodData?.fee}</span>
-              </div>
+              {selectedMethodData?.fee ? (
+                <div className="flex justify-between">
+                  <span className="text-brand-subtle">Fee</span>
+                  <span className="font-medium text-white">{selectedMethodData.fee}</span>
+                </div>
+              ) : null}
               <div className="border-t border-white/10 pt-3">
                 <div className="flex justify-between">
                   <span className="text-brand-subtle">You will receive</span>
@@ -1031,31 +1094,70 @@ export default function DepositPage() {
             <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-lg font-semibold text-white">PayPal Payment</h4>
-                  <p className="text-sm text-blue-200/80">You will be redirected to PayPal</p>
+                  <h4 className="text-lg font-semibold text-white">PayPal Card Payment</h4>
+                  {/* <p className="text-sm text-blue-200/80">
+                    Pay with debit or credit card on this page — no redirect to PayPal.com.
+                  </p> */}
                 </div>
                 <Banknote className="h-10 w-10 text-blue-400" />
               </div>
-              <div className="mt-6">
+              {!paypalOrderId ? (
                 <button
                   type="button"
                   onClick={handlePayment}
                   disabled={processingPayment}
-                  className="w-full rounded-xl bg-blue-600 py-4 text-lg font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="mt-4 w-full rounded-xl bg-blue-600 py-4 text-lg font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {processingPayment ? (
-                    <>
-                      <Loader2 className="inline h-5 w-5 animate-spin mr-2" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Pay with PayPal'
-                  )}
+                  {processingPayment ? 'Preparing secure card form...' : 'Continue to card payment'}
                 </button>
-                <p className="mt-3 text-center text-sm text-blue-200/80">
-                  Secure payment processed by PayPal
-                </p>
-              </div>
+              ) : (
+                <>
+                  {/* <PayPalCardPaymentForm
+                    orderId={paypalOrderId}
+                    depositId={paypalDepositId}
+                    amountUsd={parseFloat(amount) || 0}
+                    authToken={token}
+                    processingPayment={processingPayment}
+                    setProcessingPayment={setProcessingPayment}
+                    paypalInlineError={paypalInlineError}
+                    setPaypalInlineError={setPaypalInlineError}
+                    setPaypalStatusNote={setPaypalStatusNote}
+                    onPaymentComplete={(json) => {
+                      const msg =
+                        json.message ||
+                        `PayPal payment successful. ${toFixed2(parseFloat(amount))} USD credited.`;
+                      toast.success(msg, { title: 'Deposit Complete' });
+                      loadMyDeposits();
+                      resetDepositFlow();
+                    }}
+                    onRetry={() => {
+                      setPaypalOrderId('');
+                      setPaypalDepositId('');
+                      setPaypalInlineError('');
+                      setPaypalStatusNote('');
+                      setPaymentError('');
+                    }}
+                    toast={toast}
+                  /> */}
+                  <PayPalAccountPayButton
+                    orderId={paypalOrderId}
+                    depositId={paypalDepositId}
+                    amountUsd={parseFloat(amount) || 0}
+                    authToken={token}
+                    processingPayment={processingPayment}
+                    setProcessingPayment={setProcessingPayment}
+                    setPaypalInlineError={setPaypalInlineError}
+                    setPaypalStatusNote={setPaypalStatusNote}
+                    onPaymentComplete={handlePayPalPaymentComplete}
+                    toast={toast}
+                  />
+                  {paypalStatusNote ? (
+                    <p className="mt-3 rounded-lg border border-blue-400/25 bg-blue-500/10 px-3 py-2 text-xs text-blue-100">
+                      {paypalStatusNote}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </div>
           )}
 

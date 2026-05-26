@@ -513,6 +513,16 @@ button {
   }
 }
 
+/* PayPal embedded card fields — match dark deposit panel */
+.paypal-deposit-card-fields .paypal-card-field-host,
+.paypal-deposit-card-fields [class*='paypal-card-field'] {
+  background-color: transparent !important;
+}
+
+.paypal-deposit-card-fields iframe {
+  background: transparent !important;
+}
+
 @layer utilities {
   .skeleton-shimmer {
     background: linear-gradient(
