@@ -46,14 +46,17 @@ import { cn } from '@/lib/utils';
 import { getCryptoDepositTokenLabel } from '@/lib/cryptoDepositConfig';
 import dynamic from 'next/dynamic';
 
-const PayPalCardPaymentForm = dynamic(
-  () => import('@/components/user-dashboard/PayPalCardPaymentForm'),
-  { ssr: false }
-);
-
-const PayPalAccountPayButton = dynamic(
-  () => import('@/components/user-dashboard/PayPalAccountPayButton'),
-  { ssr: false }
+const PayPalDepositPayment = dynamic(
+  () => import('@/components/user-dashboard/PayPalDepositPayment'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-4 flex items-center gap-3 rounded-xl border border-blue-500/25 bg-blue-950/30 px-4 py-5 text-sm text-blue-100">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        Loading PayPal...
+      </div>
+    ),
+  }
 );
 
 const DEPOSIT_METHODS = [
@@ -1094,9 +1097,9 @@ export default function DepositPage() {
             <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-lg font-semibold text-white">PayPal Card Payment</h4>
+                  <h4 className="text-lg font-semibold text-white">Pay with paypal account</h4>
                   {/* <p className="text-sm text-blue-200/80">
-                    Pay with debit or credit card on this page — no redirect to PayPal.com.
+                    Pay with card on this page or with your PayPal account. USD credits automatically.
                   </p> */}
                 </div>
                 <Banknote className="h-10 w-10 text-blue-400" />
@@ -1108,11 +1111,11 @@ export default function DepositPage() {
                   disabled={processingPayment}
                   className="mt-4 w-full rounded-xl bg-blue-600 py-4 text-lg font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {processingPayment ? 'Preparing secure card form...' : 'Continue to card payment'}
+                  {processingPayment ? 'Preparing PayPal...' : 'Continue to card payment'}
                 </button>
               ) : (
                 <>
-                  {/* <PayPalCardPaymentForm
+                  <PayPalDepositPayment
                     orderId={paypalOrderId}
                     depositId={paypalDepositId}
                     amountUsd={parseFloat(amount) || 0}
@@ -1121,15 +1124,9 @@ export default function DepositPage() {
                     setProcessingPayment={setProcessingPayment}
                     paypalInlineError={paypalInlineError}
                     setPaypalInlineError={setPaypalInlineError}
+                    paypalStatusNote={paypalStatusNote}
                     setPaypalStatusNote={setPaypalStatusNote}
-                    onPaymentComplete={(json) => {
-                      const msg =
-                        json.message ||
-                        `PayPal payment successful. ${toFixed2(parseFloat(amount))} USD credited.`;
-                      toast.success(msg, { title: 'Deposit Complete' });
-                      loadMyDeposits();
-                      resetDepositFlow();
-                    }}
+                    onPaymentComplete={handlePayPalPaymentComplete}
                     onRetry={() => {
                       setPaypalOrderId('');
                       setPaypalDepositId('');
@@ -1138,24 +1135,7 @@ export default function DepositPage() {
                       setPaymentError('');
                     }}
                     toast={toast}
-                  /> */}
-                  <PayPalAccountPayButton
-                    orderId={paypalOrderId}
-                    depositId={paypalDepositId}
-                    amountUsd={parseFloat(amount) || 0}
-                    authToken={token}
-                    processingPayment={processingPayment}
-                    setProcessingPayment={setProcessingPayment}
-                    setPaypalInlineError={setPaypalInlineError}
-                    setPaypalStatusNote={setPaypalStatusNote}
-                    onPaymentComplete={handlePayPalPaymentComplete}
-                    toast={toast}
                   />
-                  {paypalStatusNote ? (
-                    <p className="mt-3 rounded-lg border border-blue-400/25 bg-blue-500/10 px-3 py-2 text-xs text-blue-100">
-                      {paypalStatusNote}
-                    </p>
-                  ) : null}
                 </>
               )}
             </div>

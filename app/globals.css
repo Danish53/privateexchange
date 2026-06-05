@@ -513,14 +513,35 @@ button {
   }
 }
 
-/* PayPal embedded card fields — match dark deposit panel */
+/* PayPal embedded card fields — transparent host, light text on dark panel */
+.paypal-deposit-card-fields {
+  color-scheme: dark;
+  background-color: transparent !important;
+}
+
 .paypal-deposit-card-fields .paypal-card-field-host,
-.paypal-deposit-card-fields [class*='paypal-card-field'] {
+.paypal-deposit-card-fields [class*='paypal-card-field'],
+.paypal-deposit-card-fields [class*='paypal-card-field'] > div,
+.paypal-deposit-card-fields [id*='paypal-card'] {
+  background: transparent !important;
   background-color: transparent !important;
 }
 
 .paypal-deposit-card-fields iframe {
   background: transparent !important;
+  background-color: transparent !important;
+  color-scheme: dark;
+}
+
+/* Hide broken white PayPal placeholders when Advanced Card is not enabled */
+.paypal-deposit-card-fields.is-paypal-card-blocked iframe,
+.paypal-deposit-card-fields.is-paypal-card-blocked .paypal-card-field-host {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
 }
 
 @layer utilities {

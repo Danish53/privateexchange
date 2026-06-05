@@ -17,7 +17,12 @@ import {
 } from '@paypal/react-paypal-js/sdk-v6';
 
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
-const PAYPAL_MERCHANT_ID = process.env.NEXT_PUBLIC_PAYPAL_MERCHANT_ID || '';
+/** Only pass if it looks like a real PayPal merchant id (not a placeholder). */
+function getPayPalMerchantId() {
+  const id = String(process.env.NEXT_PUBLIC_PAYPAL_MERCHANT_ID || '').trim();
+  if (!id || id.length < 10 || id.length > 32) return '';
+  return id;
+}
 const PAYPAL_ENV =
   process.env.NEXT_PUBLIC_PAYPAL_ENVIRONMENT === 'production' ? 'production' : 'sandbox';
 
@@ -305,7 +310,7 @@ export default function PayPalCardPaymentForm(props) {
   return (
     <PayPalProvider
       clientId={clientId}
-      {...(PAYPAL_MERCHANT_ID ? { merchantId: PAYPAL_MERCHANT_ID } : {})}
+      {...(getPayPalMerchantId() ? { merchantId: getPayPalMerchantId() } : {})}
       components={['card-fields']}
       pageType="checkout"
       environment={environment}
