@@ -17,34 +17,24 @@ import {
   ArrowUp,
   ArrowDown,
   Activity,
-  BookOpen,
   Layers,
   Clock,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { AdminDataTableSkeleton } from '@/components/ui/content-skeletons';
 import { cn } from '@/lib/utils';
 import { openDateInputPicker } from '@/lib/openDateInputPicker';
 import { formatNumberSmart } from '@/lib/numberFormat';
 
-const TYPE_LABELS = {
-  deposit: 'Deposit',
-  withdrawal: 'Withdrawal',
-  buy: 'Buy',
-  transfer: 'Transfer',
-  fee: 'Fee',
-  admin_credit: 'Admin credit',
-  admin_debit: 'Admin debit',
-};
-
 const TYPE_ORDER = ['deposit', 'withdrawal', 'buy', 'transfer', 'fee', 'admin_credit', 'admin_debit'];
 
 const TOKEN_FILTERS = ['759', 'CRISTALINO', 'ANEJO', 'RAFFLE', 'SUSU'];
 
-function formatDateTime(iso) {
+function formatDateTime(iso, locale) {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale === 'es' ? 'es' : 'en', {
       dateStyle: 'short',
       timeStyle: 'short',
     }).format(new Date(iso));
@@ -58,8 +48,10 @@ function formatAmount(n) {
   return formatNumberSmart(n, { maxFractionDigits: 2 });
 }
 
-function TypeBadge({ type }) {
-  const label = TYPE_LABELS[type] || type;
+function TypeBadge({ type, t }) {
+  const key = `superadmin.transactions.type.${type}`;
+  const label = t(key);
+  const displayLabel = label !== key ? label : type;
   const styles = {
     deposit: 'border-emerald-500/35 bg-emerald-500/[0.1] text-emerald-100',
     withdrawal: 'border-rose-500/35 bg-rose-500/[0.1] text-rose-100',
@@ -76,7 +68,7 @@ function TypeBadge({ type }) {
         styles[type] || 'border-white/10 bg-white/5 text-brand-muted'
       )}
     >
-      {label}
+      {displayLabel}
     </span>
   );
 }
@@ -99,6 +91,7 @@ function SummaryCard({ icon: Icon, label, value, hint }) {
 }
 
 export default function SuperAdminTransactionsPage() {
+  const { t, locale } = useWebsiteT();
   const { token, ready } = useAuth();
   const [userSearch, setUserSearch] = useState('');
   const [userDebounced, setUserDebounced] = useState('');
@@ -118,8 +111,8 @@ export default function SuperAdminTransactionsPage() {
   const [sorting, setSorting] = useState([{ id: 'createdAt', desc: true }]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setUserDebounced(userSearch.trim()), 400);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setUserDebounced(userSearch.trim()), 400);
+    return () => window.clearTimeout(timer);
   }, [userSearch]);
 
   useEffect(() => {
@@ -154,7 +147,7 @@ export default function SuperAdminTransactionsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error || 'Could not load ledger.');
+        setError(json.error || t('superadmin.transactions.couldNotLoad'));
         setRows([]);
         setSummary(null);
         return;
@@ -164,7 +157,7 @@ export default function SuperAdminTransactionsPage() {
       setTotalPages(Math.max(1, json.totalPages ?? 1));
       setSummary(json.summary ?? null);
     } catch {
-      setError('Network error.');
+      setError(t('superadmin.common.networkError'));
       setRows([]);
       setSummary(null);
     } finally {
@@ -181,6 +174,7 @@ export default function SuperAdminTransactionsPage() {
     dateTo,
     sortBy,
     sortOrder,
+    t,
   ]);
 
   useEffect(() => {
@@ -193,22 +187,22 @@ export default function SuperAdminTransactionsPage() {
       {
         id: 'createdAt',
         accessorKey: 'createdAt',
-        header: 'Time',
+        header: t('superadmin.transactions.columns.time'),
         cell: ({ row }) => (
           <span className="whitespace-nowrap text-xs tabular-nums text-brand-muted">
-            {formatDateTime(row.original.createdAt)}
+            {formatDateTime(row.original.createdAt, locale)}
           </span>
         ),
       },
       {
         id: 'type',
         accessorKey: 'type',
-        header: 'Type',
-        cell: ({ row }) => <TypeBadge type={row.original.type} />,
+        header: t('superadmin.transactions.columns.type'),
+        cell: ({ row }) => <TypeBadge type={row.original.type} t={t} />,
       },
       {
         id: 'user',
-        header: 'Account',
+        header: t('superadmin.transactions.columns.account'),
         cell: ({ row }) => {
           const u = row.original.user;
           return (
@@ -223,7 +217,7 @@ export default function SuperAdminTransactionsPage() {
       {
         id: 'token',
         accessorKey: 'token',
-        header: 'Token',
+        header: t('superadmin.transactions.columns.token'),
         cell: ({ row }) => (
           <span className="font-mono text-xs font-semibold text-brand-accent">{row.original.token}</span>
         ),
@@ -231,7 +225,7 @@ export default function SuperAdminTransactionsPage() {
       {
         id: 'amount',
         accessorKey: 'amount',
-        header: 'Amount',
+        header: t('superadmin.transactions.columns.amount'),
         cell: ({ row }) => {
           const sign = row.original.signedAmount >= 0 ? '+' : '';
           const cls =
@@ -246,7 +240,7 @@ export default function SuperAdminTransactionsPage() {
       },
       {
         id: 'counterparty',
-        header: 'Counterparty',
+        header: t('superadmin.transactions.columns.counterparty'),
         cell: ({ row }) => {
           const cp = row.original.counterparty;
           if (!cp?.email) return <span className="text-sm text-brand-muted">—</span>;
@@ -260,7 +254,7 @@ export default function SuperAdminTransactionsPage() {
       },
       {
         id: 'details',
-        header: 'Reference / note',
+        header: t('superadmin.transactions.columns.referenceNote'),
         cell: ({ row }) => {
           const ref = row.original.externalRef;
           const note = row.original.note;
@@ -277,7 +271,7 @@ export default function SuperAdminTransactionsPage() {
         enableSorting: false,
       },
     ],
-    []
+    [t]
   );
 
   const table = useReactTable({
@@ -313,63 +307,56 @@ export default function SuperAdminTransactionsPage() {
   };
 
   const byType = summary?.byType || {};
-  const typeBreakdown = TYPE_ORDER.filter((k) => byType[k]).map((k) => `${TYPE_LABELS[k] || k}: ${byType[k]}`);
+  const typeBreakdown = TYPE_ORDER.filter((k) => byType[k]).map((k) => {
+    const typeKey = `superadmin.transactions.type.${k}`;
+    const typeLabel = t(typeKey);
+    return t('superadmin.transactions.typeBreakdown', {
+      type: typeLabel !== typeKey ? typeLabel : k,
+      count: byType[k],
+    });
+  });
+
+  const pageStart = pagination.pageIndex * pagination.pageSize + 1;
+  const pageEnd = Math.min((pagination.pageIndex + 1) * pagination.pageSize, total);
 
   return (
     <div className="space-y-6">
       <div className="border-b border-white/[0.06] pb-6">
-        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Transactions</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">{t('superadmin.transactions.title')}</h1>
         <p className="mt-1 max-w-3xl text-sm text-brand-muted">
-          Append-only ledger: deposits, withdrawals, transfers, fees, and admin adjustments. Entries are immutable;
-          balances are derived from the stream—no silent balance edits.
+          {t('superadmin.transactions.subtitle')}
         </p>
       </div>
-
-      {/* <div className="relative overflow-hidden rounded-2xl border border-brand-accent/15 bg-gradient-to-br from-[var(--brand-accent-soft)]/20 via-black/20 to-[#060708] p-5 sm:p-6">
-        <div className="flex gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-accent/25 bg-black/30 text-brand-accent">
-            <BookOpen className="h-5 w-5" strokeWidth={2} aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-brand-heading">Ledger management</p>
-            <p className="mt-1 text-sm leading-relaxed text-brand-muted">
-              Filter by user, token, type, and date range. When the transaction engine is wired, new lines will appear
-              here automatically; admin tools will post <strong className="font-medium text-brand-subtle">admin_credit</strong>{' '}
-              / <strong className="font-medium text-brand-subtle">admin_debit</strong> with mandatory notes for audit.
-            </p>
-          </div>
-        </div>
-      </div> */}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           icon={Layers}
-          label="All-time lines"
-          value={summary != null ? summary.totalAllTime.toLocaleString() : '—'}
-          hint="Total ledger rows in database"
+          label={t('superadmin.transactions.summary.allTimeLines')}
+          value={summary != null ? summary.totalAllTime.toLocaleString(locale === 'es' ? 'es' : 'en') : '—'}
+          hint={t('superadmin.transactions.summary.allTimeLinesHint')}
         />
         <SummaryCard
           icon={Clock}
-          label="Last 24 hours"
-          value={summary != null ? summary.last24h.toLocaleString() : '—'}
-          hint="New entries (any filter)"
+          label={t('superadmin.transactions.summary.last24h')}
+          value={summary != null ? summary.last24h.toLocaleString(locale === 'es' ? 'es' : 'en') : '—'}
+          hint={t('superadmin.transactions.summary.last24hHint')}
         />
         <SummaryCard
           icon={Activity}
-          label="Matching filter"
-          value={summary != null ? summary.filteredTotal.toLocaleString() : '—'}
-          hint="Rows that match current filters"
+          label={t('superadmin.transactions.summary.matchingFilter')}
+          value={summary != null ? summary.filteredTotal.toLocaleString(locale === 'es' ? 'es' : 'en') : '—'}
+          hint={t('superadmin.transactions.summary.matchingFilterHint')}
         />
         <SummaryCard
           icon={Filter}
-          label="By type (filtered)"
-          value={typeBreakdown.length ? `${typeBreakdown.length} types` : '—'}
-          hint={typeBreakdown.length ? typeBreakdown.join(' · ') : 'Apply filters to see mix'}
+          label={t('superadmin.transactions.summary.byTypeFiltered')}
+          value={typeBreakdown.length ? t('superadmin.transactions.summary.typeCount', { count: typeBreakdown.length }) : '—'}
+          hint={typeBreakdown.length ? typeBreakdown.join(' · ') : t('superadmin.transactions.summary.applyFiltersHint')}
         />
       </div>
 
       <div className="rounded-2xl border border-white/[0.08] bg-black/[0.2] p-4 sm:p-5">
-        <p className="mb-3 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">Filters</p>
+        <p className="mb-3 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">{t('superadmin.transactions.filters.label')}</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <div className="relative sm:col-span-2">
             <Search
@@ -379,7 +366,7 @@ export default function SuperAdminTransactionsPage() {
             />
             <input
               type="search"
-              placeholder="User email or name…"
+              placeholder={t('superadmin.transactions.filters.userPlaceholder')}
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
               className="w-full rounded-xl border border-brand-border-muted bg-black/40 py-2.5 pl-10 pr-3 text-sm text-brand-heading placeholder:text-brand-subtle/70 focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
@@ -390,22 +377,26 @@ export default function SuperAdminTransactionsPage() {
             onChange={(e) => setTypeFilter(e.target.value)}
             className="rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
           >
-            <option value="">All types</option>
-            {TYPE_ORDER.map((k) => (
-              <option key={k} value={k}>
-                {TYPE_LABELS[k]}
-              </option>
-            ))}
+            <option value="">{t('superadmin.transactions.filters.allTypes')}</option>
+            {TYPE_ORDER.map((k) => {
+              const typeKey = `superadmin.transactions.type.${k}`;
+              const typeLabel = t(typeKey);
+              return (
+                <option key={k} value={k}>
+                  {typeLabel !== typeKey ? typeLabel : k}
+                </option>
+              );
+            })}
           </select>
           <select
             value={tokenFilter}
             onChange={(e) => setTokenFilter(e.target.value)}
             className="rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
           >
-            <option value="">All tokens</option>
-            {TOKEN_FILTERS.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            <option value="">{t('superadmin.transactions.filters.allTokens')}</option>
+            {TOKEN_FILTERS.map((tok) => (
+              <option key={tok} value={tok}>
+                {tok}
               </option>
             ))}
           </select>
@@ -417,7 +408,7 @@ export default function SuperAdminTransactionsPage() {
             onClick={() => openDateInputPicker(dateFromInputRef.current)}
             onFocus={() => openDateInputPicker(dateFromInputRef.current)}
             className="cursor-pointer rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
-            aria-label="From date"
+            aria-label={t('superadmin.transactions.filters.fromDate')}
           />
           <input
             ref={dateToInputRef}
@@ -427,7 +418,7 @@ export default function SuperAdminTransactionsPage() {
             onClick={() => openDateInputPicker(dateToInputRef.current)}
             onFocus={() => openDateInputPicker(dateToInputRef.current)}
             className="cursor-pointer rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
-            aria-label="To date"
+            aria-label={t('superadmin.transactions.filters.toDate')}
           />
         </div>
       </div>
@@ -484,11 +475,9 @@ export default function SuperAdminTransactionsPage() {
                         colSpan={columns.length}
                         className="px-5 py-16 text-center text-sm text-brand-muted"
                       >
-                        <p className="font-medium text-brand-subtle">No ledger entries yet</p>
+                        <p className="font-medium text-brand-subtle">{t('superadmin.transactions.empty.title')}</p>
                         <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed">
-                          When deposits, transfers, and fees flow through the transaction engine, each movement will
-                          appear here as an immutable line. You can seed or import rows via your backend or a migration
-                          script.
+                          {t('superadmin.transactions.empty.description')}
                         </p>
                       </td>
                     </tr>
@@ -515,19 +504,16 @@ export default function SuperAdminTransactionsPage() {
 
             <div className="relative flex flex-col gap-4 border-t border-white/[0.06] bg-black/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-brand-muted">
-                <span className="font-medium text-brand-subtle">{total.toLocaleString()}</span> matching
+                <span className="font-medium text-brand-subtle">
+                  {t('superadmin.transactions.pagination.matching', { total: total.toLocaleString(locale === 'es' ? 'es' : 'en') })}
+                </span>
                 {total > 0 ? (
                   <>
                     {' '}
-                    · Showing{' '}
-                    <span className="font-medium text-brand-subtle tabular-nums">
-                      {pagination.pageIndex * pagination.pageSize + 1}
-                      –
-                      {Math.min((pagination.pageIndex + 1) * pagination.pageSize, total)}
-                    </span>
+                    {t('superadmin.transactions.pagination.showing', { from: pageStart, to: pageEnd })}
                   </>
                 ) : (
-                  <span className="text-brand-subtle/80"> · No rows</span>
+                  <span className="text-brand-subtle/80"> {t('superadmin.transactions.pagination.noRows')}</span>
                 )}
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -537,7 +523,7 @@ export default function SuperAdminTransactionsPage() {
                     className="rounded-md p-2 text-brand-muted transition hover:bg-[var(--brand-surface-hover)] hover:text-brand-heading disabled:opacity-30"
                     disabled={pagination.pageIndex <= 0}
                     onClick={() => setPagination((p) => ({ ...p, pageIndex: 0 }))}
-                    aria-label="First page"
+                    aria-label={t('superadmin.transactions.pagination.firstPage')}
                   >
                     <ChevronsLeft className="h-4 w-4" strokeWidth={2} />
                   </button>
@@ -548,12 +534,15 @@ export default function SuperAdminTransactionsPage() {
                     onClick={() =>
                       setPagination((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))
                     }
-                    aria-label="Previous page"
+                    aria-label={t('superadmin.transactions.pagination.previousPage')}
                   >
                     <ChevronLeft className="h-4 w-4" strokeWidth={2} />
                   </button>
                   <span className="min-w-[7rem] px-2 text-center text-xs font-medium tabular-nums text-brand-heading">
-                    Page {pagination.pageIndex + 1} of {totalPages}
+                    {t('superadmin.transactions.pagination.pageOf', {
+                      current: pagination.pageIndex + 1,
+                      total: totalPages,
+                    })}
                   </span>
                   <button
                     type="button"
@@ -565,7 +554,7 @@ export default function SuperAdminTransactionsPage() {
                         pageIndex: Math.min(totalPages - 1, p.pageIndex + 1),
                       }))
                     }
-                    aria-label="Next page"
+                    aria-label={t('superadmin.transactions.pagination.nextPage')}
                   >
                     <ChevronRight className="h-4 w-4" strokeWidth={2} />
                   </button>
@@ -576,13 +565,13 @@ export default function SuperAdminTransactionsPage() {
                     onClick={() =>
                       setPagination((p) => ({ ...p, pageIndex: totalPages - 1 }))
                     }
-                    aria-label="Last page"
+                    aria-label={t('superadmin.transactions.pagination.lastPage')}
                   >
                     <ChevronsRight className="h-4 w-4" strokeWidth={2} />
                   </button>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-brand-muted">
-                  <span className="hidden sm:inline">Rows</span>
+                  <span className="hidden sm:inline">{t('superadmin.transactions.pagination.rows')}</span>
                   <select
                     value={pagination.pageSize}
                     onChange={(e) => {

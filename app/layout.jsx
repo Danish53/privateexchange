@@ -1,6 +1,8 @@
 import '@fontsource-variable/source-sans-3';
 import { AuthProvider } from '@/components/auth-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { WebsiteLocaleProvider } from '@/components/i18n/WebsiteLocaleProvider';
+import TranslationOverlay from '@/components/i18n/TranslationOverlay';
 import { ToastProvider } from '@/components/ui/toast-context';
 import './globals.css';
 
@@ -24,7 +26,10 @@ export default function RootLayout({ children }) {
       <body className="min-h-screen bg-slate-900 font-sans antialiased">
         <ErrorBoundary>
           <AuthProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <WebsiteLocaleProvider>
+              <ToastProvider>{children}</ToastProvider>
+              <TranslationOverlay />
+            </WebsiteLocaleProvider>
           </AuthProvider>
         </ErrorBoundary>
       </body>

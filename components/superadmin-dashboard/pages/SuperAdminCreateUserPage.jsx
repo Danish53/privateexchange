@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Loader2, CheckCircle2, Crown } from 'lucide-react';
+import { UserPlus, Loader2, Crown } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import PasswordField from '@/components/auth/PasswordField';
 import { cn } from '@/lib/utils';
 import { formatCurrencySmart } from '@/lib/numberFormat';
@@ -28,6 +29,7 @@ function PermToggle({ id, label, checked, onChange, disabled = false }) {
 }
 
 export default function SuperAdminCreateUserPage() {
+  const { t } = useWebsiteT();
   const router = useRouter();
   const { token, user } = useAuth();
   const isSuperAdmin = user?.role === 'superadmin';
@@ -78,11 +80,11 @@ export default function SuperAdminCreateUserPage() {
     setSuccess('');
     setEmailSent(null);
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError(t('superadmin.createUser.errors.passwordMismatch'));
       return;
     }
     if (!token) {
-      setError('You are not signed in.');
+      setError(t('superadmin.createUser.errors.notSignedIn'));
       return;
     }
     setLoading(true);
@@ -109,10 +111,10 @@ export default function SuperAdminCreateUserPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'Could not create user.');
+        setError(data.error || t('superadmin.createUser.errors.couldNotCreate'));
         return;
       }
-      setSuccess(data.message || 'User created successfully.');
+      setSuccess(data.message || t('superadmin.createUser.successDefault'));
       setEmailSent(data.credentialsEmailSent === true);
       setName('');
       setEmail('');
@@ -121,7 +123,7 @@ export default function SuperAdminCreateUserPage() {
       setIsVip(false);
       setManualMembershipTierId(null);
     } catch {
-      setError('Network error.');
+      setError(t('superadmin.createUser.errors.networkError'));
     } finally {
       setLoading(false);
     }
@@ -135,17 +137,21 @@ export default function SuperAdminCreateUserPage() {
           onClick={() => router.push('/dashboard/superadmin/users')}
           className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent hover:underline"
         >
-          ← Back to users
+          {t('superadmin.createUser.backToUsers')}
         </button>
-        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Add user</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
+          {t('superadmin.createUser.title')}
+        </h1>
         <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-          Create a <strong className="font-medium text-brand-subtle">user</strong> or{' '}
-          <strong className="font-medium text-brand-subtle">admin</strong> account. They are email-verified
-          immediately and can sign in at{' '}
+          {t('superadmin.createUser.subtitleBeforeUser')}{' '}
+          <strong className="font-medium text-brand-subtle">{t('superadmin.createUser.subtitleUserRole')}</strong>{' '}
+          {t('superadmin.createUser.subtitleOr')}{' '}
+          <strong className="font-medium text-brand-subtle">{t('superadmin.createUser.subtitleAdminRole')}</strong>{' '}
+          {t('superadmin.createUser.subtitleAfterRole')}{' '}
           <Link href="/login" className="text-brand-accent underline-offset-2 hover:underline">
             /login
           </Link>{' '}
-          with the password you set—no OTP.
+          {t('superadmin.createUser.subtitleAfterLogin')}
         </p>
       </div>
 
@@ -161,30 +167,37 @@ export default function SuperAdminCreateUserPage() {
               <UserPlus className="h-5 w-5" strokeWidth={2} aria-hidden />
             </span>
             <div>
-              <p className="text-sm font-semibold text-brand-heading">Account type</p>
+              <p className="text-sm font-semibold text-brand-heading">{t('superadmin.createUser.accountType')}</p>
             </div>
           </div>
 
           {success ? (
             <div className="mb-6 space-y-3">
-              <FeedbackMessage tone="success" title="User Created" message={success} />
+              <FeedbackMessage tone="success" title={t('superadmin.createUser.userCreatedTitle')} message={success} />
               {emailSent === false ? (
                 <FeedbackMessage
                   tone="info"
-                  title="Email Not Sent"
-                  message="SMTP is missing: share credentials manually or add SMTP_* vars for automatic email delivery."
+                  title={t('superadmin.createUser.emailNotSentTitle')}
+                  message={t('superadmin.createUser.emailNotSentMessage')}
                 />
               ) : null}
               <Link
                 href="/dashboard/superadmin/users"
                 className="inline-block text-xs font-semibold text-brand-accent hover:underline"
               >
-                View users list →
+                {t('superadmin.createUser.viewUsersList')}
               </Link>
             </div>
           ) : null}
 
-          {error ? <FeedbackMessage tone="error" title="Create Failed" message={error} className="mb-6" /> : null}
+          {error ? (
+            <FeedbackMessage
+              tone="error"
+              title={t('superadmin.createUser.createFailedTitle')}
+              message={error}
+              className="mb-6"
+            />
+          ) : null}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -192,7 +205,7 @@ export default function SuperAdminCreateUserPage() {
                 htmlFor="sa-user-role"
                 className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle"
               >
-                Role
+                {t('superadmin.createUser.role')}
               </label>
               {isSuperAdmin ? (
                 <select
@@ -208,58 +221,59 @@ export default function SuperAdminCreateUserPage() {
                   disabled={loading}
                   className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-4 py-3 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 disabled:opacity-50"
                 >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
+                  <option value="user">{t('superadmin.createUser.roleUser')}</option>
+                  <option value="admin">{t('superadmin.createUser.roleAdmin')}</option>
                 </select>
               ) : (
                 <div className="rounded-xl border border-brand-border-muted bg-black/25 px-4 py-3 text-sm text-brand-muted">
-                  New accounts are created as <span className="font-medium text-brand-heading">users</span>{' '}
-                  only.
+                  {t('superadmin.createUser.newAccountsUsersOnly')}{' '}
+                  <span className="font-medium text-brand-heading">{t('superadmin.createUser.usersOnly')}</span>{' '}
+                  {t('superadmin.createUser.only')}
                 </div>
               )}
             </div>
             {isSuperAdmin && role === 'admin' ? (
               <div className="space-y-2 rounded-xl border border-white/[0.06] bg-black/25 p-4">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                  Users module (delegated admin)
+                  {t('superadmin.createUser.usersModuleTitle')}
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <PermToggle
                     id="new-ap-view"
-                    label="View list"
+                    label={t('superadmin.createUser.permViewList')}
                     checked={adminPermissions.usersView}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, usersView: v }))}
                     disabled={loading}
                   />
                   <PermToggle
                     id="new-ap-create"
-                    label="Create accounts"
+                    label={t('superadmin.createUser.permCreateAccounts')}
                     checked={adminPermissions.usersCreate}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, usersCreate: v }))}
                     disabled={loading}
                   />
                   <PermToggle
                     id="new-ap-edit"
-                    label="Edit users"
+                    label={t('superadmin.createUser.permEditUsers')}
                     checked={adminPermissions.usersEdit}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, usersEdit: v }))}
                     disabled={loading}
                   />
                   <PermToggle
                     id="new-ap-delete"
-                    label="Archive users"
+                    label={t('superadmin.createUser.permArchiveUsers')}
                     checked={adminPermissions.usersDelete}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, usersDelete: v }))}
                     disabled={loading}
                   />
                 </div>
                 <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                  Wallets module
+                  {t('superadmin.createUser.walletsModuleTitle')}
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <PermToggle
                     id="new-ap-wallets-view"
-                    label="View user wallets"
+                    label={t('superadmin.createUser.permViewWallets')}
                     checked={adminPermissions.walletsView}
                     onChange={(v) =>
                       setAdminPermissions((p) => ({
@@ -272,7 +286,7 @@ export default function SuperAdminCreateUserPage() {
                   />
                   <PermToggle
                     id="new-ap-wallets-adjust"
-                    label="Manage token balances"
+                    label={t('superadmin.createUser.permManageBalances')}
                     checked={adminPermissions.walletsAdjust}
                     onChange={(v) =>
                       setAdminPermissions((p) => ({
@@ -284,56 +298,54 @@ export default function SuperAdminCreateUserPage() {
                     disabled={loading}
                   />
                 </div>
-                <p className="text-[0.65rem] leading-relaxed text-brand-muted">
-                  Adjust includes view. View-only shows balances in the table; adjust unlocks the Manage panel.
-                </p>
+                <p className="text-[0.65rem] leading-relaxed text-brand-muted">{t('superadmin.createUser.walletsHint')}</p>
                 <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                  Settings module
+                  {t('superadmin.createUser.settingsModuleTitle')}
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <PermToggle
                     id="new-ap-tokens"
-                    label="Manage tokens"
+                    label={t('superadmin.createUser.permManageTokens')}
                     checked={adminPermissions.manageTokens}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, manageTokens: v }))}
                     disabled={loading}
                   />
                 </div>
                 <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                  Platform modules
+                  {t('superadmin.createUser.platformModulesTitle')}
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <PermToggle
                     id="new-ap-transactions"
-                    label="View transactions"
+                    label={t('superadmin.createUser.permViewTransactions')}
                     checked={adminPermissions.transactionsView}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, transactionsView: v }))}
                     disabled={loading}
                   />
                   <PermToggle
                     id="new-ap-drawings"
-                    label="Manage drawings"
+                    label={t('superadmin.createUser.permManageDrawings')}
                     checked={adminPermissions.drawingsManage}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, drawingsManage: v }))}
                     disabled={loading}
                   />
                   <PermToggle
                     id="new-ap-membership"
-                    label="Manage membership"
+                    label={t('superadmin.createUser.permManageMembership')}
                     checked={adminPermissions.membershipManage}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, membershipManage: v }))}
                     disabled={loading}
                   />
                   <PermToggle
                     id="new-ap-announcements"
-                    label="Community announcements"
+                    label={t('superadmin.createUser.permAnnouncements')}
                     checked={adminPermissions.announcementsManage}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, announcementsManage: v }))}
                     disabled={loading}
                   />
                   <PermToggle
                     id="new-ap-support"
-                    label="Support tickets"
+                    label={t('superadmin.createUser.permSupportTickets')}
                     checked={adminPermissions.supportTicketsManage}
                     onChange={(v) => setAdminPermissions((p) => ({ ...p, supportTicketsManage: v }))}
                     disabled={loading}
@@ -348,13 +360,13 @@ export default function SuperAdminCreateUserPage() {
                     <div className="flex items-center gap-2">
                       <Crown className="h-4 w-4 text-brand-accent" strokeWidth={2} aria-hidden />
                       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                        Membership
+                        {t('superadmin.createUser.membership')}
                       </p>
                     </div>
                     {membershipTiersLoading ? (
                       <p className="mt-2 flex items-center gap-2 text-sm text-brand-muted">
                         <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
-                        Loading tiers…
+                        {t('superadmin.createUser.loadingTiers')}
                       </p>
                     ) : (
                       <div className="mt-2 max-h-44 space-y-2 overflow-y-auto pr-1">
@@ -375,13 +387,15 @@ export default function SuperAdminCreateUserPage() {
                             >
                               <span className="font-semibold text-brand-heading">{tier.name}</span>
                               <span className="mt-0.5 block text-xs text-brand-muted">
-                                Min {formatCurrencySmart(tier.minValueUsd, 'USD')}
+                                {t('superadmin.createUser.minUsd', {
+                                  amount: formatCurrencySmart(tier.minValueUsd, 'USD'),
+                                })}
                               </span>
                             </button>
                           );
                         })}
                         {!membershipTiersLoading && membershipTiers.length === 0 ? (
-                          <p className="text-xs text-brand-muted">No tiers yet — create them under Membership.</p>
+                          <p className="text-xs text-brand-muted">{t('superadmin.createUser.noTiersYet')}</p>
                         ) : null}
                       </div>
                     )}
@@ -394,7 +408,8 @@ export default function SuperAdminCreateUserPage() {
                 htmlFor="sa-user-name"
                 className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle"
               >
-                Display name <span className="font-normal normal-case text-brand-muted">(optional)</span>
+                {t('superadmin.createUser.displayName')}{' '}
+                <span className="font-normal normal-case text-brand-muted">{t('superadmin.createUser.optional')}</span>
               </label>
               <input
                 id="sa-user-name"
@@ -403,7 +418,7 @@ export default function SuperAdminCreateUserPage() {
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="name"
                 className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-4 py-3 text-sm text-brand-heading placeholder:text-brand-subtle/70 focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
-                placeholder="e.g. Jane Doe"
+                placeholder={t('superadmin.createUser.displayNamePlaceholder')}
               />
             </div>
             <div>
@@ -411,7 +426,7 @@ export default function SuperAdminCreateUserPage() {
                 htmlFor="sa-user-email"
                 className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle"
               >
-                Email
+                {t('superadmin.createUser.email')}
               </label>
               <input
                 id="sa-user-email"
@@ -421,11 +436,11 @@ export default function SuperAdminCreateUserPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="off"
                 className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-4 py-3 text-sm text-brand-heading placeholder:text-brand-subtle/70 focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
-                placeholder="user@company.com"
+                placeholder={t('superadmin.createUser.emailPlaceholder')}
               />
             </div>
             <PasswordField
-              label="Password"
+              label={t('superadmin.createUser.password')}
               value={password}
               onChange={setPassword}
               autoComplete="new-password"
@@ -437,7 +452,7 @@ export default function SuperAdminCreateUserPage() {
                 htmlFor="sa-user-confirm"
                 className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle"
               >
-                Confirm password
+                {t('superadmin.createUser.confirmPassword')}
               </label>
               <input
                 id="sa-user-confirm"
@@ -462,12 +477,12 @@ export default function SuperAdminCreateUserPage() {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
-                  Creating…
+                  {t('superadmin.createUser.creating')}
                 </>
               ) : (
                 <>
                   <UserPlus className="h-4 w-4" strokeWidth={2} aria-hidden />
-                  Create account
+                  {t('superadmin.createUser.createAccount')}
                 </>
               )}
             </button>

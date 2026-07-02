@@ -19,33 +19,38 @@ import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { useUserWalletHistory } from '@/components/user-dashboard/useUserWalletHistory';
 import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
 import { formatNumberSmart } from '@/lib/numberFormat';
+import { useMemo } from 'react';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
+import { getLedgerTypeLabel } from '@/lib/i18n/dashboard-helpers';
 
-const DEPOSIT_METHODS = [
-  {
-    id: 'paypal',
-    name: 'PayPal',
-    status: 'Available',
-    available: true,
-    icon: Banknote,
-    blurb: 'Instant top-ups',
-  },
-  {
-    id: 'stripe',
-    name: 'Stripe',
-    status: 'Roadmap',
-    available: false,
-    icon: CreditCard,
-    blurb: 'Cards · coming soon',
-  },
-  {
-    id: 'crypto',
-    name: 'Crypto',
-    status: 'Available',
-    available: true,
-    icon: Coins,
-    blurb: 'On-chain deposits',
-  },
-];
+function getWalletDepositMethods(t) {
+  return [
+    {
+      id: 'paypal',
+      name: t('dashboard.deposit.methods.paypal.name'),
+      status: t('dashboard.common.available'),
+      available: true,
+      icon: Banknote,
+      blurb: t('dashboard.wallet.paypalBlurb'),
+    },
+    {
+      id: 'stripe',
+      name: t('dashboard.deposit.methods.stripe.name'),
+      status: t('dashboard.common.roadmap'),
+      available: false,
+      icon: CreditCard,
+      blurb: t('dashboard.wallet.stripeBlurb'),
+    },
+    {
+      id: 'crypto',
+      name: t('dashboard.deposit.methods.crypto.name'),
+      status: t('dashboard.common.available'),
+      available: true,
+      icon: Coins,
+      blurb: t('dashboard.wallet.cryptoBlurb'),
+    },
+  ];
+}
 
 function historyIcon(type) {
   if (type === 'fee') return 'fee';
@@ -54,6 +59,8 @@ function historyIcon(type) {
 }
 
 export default function WalletPage() {
+  const { t, locale } = useWebsiteT();
+  const depositMethods = useMemo(() => getWalletDepositMethods(t), [t]);
   const { loading, error, tokens, totalUsdFormatted } = useUserWallet();
   const hist = useUserWalletHistory({ limit: 100, enableTokenFilter: true });
 
@@ -83,14 +90,13 @@ export default function WalletPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
-              Wallet
+              {t('dashboard.wallet.eyebrow')}
             </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem]">
-              Balances & deposits
+              {t('dashboard.wallet.title')}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Balances load from your custodial wallet (one row per token). Deposits and ledger history will tie in here
-              as payments go live.
+              {t('dashboard.wallet.subtitle')}
             </p>
           </div>
           {/* <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
@@ -107,12 +113,12 @@ export default function WalletPage() {
           />
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm font-medium text-brand-muted">Total wallet value (USD)</p>
+              <p className="text-sm font-medium text-brand-muted">{t('dashboard.wallet.totalWalletUsd')}</p>
               <p className="mt-2 text-3xl font-semibold tabular-nums tracking-[-0.04em] text-brand-heading sm:text-[2.125rem]">
                 {loading ? <UsdHeroSkeleton className="mt-0" /> : totalUsdFormatted}
               </p>
               <p className="mt-2 text-xs text-brand-subtle">
-                USD Balance
+                {t('dashboard.common.usdBalance')}
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
@@ -121,14 +127,14 @@ export default function WalletPage() {
                 className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
               >
                 <ArrowRightLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
-                Send tokens
+                {t('dashboard.wallet.sendTokens')}
               </Link>
               <Link
                 href="/dashboard/user"
                 className="btn-secondary inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
               >
                 <Wallet className="h-4 w-4" strokeWidth={2} aria-hidden />
-                Overview
+                {t('dashboard.common.overview')}
               </Link>
             </div>
           </div>
@@ -136,7 +142,7 @@ export default function WalletPage() {
 
         {/* <Panel title="Deposit methods" subtitle="How you can add funds when each channel is enabled for your account.">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {DEPOSIT_METHODS.map((m) => {
+            {depositMethods.map((m) => {
               const Icon = m.icon;
               return (
                 <button
@@ -176,7 +182,7 @@ export default function WalletPage() {
           </div>
         </Panel> */}
 
-        <Panel title="Token balances" subtitle="Your current token balances.">
+        <Panel title={t('dashboard.overview.tokenBalances')} subtitle={t('dashboard.overview.tokenBalancesSub')}>
           {error ? (
             <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
               {error}
@@ -190,18 +196,18 @@ export default function WalletPage() {
 
         {hist.totalForUser > 0 ? (
           <Panel
-            title="Transaction history"
-            subtitle="Ledger: deposits, transfers, fees, and admin adjustments · filter by token or view all"
+            title={t('dashboard.wallet.recentLedger')}
+            subtitle={t('dashboard.wallet.recentLedgerSub')}
           >
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <label className="flex flex-col gap-1.5 text-xs sm:flex-row sm:items-center sm:gap-3">
-                <span className="font-semibold uppercase tracking-[0.1em] text-brand-subtle">Token</span>
+                <span className="font-semibold uppercase tracking-[0.1em] text-brand-subtle">{t('dashboard.common.token')}</span>
                 <select
                   value={hist.tokenFilter}
                   onChange={(e) => hist.setTokenFilter(e.target.value)}
                   className="w-full max-w-xs rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 sm:w-auto"
                 >
-                  <option value="all">All tokens</option>
+                  <option value="all">{t('dashboard.common.allTokens')}</option>
                   {tokens.filter((t) => t.isActive === true).map((t) => (
                     <option key={t.slug} value={t.symbol}>
                       {t.name} ({t.symbol})
@@ -213,7 +219,7 @@ export default function WalletPage() {
                 href="/dashboard/user/history"
                 className="text-xs font-medium text-brand-accent transition hover:text-brand-accent-hover"
               >
-                Open full history page
+                {t('dashboard.wallet.viewAllHistory')}
               </Link>
             </div>
 
@@ -226,14 +232,14 @@ export default function WalletPage() {
             ) : (
               <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-black/[0.2]">
                 <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-white/[0.06] px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] sm:px-5">
-                  <span>Type / asset</span>
-                  <span className="hidden sm:block">Date</span>
-                  <span className="hidden text-right sm:block">Status</span>
-                  <span className="text-right">Amount</span>
+                  <span>{t('dashboard.wallet.typeAsset')}</span>
+                  <span className="hidden sm:block">{t('dashboard.common.date')}</span>
+                  <span className="hidden text-right sm:block">{t('dashboard.common.status')}</span>
+                  <span className="text-right">{t('dashboard.common.amount')}</span>
                 </div>
                 {hist.entries.length === 0 ? (
                   <p className="px-4 py-8 text-center text-sm text-brand-muted sm:px-5">
-                    No ledger lines for this token yet.
+                    {t('dashboard.history.noEntriesYet')}
                   </p>
                 ) : (
                   <ul className="divide-y divide-white/[0.04]">
@@ -264,7 +270,9 @@ export default function WalletPage() {
                               )}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-medium text-brand-heading">{tx.typeLabel}</p>
+                              <p className="font-medium text-brand-heading">
+                                {getLedgerTypeLabel(tx.type, t)}
+                              </p>
                               <p className="text-xs text-brand-subtle">
                                 {tx.token}
                                 {tx.note ? ` · ${tx.note}` : ''}
@@ -272,12 +280,23 @@ export default function WalletPage() {
                             </div>
                           </div>
                           <div className="hidden min-w-0 flex-1 text-sm text-brand-muted sm:block">
-                            {tx.dateDisplay}
+                            {tx.date
+                              ? new Date(tx.date).toLocaleString(locale === 'es' ? 'es' : 'en', {
+                                  dateStyle: 'medium',
+                                  timeStyle: 'short',
+                                })
+                              : tx.dateDisplay}
                           </div>
                           <div className="hidden items-center justify-end sm:flex">
                             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/[0.08] px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-200/90">
                               <CheckCircle2 className="h-3 w-3" strokeWidth={2} aria-hidden />
-                              {tx.status}
+                              {tx.status === 'pending'
+                                ? t('dashboard.common.pending')
+                                : tx.status === 'approved' || tx.status === 'completed'
+                                  ? t('dashboard.common.approved')
+                                  : tx.status === 'rejected' || tx.status === 'cancelled'
+                                    ? t('dashboard.common.rejected')
+                                    : tx.status}
                             </span>
                           </div>
                           <span

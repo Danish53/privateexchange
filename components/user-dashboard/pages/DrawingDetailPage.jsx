@@ -5,6 +5,17 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Gift, ArrowLeft, Wallet } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
+import { getDrawingPrizeLine } from '@/lib/i18n/dashboard-helpers';
+
+function getDrawingStatusLabel(status, t) {
+  const map = {
+    active: t('dashboard.drawings.statusActive'),
+    pending: t('dashboard.drawings.statusPending'),
+    completed: t('dashboard.drawings.statusCompleted'),
+  };
+  return map[status] || status || t('dashboard.drawings.statusActive');
+}
 
 function imageSrc(value) {
   const raw = String(value || '').trim();
@@ -14,6 +25,7 @@ function imageSrc(value) {
 }
 
 export default function DrawingDetailPage() {
+  const { t, locale, translateRowFields } = useWebsiteT();
   const params = useParams();
   const slug = typeof params?.slug === 'string' ? params.slug : params?.slug?.[0] || '';
   const { token, ready } = useAuth();
@@ -39,12 +51,18 @@ export default function DrawingDetailPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setError(json.error || 'Could not load drawing.');
+        setError(json.error || t('dashboard.drawings.errors.couldNotLoad'));
         return;
       }
-      setDrawing(json.drawing || null);
+      const draw = json.drawing || null;
+      if (draw) {
+        const [translated] = await translateRowFields([draw], ['title', 'prize_title', 'description', 'prize_description']);
+        setDrawing(translated || draw);
+      } else {
+        setDrawing(null);
+      }
     } catch {
-      setError('Network error while loading drawing.');
+      setError(t('dashboard.drawings.errors.networkLoad'));
     } finally {
       setLoading(false);
     }
@@ -68,12 +86,12 @@ export default function DrawingDetailPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setJoinError(json.error || 'Could not load join info.');
+        setJoinError(json.error || t('dashboard.drawings.errors.couldNotLoadJoinInfo'));
         return;
       }
       setJoinPreview(json.preview || null);
     } catch {
-      setJoinError('Network error while loading join info.');
+      setJoinError(t('dashboard.drawings.errors.networkJoinInfo'));
     } finally {
       setJoinPreviewLoading(false);
     }
@@ -90,14 +108,14 @@ export default function DrawingDetailPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setJoinError(json.error || 'Failed to join drawing.');
+        setJoinError(json.error || t('dashboard.drawings.errors.joinFailed'));
         return;
       }
       setShowJoinModal(false);
-      setJoinSuccess(json.message || 'Drawing joined successfully.');
+      setJoinSuccess(json.message || t('dashboard.drawings.joinSuccess'));
       await loadDetail();
     } catch {
-      setJoinError('Network error while joining drawing.');
+      setJoinError(t('dashboard.drawings.errors.networkJoin'));
     } finally {
       setIsJoining(false);
     }
@@ -110,7 +128,7 @@ export default function DrawingDetailPage() {
         className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent hover:underline"
       >
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-        Back to drawings
+        {t('dashboard.drawings.viewDrawing')}
       </Link>
 
       {loading ? (
@@ -137,7 +155,7 @@ export default function DrawingDetailPage() {
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight text-brand-heading">{drawing.title}</h1>
                 <p className="mt-1 text-sm text-brand-muted">
-                  Draw date: {drawing.draw_date ? new Date(drawing.draw_date).toLocaleString() : 'TBD'}
+                  {t('dashboard.common.date')}: {drawing.draw_date ? new Date(drawing.draw_date).toLocaleString(locale === 'es' ? 'es' : 'en') : '—'}
                 </p>
               </div>
             </div>
@@ -148,36 +166,36 @@ export default function DrawingDetailPage() {
                   ? 'border-sky-500/30 bg-sky-500/[0.1] text-sky-100/90'
                   : 'border-emerald-500/30 bg-emerald-500/[0.12] text-emerald-100/95'
             }`}>
-              {drawing.status || 'active'}
+              {getDrawingStatusLabel(drawing.status, t)}
             </span>
           </div>
 
           <section className="mt-6 rounded-xl border border-white/[0.08] bg-black/25 p-4">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-              Drawing details
+              {t('dashboard.drawings.drawingDetails')}
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {drawing.drawing_image ? (
                 <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3 sm:col-span-2">
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Drawing image</p>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.drawingImage')}</p>
                   <div className="mt-2 w-fit overflow-hidden rounded-lg border border-white/[0.08] bg-black/25 h-56">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imageSrc(drawing.drawing_image)} alt={drawing.title || 'Drawing image'} className="w-fit object-cover h-56" />
+                    <img src={imageSrc(drawing.drawing_image)} alt={drawing.title || t('dashboard.drawings.drawingImage')} className="w-fit object-cover h-56" />
                   </div>
                 </div>
               ) : null}
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Title</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.title')}</p>
                 <p className="mt-1 text-sm font-semibold text-brand-heading">{drawing.title || '—'}</p>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Draw date</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.common.date')}</p>
                 <p className="mt-1 text-sm font-semibold text-brand-heading">
-                  {drawing.draw_date ? new Date(drawing.draw_date).toLocaleString() : 'TBD'}
+                  {drawing.draw_date ? new Date(drawing.draw_date).toLocaleString(locale === 'es' ? 'es' : 'en') : '—'}
                 </p>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3 sm:col-span-2">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Description</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.description')}</p>
                 <p className="mt-1 text-sm leading-relaxed text-brand-muted">{drawing.description || '—'}</p>
               </div>
               
@@ -186,12 +204,12 @@ export default function DrawingDetailPage() {
 
           <section className="mt-4 rounded-xl border border-white/[0.08] bg-black/25 p-4">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-              Prize details
+              {t('dashboard.drawings.prizeDetails')}
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {drawing.prize_image ? (
                 <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3 sm:col-span-2">
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Prize image</p>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.prizeImage')}</p>
                   <div className="mt-2 w-fit overflow-hidden rounded-lg border border-white/[0.08] bg-black/25 h-56">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imageSrc(drawing.prize_image)} alt={drawing.prize_title || drawing.title} className="w-fit object-cover h-56" />
@@ -199,19 +217,17 @@ export default function DrawingDetailPage() {
                 </div>
               ) : null}
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Prize</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.prize')}</p>
                 <p className="mt-1 text-sm font-semibold text-brand-accent">{drawing.prize_title || '—'}</p>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Reward</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.prize')}</p>
                 <p className="mt-1 text-sm font-semibold text-brand-heading">
-                  {drawing.reward_type === 'token'
-                    ? `${drawing.reward_token_amount || '0'} ${drawing.reward_token?.symbol || ''}`.trim()
-                    : drawing.reward_type === "event_access" ? "Event Access" : drawing.reward_type || '—'}
+                  {getDrawingPrizeLine(drawing, t)}
                 </p>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3 sm:col-span-2">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Prize description</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.prizeDescription')}</p>
                 <p className="mt-1 text-sm leading-relaxed text-brand-muted">{drawing.prize_description || '—'}</p>
               </div>
               
@@ -220,27 +236,27 @@ export default function DrawingDetailPage() {
 
           <section className="mt-4 rounded-xl border border-white/[0.08] bg-black/25 p-4">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-              Entry details
+              {t('dashboard.drawings.entryDetails')}
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Entry token</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.entryToken')}</p>
                 <p className="mt-1 text-sm font-semibold text-brand-heading">
                   {drawing.entry_token?.symbol || drawing.entry_token?.name || '—'}
                 </p>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Entry cost</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.entryCost')}</p>
                 <p className="mt-1 text-sm font-semibold text-brand-heading">{drawing.entry_cost || '—'}</p>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Total slots</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.totalSlots')}</p>
                 <p className="mt-1 text-sm font-semibold tabular-nums text-brand-heading">
                   {drawing.total_entries ? drawing.total_entries.toLocaleString() : '0'}
                 </p>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Joined users</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.drawings.joinedUsers')}</p>
                 <p className="mt-1 text-sm font-semibold tabular-nums text-brand-heading">
                   {drawing.joined_count ? drawing.joined_count.toLocaleString() : '0'}
                 </p>
@@ -257,7 +273,7 @@ export default function DrawingDetailPage() {
                     Number(drawing.total_entries || 0) > 0 &&
                     Number(drawing.joined_count || 0) >= Number(drawing.total_entries || 0)
                   ) {
-                    setJoinError('Drawing capacity is full. Join is closed.');
+                    setJoinError(t('dashboard.drawings.capacityFull'));
                     setJoinSuccess('');
                     setShowJoinModal(true);
                     return;
@@ -274,8 +290,8 @@ export default function DrawingDetailPage() {
                 <Wallet className="h-4 w-4" strokeWidth={2} aria-hidden />
                 {Number(drawing.total_entries || 0) > 0 &&
                 Number(drawing.joined_count || 0) >= Number(drawing.total_entries || 0)
-                  ? 'Join closed'
-                  : 'Join'}
+                  ? t('dashboard.drawings.joinClosed')
+                  : t('dashboard.drawings.join')}
               </button>
             </div>
           ) : (
@@ -286,7 +302,7 @@ export default function DrawingDetailPage() {
         </article>
       ) : (
         <div className="rounded-2xl border border-white/[0.08] bg-black/[0.25] p-6 text-sm text-brand-muted">
-          Drawing not found.
+          {t('dashboard.drawings.notFound')}
         </div>
       )}
 
@@ -299,12 +315,12 @@ export default function DrawingDetailPage() {
       {showJoinModal ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#07080c] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:p-6">
-            <h3 className="text-lg font-semibold text-brand-heading">Confirm drawing join</h3>
+            <h3 className="text-lg font-semibold text-brand-heading">{t('dashboard.drawings.confirmJoin')}</h3>
             <p className="mt-1 text-sm text-brand-muted">
-              Joining this drawing will deduct entry cost from your wallet.
+              {t('dashboard.drawings.joinModalHint')}
             </p>
             <p className="mt-1 text-xs text-brand-subtle">
-              This deduction will be added to your transaction history.
+              {t('dashboard.drawings.deductionHistoryNote')}
             </p>
             {joinPreviewLoading ? (
               <div className="mt-4 grid gap-3 rounded-xl border border-white/[0.08] bg-black/25 p-4 animate-pulse">
@@ -318,30 +334,30 @@ export default function DrawingDetailPage() {
             ) : (
               <div className="mt-4 grid gap-2 rounded-xl border border-white/[0.08] bg-black/25 p-4 text-sm">
                 <p className="text-brand-muted">
-                  Entry token: <span className="text-brand-heading">{joinPreview?.entryToken?.symbol || '—'}</span>
+                  {t('dashboard.drawings.entryToken')}: <span className="text-brand-heading">{joinPreview?.entryToken?.symbol || '—'}</span>
                 </p>
                 <p className="text-brand-muted">
-                  Entry cost: <span className="text-brand-heading">{joinPreview?.entryCost ?? '—'}</span>
+                  {t('dashboard.drawings.entryCost')}: <span className="text-brand-heading">{joinPreview?.entryCost ?? '—'}</span>
                 </p>
                 <p className="text-brand-muted">
-                  Your balance: <span className="text-brand-heading">{joinPreview?.walletBalance?.toFixed(2) ?? '—'}</span>
+                  {t('dashboard.drawings.yourBalance')}: <span className="text-brand-heading">{joinPreview?.walletBalance?.toFixed(2) ?? '—'}</span>
                 </p>
                 <p className="text-brand-muted">
-                  Balance after join:{' '}
+                  {t('dashboard.drawings.balanceAfterJoin')}:{' '}
                   <span className="text-brand-heading">{joinPreview?.walletBalanceAfterJoin ?? '—'}</span>
                 </p>
                 <p className="text-brand-muted">
-                  Deduction:{' '}
+                  {t('dashboard.drawings.deduction')}:{' '}
                   <span className="text-rose-300">
                     -{joinPreview?.entryCost ?? '—'} {joinPreview?.entryToken?.symbol || ''}
                   </span>
                 </p>
                 <p className="text-brand-muted">
-                  Reward:{' '}
+                  {t('dashboard.drawings.reward')}:{' '}
                   <span className="text-brand-heading">
                     {joinPreview?.reward?.type === 'token'
                       ? `${joinPreview?.reward?.tokenAmount || '0'} ${joinPreview?.reward?.token?.symbol || ''}`.trim()
-                      : joinPreview?.reward?.type === "event_access" ? "Event Access" : joinPreview?.reward?.type || '—'}
+                      : joinPreview?.reward?.type === "event_access" ? t('dashboard.drawings.eventAccessLabel') : joinPreview?.reward?.type || '—'}
                   </span>
                 </p>
               </div>
@@ -356,7 +372,7 @@ export default function DrawingDetailPage() {
                 }}
                 className="rounded-xl border border-white/[0.1] px-4 py-2 text-sm font-semibold text-brand-muted"
               >
-                Cancel
+                {t('dashboard.common.cancel')}
               </button>
               <button
                 type="button"
@@ -364,7 +380,7 @@ export default function DrawingDetailPage() {
                 onClick={onConfirmJoin}
                 className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
               >
-                {isJoining ? 'Joining...' : 'Confirm join'}
+                {isJoining ? t('dashboard.drawings.joining') : t('dashboard.drawings.confirmJoin')}
               </button>
             </div>
           </div>

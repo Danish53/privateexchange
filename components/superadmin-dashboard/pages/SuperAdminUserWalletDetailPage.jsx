@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Wallet, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { cn } from '@/lib/utils';
 import { AdminMemberWalletSkeleton, TokenBalanceCardsSkeleton } from '@/components/ui/content-skeletons';
 import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
@@ -20,6 +21,7 @@ function tokenBalanceFromRow(row, symbolUpper) {
 }
 
 export default function SuperAdminUserWalletDetailPage() {
+  const { t } = useWebsiteT();
   const params = useParams();
   const userId = typeof params?.userId === 'string' ? params.userId : params?.userId?.[0] || '';
   const { token, ready, user } = useAuth();
@@ -45,18 +47,17 @@ export default function SuperAdminUserWalletDetailPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setError(json.error || 'Could not load wallet.');
+        setError(json.error || t('superadmin.userWalletDetail.couldNotLoad'));
         return;
       }
       setPayload(json);
     } catch {
-      setError('Network error.');
+      setError(t('superadmin.common.networkError'));
     } finally {
       setLoading(false);
     }
-  }, [token, userId]);
+  }, [token, userId, t]);
 
-  // Fetch active tokens from API
   useEffect(() => {
     const fetchActiveTokens = async () => {
       setLoadingActiveTokens(true);
@@ -82,7 +83,11 @@ export default function SuperAdminUserWalletDetailPage() {
 
   if (!userId) {
     return (
-      <FeedbackMessage tone="error" title="Invalid Request" message="Missing user id." />
+      <FeedbackMessage
+        tone="error"
+        title={t('superadmin.userWalletDetail.invalidRequestTitle')}
+        message={t('superadmin.userWalletDetail.missingUserId')}
+      />
     );
   }
 
@@ -90,14 +95,20 @@ export default function SuperAdminUserWalletDetailPage() {
     return (
       <FeedbackMessage
         tone="info"
-        title="Access Required"
-        message="You don't have permission to view wallets. Ask a super admin to grant wallet access."
+        title={t('superadmin.userWalletDetail.accessRequiredTitle')}
+        message={t('superadmin.userWalletDetail.noPermission')}
       />
     );
   }
 
   const w = payload?.wallet;
   const nonMember = payload?.memberWallet === false;
+  const roleLabel =
+    payload?.role === 'admin'
+      ? t('superadmin.common.roleAdmin')
+      : payload?.role === 'user'
+        ? t('superadmin.common.roleUser')
+        : payload?.role || '—';
 
   return (
     <div className="space-y-6">
@@ -107,16 +118,14 @@ export default function SuperAdminUserWalletDetailPage() {
           className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent hover:underline"
         >
           <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-          Back to users
+          {t('superadmin.userWalletDetail.backToUsers')}
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
-              Wallet & balances
+              {t('superadmin.userWalletDetail.title')}
             </h1>
-            <p className="mt-1 text-sm text-brand-muted">
-              Custodial token balances for this account (member wallets only).
-            </p>
+            <p className="mt-1 text-sm text-brand-muted">{t('superadmin.userWalletDetail.subtitle')}</p>
           </div>
           {w && !nonMember && canAdjustWallets ? (
             <Link
@@ -124,7 +133,7 @@ export default function SuperAdminUserWalletDetailPage() {
               className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
             >
               <Wallet className="h-4 w-4" strokeWidth={2} aria-hidden />
-              Manage balances
+              {t('superadmin.userWalletDetail.manageBalances')}
             </Link>
           ) : null}
         </div>
@@ -133,18 +142,24 @@ export default function SuperAdminUserWalletDetailPage() {
       {loading ? (
         <AdminMemberWalletSkeleton tokenCount={5} />
       ) : error ? (
-        <FeedbackMessage tone="error" title="Wallet Error" message={error} />
+        <FeedbackMessage
+          tone="error"
+          title={t('superadmin.userWalletDetail.walletErrorTitle')}
+          message={error}
+        />
       ) : nonMember ? (
         <div className="space-y-4 rounded-2xl border border-white/[0.08] bg-black/[0.25] p-6">
           {payload?.archived ? (
             <p className="text-sm text-brand-muted">
-              This account is <strong className="text-brand-heading">archived</strong>. Restore it under Users →
-              Archived to use the wallet again.
+              {t('superadmin.userWalletDetail.archivedIntro')}{' '}
+              <strong className="text-brand-heading">{t('superadmin.userWalletDetail.archivedStrong')}</strong>
+              {t('superadmin.userWalletDetail.archivedOutro')}
             </p>
           ) : (
             <p className="text-sm text-brand-muted">
-              <strong className="text-brand-heading">Administrator</strong> accounts don&apos;t have a member
-              custodial wallet here. Member balances appear only for accounts with role <strong>User</strong>.
+              <strong className="text-brand-heading">{t('superadmin.userWalletDetail.adminStrong')}</strong>{' '}
+              {t('superadmin.userWalletDetail.adminNoWalletIntro')}{' '}
+              <strong>{t('superadmin.userWalletDetail.userStrong')}</strong>.
             </p>
           )}
           <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3">
@@ -160,7 +175,7 @@ export default function SuperAdminUserWalletDetailPage() {
               <p className="truncate font-medium text-brand-heading">{payload?.email}</p>
               {payload?.name ? <p className="truncate text-xs text-brand-muted">{payload.name}</p> : null}
               <p className="mt-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                Role: {payload?.role === 'admin' ? 'Admin' : payload?.role || '—'}
+                {t('superadmin.userWalletDetail.roleLabel', { role: roleLabel })}
               </p>
             </div>
           </div>
@@ -186,12 +201,12 @@ export default function SuperAdminUserWalletDetailPage() {
                   {w.emailVerified ? (
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-300/95">
                       <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                      Verified
+                      {t('superadmin.wallets.kycVerified')}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-200/80">
                       <ShieldAlert className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                      Email pending
+                      {t('superadmin.userWalletDetail.emailPending')}
                     </span>
                   )}
                   <code className="rounded-md border border-white/[0.08] bg-black/40 px-2 py-0.5 text-[0.65rem] text-brand-subtle">
@@ -202,37 +217,32 @@ export default function SuperAdminUserWalletDetailPage() {
             </div>
             <div className="rounded-xl border border-brand-accent/20 bg-[var(--brand-accent-soft)]/15 px-4 py-3 text-right">
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                Total (USD)
+                {t('superadmin.userWalletDetail.totalUsd')}
               </p>
               <p className="mt-1 text-2xl font-semibold tabular-nums text-brand-heading">{w.balanceDisplay}</p>
             </div>
           </div>
 
           <div>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-subtle">Token balances</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-subtle">
+              {t('superadmin.userWalletDetail.tokenBalances')}
+            </h2>
             {loadingActiveTokens ? (
               <TokenBalanceCardsSkeleton count={5} className="mt-3" />
             ) : (
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                {activeTokens.filter((t) => t.slug !== "usd").map((t) => {
-                    const sym = String(t.symbol).toUpperCase();
-                    const bal = tokenBalanceFromRow(w, sym);
-                    return (
-                      <div
-                        key={t.slug || t._id}
-                        className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-black/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
-                      >
-                        {/* <span
-                          className={cn(
-                            'pointer-events-none absolute left-0 top-0 bottom-0 w-1 rounded-l-xl',
-                          t.bar || 'bg-gray-500'
-                        )}
-                        aria-hidden
-                      /> */}
+                {activeTokens.filter((tok) => tok.slug !== 'usd').map((tok) => {
+                  const sym = String(tok.symbol).toUpperCase();
+                  const bal = tokenBalanceFromRow(w, sym);
+                  return (
+                    <div
+                      key={tok.slug || tok._id}
+                      className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-black/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+                    >
                       <p className="pl-2 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                        {t.symbol}
+                        {tok.symbol}
                       </p>
-                      <p className="pl-2 mt-0.5 text-xs text-brand-muted">{t.name}</p>
+                      <p className="pl-2 mt-0.5 text-xs text-brand-muted">{tok.name}</p>
                       <p className="pl-2 mt-3 border-t border-white/[0.06] pt-2 font-mono text-lg font-semibold tabular-nums text-brand-heading">
                         {bal}
                       </p>
@@ -245,13 +255,13 @@ export default function SuperAdminUserWalletDetailPage() {
 
           {w.country ? (
             <p className="text-xs text-brand-muted">
-              Region: <span className="text-brand-heading">{w.country}</span>
+              {t('superadmin.userWalletDetail.region', { country: w.country })}
             </p>
           ) : null}
         </div>
       ) : (
         <div className="rounded-xl border border-white/[0.08] px-4 py-3 text-sm text-brand-muted">
-          No wallet data.
+          {t('superadmin.userWalletDetail.noWalletData')}
         </div>
       )}
     </div>

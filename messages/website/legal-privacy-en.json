@@ -1,0 +1,48 @@
+{
+  "sections": [
+    {
+      "title": "Introduction",
+      "paragraphs": [
+        "This Privacy Policy describes how 759 Private Exchange (“we”, “us”) handles information in the current demo and preview environment. It is provided for transparency and should be replaced with counsel-reviewed language before any production launch."
+      ]
+    },
+    {
+      "title": "Information you provide",
+      "paragraphs": [
+        "When you create an account or use forms, you may provide identifiers such as an email address, display name, or phone number. You should only submit information you are permitted to share."
+      ]
+    },
+    {
+      "title": "Local demo storage",
+      "paragraphs": [
+        "In this build, sign-in state and profile fields may be stored in your browser (for example via localStorage) so the UI can be demonstrated without a live API. That data stays on your device unless you clear site data or use another browser."
+      ]
+    },
+    {
+      "title": "When a backend is connected",
+      "paragraphs": [
+        "A production deployment would typically process data on secure servers, apply retention rules, and integrate with your authentication provider. Those details will be documented here and in your product agreements before go-live."
+      ]
+    },
+    {
+      "title": "Cookies and similar technologies",
+      "paragraphs": [
+        "The application may use cookies or local storage for session continuity and preferences. You can control cookies through your browser settings."
+      ]
+    },
+    {
+      "title": "Your choices",
+      "list": [
+        "Update profile fields where the product allows it.",
+        "Sign out and clear site data to remove local demo storage.",
+        "Contact the operator if you need account deletion once a live service exists."
+      ]
+    },
+    {
+      "title": "Contact",
+      "paragraphs": [
+        "For privacy questions related to a future production service, use the contact channel published on the official site once available."
+      ]
+    }
+  ]
+}

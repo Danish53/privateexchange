@@ -14,11 +14,12 @@ import {
   BuyTokenPickerSkeleton,
   DepositRequestsTableSkeleton,
 } from '@/components/ui/content-skeletons';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
-function formatDateTime(iso) {
+function formatDateTime(iso, locale) {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale === 'es' ? 'es' : 'en', {
       dateStyle: 'short',
       timeStyle: 'short',
     }).format(new Date(iso));
@@ -32,11 +33,11 @@ function formatDepositAmount(n) {
   return formatNumberSmart(n, { maxFractionDigits: 2 });
 }
 
-function DepositStatusBadge({ status }) {
+function DepositStatusBadge({ status, t }) {
   const map = {
-    pending: { label: 'Pending', className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
-    completed: { label: 'Approved', className: 'border-emerald-500/35 bg-emerald-500/[0.1] text-emerald-100' },
-    cancelled: { label: 'Rejected', className: 'border-rose-500/35 bg-rose-500/[0.1] text-rose-100' },
+    pending: { label: t('dashboard.common.pending'), className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
+    completed: { label: t('dashboard.common.approved'), className: 'border-emerald-500/35 bg-emerald-500/[0.1] text-emerald-100' },
+    cancelled: { label: t('dashboard.common.rejected'), className: 'border-rose-500/35 bg-rose-500/[0.1] text-rose-100' },
   };
   const m = map[status] || { label: status, className: 'border-white/10 bg-white/5 text-brand-muted' };
   return (
@@ -51,10 +52,10 @@ function DepositStatusBadge({ status }) {
   );
 }
 
-function PaymentMethodBadge({ method }) {
+function PaymentMethodBadge({ method, t }) {
   const map = {
-    paypal: { label: 'PayPal', className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
-    crypto: { label: 'Crypto', className: 'border-purple-500/35 bg-purple-500/[0.1] text-purple-100' },
+    paypal: { label: t('dashboard.deposit.paypalMethod'), className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
+    crypto: { label: t('dashboard.deposit.cryptoMethod'), className: 'border-purple-500/35 bg-purple-500/[0.1] text-purple-100' },
   };
   const m = map[method] || { label: method, className: 'border-white/10 bg-white/5 text-brand-muted' };
   return (
@@ -86,6 +87,7 @@ const BAR_COLORS = {
 };
 
 export default function BuyCryptoPage() {
+  const { t, locale } = useWebsiteT();
   const { token, ready } = useAuth();
   const toast = useToast();
   const { tokens: walletTokens, loading, reload: refreshWallet, totalUsdFormatted } = useUserWallet();
@@ -115,13 +117,13 @@ export default function BuyCryptoPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setDepositsError(json.error || 'Could not load your requests.');
+        setDepositsError(json.error || t('dashboard.common.couldNotLoad'));
         setMyDeposits([]);
         return;
       }
       setMyDeposits(Array.isArray(json.deposits) ? json.deposits : []);
     } catch {
-      setDepositsError('Network error.');
+      setDepositsError(t('dashboard.common.networkError'));
       setMyDeposits([]);
     } finally {
       setDepositsLoading(false);
@@ -235,29 +237,27 @@ export default function BuyCryptoPage() {
 
   const handleBuy = async () => {
     if (!selectedToken || !usdAmount || !token) {
-      const msg = 'Please select a token and enter USD amount.';
+      const msg = t('dashboard.buy.selectToken');
       setMessage({ type: 'error', text: msg });
-      toast.error(msg, { title: 'Purchase Failed' });
+      toast.error(msg, { title: t('dashboard.buy.purchaseFailedTitle') });
       return;
     }
 
     const amount = parseFloat(usdAmount);
     if (isNaN(amount) || amount <= 0) {
-      const msg = 'Please enter a valid USD amount greater than 0.';
+      const msg = t('dashboard.buy.amountUsd');
       setMessage({ type: 'error', text: msg });
-      toast.error(msg, { title: 'Purchase Failed' });
+      toast.error(msg, { title: t('dashboard.buy.purchaseFailedTitle') });
       return;
     }
 
     if (amount > usdBalance) {
-      setMessage({
-        type: 'error',
-        text: `Insufficient USD balance to buy ${selectedToken.symbol}. You have ${formatCurrencySmart(usdBalance)} available.`
+      const msg = t('dashboard.buy.insufficientUsd', {
+        symbol: selectedToken.symbol,
+        balance: formatCurrencySmart(usdBalance),
       });
-      toast.error(
-        `Insufficient USD balance to buy ${selectedToken.symbol}. You have ${formatCurrencySmart(usdBalance)} available.`,
-        { title: 'Purchase Failed' }
-      );
+      setMessage({ type: 'error', text: msg });
+      toast.error(msg, { title: t('dashboard.buy.purchaseFailedTitle') });
       return;
     }
 
@@ -284,7 +284,7 @@ export default function BuyCryptoPage() {
         console.error('API error response:', errorData);
 
         throw new Error(
-          errorData?.error || res.statusText || 'Unknown error'
+          errorData?.error || res.statusText || t('dashboard.buy.unknownError')
         );
       }
 
@@ -293,9 +293,9 @@ export default function BuyCryptoPage() {
       if (data.ok) {
         setMessage({
           type: 'success',
-          text: data.message || 'Purchase successful!'
+          text: data.message || t('dashboard.buy.purchaseSuccess')
         });
-        toast.success(data.message || 'Purchase successful!', { title: 'Purchase Complete' });
+        toast.success(data.message || t('dashboard.buy.confirmPurchase'), { title: t('dashboard.buy.purchaseCompleteTitle') });
 
         // Reset form
         setUsdAmount('');
@@ -311,18 +311,18 @@ export default function BuyCryptoPage() {
       } else {
         setMessage({
           type: 'error',
-          text: data.error || 'Failed to process purchase.'
+          text: data.error || t('dashboard.buy.purchaseFailed')
         });
-        toast.error(data.error || 'Failed to process purchase.', { title: 'Purchase Failed' });
+        toast.error(data.error || t('dashboard.transfer.transferFailed'), { title: t('dashboard.buy.purchaseFailedTitle') });
       }
     } catch (error) {
       console.error('Buy error:', error);
-      const msg = `Error: ${error.message || 'Network error. Please try again.'}`;
+      const msg = `${t('dashboard.buy.errorPrefix')} ${error.message || t('dashboard.common.networkError')}`;
       setMessage({
         type: 'error',
         text: msg
       });
-      toast.error(msg, { title: 'Purchase Failed' });
+      toast.error(msg, { title: t('dashboard.buy.purchaseFailedTitle') });
     } finally {
       setProcessing(false);
     }
@@ -333,7 +333,7 @@ export default function BuyCryptoPage() {
   };
 
   const formatTokens = (amount) => {
-    return formatNumberSmart(amount, { locale: 'en-US', maxFractionDigits: 2 });
+    return formatNumberSmart(amount, { locale: locale === 'es' ? 'es' : 'en', maxFractionDigits: 2 });
   };
 
   return (
@@ -342,27 +342,27 @@ export default function BuyCryptoPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
-              Trading
+              {t('dashboard.buy.eyebrow')}
             </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem] flex items-center gap-3">
               <Coins className="w-7 h-7" />
-              Buy Tokens
+              {t('dashboard.buy.title')}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Use your USD balance to buy platform tokens at fixed exchange rates
+              {t('dashboard.buy.subtitle')}
             </p>
           </div>
 
           {/* USD Balance Card */}
           <div className="rounded-xl border border-white/[0.06] bg-black/[0.18] px-4 py-3 sm:px-5 sm:py-4">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
-              Available Balance
+              {t('dashboard.buy.availableBalance')}
             </p>
             <p className="mt-2 text-3xl font-semibold tabular-nums tracking-[-0.04em] text-brand-heading sm:text-[2.25rem] sm:leading-none">
               {loading ? <UsdHeroSkeleton className="mt-0" /> : totalUsdFormatted}
             </p>
             <p className="mt-0.5 text-xs text-brand-muted">
-              USD · Ready to spend
+              {t('dashboard.buy.readyToSpend')}
             </p>
           </div>
         </div>
@@ -375,7 +375,7 @@ export default function BuyCryptoPage() {
             <div className="space-y-8">
               <div>
                 <h2 className="text-lg font-semibold text-brand-heading mb-6">
-                  Purchase Details
+                  {t('dashboard.buy.purchaseDetails')}
                 </h2>
 
                 {/* Token selection */}
@@ -383,10 +383,10 @@ export default function BuyCryptoPage() {
                   <div>
                     <div className="mb-3">
                       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
-                        Select Token to Buy
+                        {t('dashboard.buy.selectToken')}
                       </p>
                       <p className="mt-1 text-sm text-brand-muted">
-                        Choose which token you want to purchase
+                        {t('dashboard.buy.selectTokenSub')}
                       </p>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -436,7 +436,7 @@ export default function BuyCryptoPage() {
 
                                   <div className="mt-2 flex items-center justify-between">
                                     <div className="text-xs text-gray-400">
-                                      Price
+                                      {t('dashboard.buy.exchangeRate')}
                                     </div>
                                     <div className="text-sm font-medium text-white">
                                       ${formatNumberSmart(token.usdPerUnit, { maxFractionDigits: 2 })}
@@ -449,7 +449,7 @@ export default function BuyCryptoPage() {
                         })
                       ) : (
                         <div className="col-span-3 text-center py-8 text-brand-muted">
-                          No tokens available for purchase.
+                          {t('dashboard.buy.noTokensAvailable')}
                         </div>
                       )}
                     </div>
@@ -459,13 +459,13 @@ export default function BuyCryptoPage() {
                   <div>
                     <div className="mb-3">
                       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
-                        USD Amount to Spend
+                        {t('dashboard.buy.amountUsd')}
                       </p>
                       <p className="mt-1 text-sm text-brand-muted">
-                        Enter how much USD you want to convert
+                        {t('dashboard.buy.amountUsdSub')}
                       </p>
                       <p className="mt-1 text-xs text-brand-subtle">
-                        USD will be deducted from your USD balance
+                        {t('dashboard.buy.availableBalance')}
                       </p>
                     </div>
                     <div className="relative">
@@ -479,7 +479,7 @@ export default function BuyCryptoPage() {
                         value={usdAmount}
                         onChange={(e) => setUsdAmount(e.target.value)}
                         className="pl-8 block w-full rounded-xl border border-white/[0.1] bg-white/[0.05] py-3.5 px-4 text-brand-heading placeholder:text-brand-muted focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/30 focus:outline-none"
-                        placeholder="0.00"
+                        placeholder={t('dashboard.transfer.amountPlaceholder')}
                       />
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                         <span className="text-brand-subtle text-sm font-medium">USD</span>
@@ -487,14 +487,14 @@ export default function BuyCryptoPage() {
                     </div>
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-brand-muted">Available USD balance:</span>
+                        <span className="text-brand-muted">{t('dashboard.buy.availableBalance')}:</span>
                         <span className="font-semibold tabular-nums text-brand-heading">
                           {loading ? <UsdInlineSkeleton className="inline-block align-middle" /> : `${totalUsdFormatted}`}
                         </span>
                       </div>
                       {selectedToken && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-brand-muted">Your {selectedToken.symbol} balance:</span>
+                            <span className="text-brand-muted">{t('dashboard.transfer.availableBalance', { token: selectedToken.symbol, amount: '' })}</span>
                           <span className="font-semibold tabular-nums text-brand-heading">
                             {formatTokens(selectedTokenBalance)} {selectedToken.symbol}
                           </span>
@@ -502,7 +502,8 @@ export default function BuyCryptoPage() {
                       )}
                       <div className="pt-1">
                         <p className="text-xs text-brand-subtle">
-                          <span className="text-amber-400">Note:</span> You need sufficient USD balance to buy any token. The button will be enabled when your USD amount is within your available USD balance.
+                          <span className="text-amber-400">{t('dashboard.buy.balanceNoteLabel')}</span>{' '}
+                          {t('dashboard.buy.balanceNote')}
                         </p>
                       </div>
                     </div>
@@ -518,10 +519,10 @@ export default function BuyCryptoPage() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-brand-heading">
-                              Transaction Summary
+                              {t('dashboard.buy.purchaseDetails')}
                             </p>
                             <p className="text-xs text-brand-muted">
-                              USD deducted, tokens added to your wallet
+                              {t('dashboard.buy.subtitle')}
                             </p>
                           </div>
                         </div>
@@ -530,7 +531,7 @@ export default function BuyCryptoPage() {
                             {formatTokens(calculatedTokens)} {selectedToken.symbol}
                           </div>
                           <div className="text-sm text-brand-muted">
-                            for {formatCurrency(parseFloat(usdAmount) || 0)} USD
+                            {t('dashboard.buy.amountUsdFor', { amount: formatCurrency(parseFloat(usdAmount) || 0) })}
                           </div>
                         </div>
                       </div>
@@ -540,8 +541,8 @@ export default function BuyCryptoPage() {
                             <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center">
                               <Minus className="h-3 w-3 text-red-400" />
                             </div>
-                            <span className="text-brand-muted">USD deducted from</span>
-                            <span className="font-medium text-brand-heading">USD Balance</span>
+                            <span className="text-brand-muted">{t('dashboard.buy.usdDeductedFrom')}</span>
+                            <span className="font-medium text-brand-heading">{t('dashboard.buy.usdBalanceLabel')}</span>
                           </div>
                           <span className="font-semibold text-red-300">
                             -{formatCurrency(parseFloat(usdAmount) || 0)} USD
@@ -552,17 +553,20 @@ export default function BuyCryptoPage() {
                             <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center">
                               <Plus className="h-3 w-3 text-green-400" />
                             </div>
-                            <span className="text-brand-muted">Tokens added to</span>
-                            <span className="font-medium text-brand-heading">{selectedToken.symbol} Balance</span>
+                            <span className="text-brand-muted">{t('dashboard.buy.tokensAddedTo')}</span>
+                            <span className="font-medium text-brand-heading">{t('dashboard.buy.tokenBalanceLabel', { symbol: selectedToken.symbol })}</span>
                           </div>
                           <span className="font-semibold text-green-300">
                             +{formatTokens(calculatedTokens)} {selectedToken.symbol}
                           </span>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t border-white/[0.05]">
-                          <span className="text-brand-muted">Exchange rate</span>
+                            <span className="text-brand-muted">{t('dashboard.buy.exchangeRate')}</span>
                           <span className="font-semibold text-brand-heading">
-                            1 {selectedToken.symbol} = ${formatNumberSmart(selectedToken.usdPerUnit, { maxFractionDigits: 2 })} USD
+                            {t('dashboard.buy.rateLine', {
+                              symbol: selectedToken.symbol,
+                              rate: formatNumberSmart(selectedToken.usdPerUnit, { maxFractionDigits: 2 }),
+                            })}
                           </span>
                         </div>
                       </div>
@@ -579,12 +583,14 @@ export default function BuyCryptoPage() {
                       {processing ? (
                         <>
                           <Loader2 className="h-5 w-5 animate-spin" />
-                          <span>Processing Purchase...</span>
+                          <span>{t('dashboard.buy.processing')}</span>
                         </>
                       ) : (
                         <>
                           <Coins className="h-5 w-5" />
-                          <span>Buy {selectedToken ? selectedToken.symbol : 'Tokens'}</span>
+                          <span>
+                            {t('dashboard.buy.confirmPurchase')} {selectedToken ? selectedToken.symbol : ''}
+                          </span>
                           <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                         </>
                       )}
@@ -678,7 +684,7 @@ export default function BuyCryptoPage() {
                               <span className="font-mono text-xs font-semibold text-brand-accent">{row.token}</span>
                             </td>
                             <td className="px-4 py-4 sm:px-6">
-                              <PaymentMethodBadge method={row.paymentMethod} />
+                              <PaymentMethodBadge method={row.paymentMethod} t={t} />
                             </td>
                             <td className="px-4 py-4 sm:px-6">
                               <span className="whitespace-nowrap text-xs text-brand-muted">
@@ -705,7 +711,7 @@ export default function BuyCryptoPage() {
           <Panel>
             <h3 className="text-lg font-semibold text-brand-heading mb-4 flex items-center gap-2">
               <Wallet className="w-5 h-5 text-brand-accent" />
-              Your USD Balance
+              {t('dashboard.buy.usdBalancePanel')}
             </h3>
             <div className="space-y-4">
               <div className="text-center p-4 bg-brand-card border border-brand-border rounded-lg">
@@ -713,20 +719,20 @@ export default function BuyCryptoPage() {
                   {loading ? <UsdHeroSkeleton className="mx-auto mt-0" /> : totalUsdFormatted}
                 </div>
                 <div className="text-sm text-brand-subtle mt-1">
-                  Available for token purchases
+                  {t('dashboard.buy.availableForPurchases')}
                 </div>
               </div>
 
               <div className="text-sm text-brand-muted">
                 <p className="mb-2">
-                  Use your USD balance to buy platform tokens at fixed exchange rates.
+                  {t('dashboard.buy.subtitle')}
                 </p>
                 <ul className="space-y-1 list-disc list-inside text-brand-subtle">
-                  <li>Select a token from the list</li>
-                  <li>Enter USD amount to spend</li>
-                  <li>Tokens are calculated automatically</li>
-                  <li>Transaction is processed instantly</li>
-                  <li>Balance updates immediately</li>
+                  <li>{t('dashboard.buy.bulletSelectToken')}</li>
+                  <li>{t('dashboard.buy.bulletEnterAmount')}</li>
+                  <li>{t('dashboard.buy.bulletAutoCalculate')}</li>
+                  <li>{t('dashboard.buy.bulletInstantProcess')}</li>
+                  <li>{t('dashboard.buy.bulletBalanceUpdates')}</li>
                 </ul>
               </div>
             </div>
@@ -734,7 +740,7 @@ export default function BuyCryptoPage() {
 
           <Panel>
             <h3 className="text-lg font-semibold text-brand-heading mb-4">
-              How It Works
+              {t('dashboard.buy.howItWorks')}
             </h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
@@ -742,9 +748,9 @@ export default function BuyCryptoPage() {
                   <span className="text-xs font-semibold text-brand-accent">1</span>
                 </div>
                 <div>
-                  <div className="font-medium text-brand-heading">Select Token</div>
+                  <div className="font-medium text-brand-heading">{t('dashboard.buy.step1Title')}</div>
                   <div className="text-sm text-brand-subtle">
-                    Choose which platform token you want to buy
+                    {t('dashboard.buy.step1Desc')}
                   </div>
                 </div>
               </div>
@@ -754,9 +760,9 @@ export default function BuyCryptoPage() {
                   <span className="text-xs font-semibold text-brand-accent">2</span>
                 </div>
                 <div>
-                  <div className="font-medium text-brand-heading">Enter Amount</div>
+                  <div className="font-medium text-brand-heading">{t('dashboard.buy.step2Title')}</div>
                   <div className="text-sm text-brand-subtle">
-                    Specify how much USD you want to spend
+                    {t('dashboard.buy.step2Desc')}
                   </div>
                 </div>
               </div>
@@ -766,9 +772,9 @@ export default function BuyCryptoPage() {
                   <span className="text-xs font-semibold text-brand-accent">3</span>
                 </div>
                 <div>
-                  <div className="font-medium text-brand-heading">Confirm Purchase</div>
+                  <div className="font-medium text-brand-heading">{t('dashboard.buy.step3Title')}</div>
                   <div className="text-sm text-brand-subtle">
-                    Review the token amount and confirm transaction
+                    {t('dashboard.buy.step3Desc')}
                   </div>
                 </div>
               </div>
@@ -778,9 +784,9 @@ export default function BuyCryptoPage() {
                   <span className="text-xs font-semibold text-brand-accent">4</span>
                 </div>
                 <div>
-                  <div className="font-medium text-brand-heading">Receive Tokens</div>
+                  <div className="font-medium text-brand-heading">{t('dashboard.buy.step4Title')}</div>
                   <div className="text-sm text-brand-subtle">
-                    Tokens are added to your wallet instantly
+                    {t('dashboard.buy.step4Desc')}
                   </div>
                 </div>
               </div>

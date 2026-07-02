@@ -1,0 +1,66 @@
+{
+  "sections": [
+    {
+      "title": "Agreement",
+      "paragraphs": [
+        "By accessing or using 759 Private Exchange (the “Service”), you agree to these Terms of Service. If you do not agree, do not use the Service. This text is demo copy and must be reviewed by legal counsel before production."
+      ]
+    },
+    {
+      "title": "Eligibility",
+      "paragraphs": [
+        "You represent that you are of legal age to enter a binding agreement in your jurisdiction and that your use of the Service complies with applicable laws and sanctions rules."
+      ]
+    },
+    {
+      "title": "Demo and preview",
+      "paragraphs": [
+        "The Service may run in preview or demonstration mode. Balances, transfers, drawings, and fees shown may be illustrative. Nothing on this site constitutes financial, investment, or legal advice."
+      ]
+    },
+    {
+      "title": "Accounts",
+      "paragraphs": [
+        "You are responsible for safeguarding credentials and for activity under your account. Notify the operator of unauthorized use when a production support channel exists."
+      ]
+    },
+    {
+      "title": "Acceptable use",
+      "list": [
+        "No unlawful, fraudulent, or abusive activity.",
+        "No attempt to disrupt, probe, or reverse engineer the Service beyond permitted testing.",
+        "No use that infringes third-party rights."
+      ]
+    },
+    {
+      "title": "Fees",
+      "paragraphs": [
+        "Fee schedules, VIP rules, and waivers will be published in the product and may change. Displayed amounts in demo mode are not binding."
+      ]
+    },
+    {
+      "title": "Disclaimer",
+      "paragraphs": [
+        "THE SERVICE IS PROVIDED “AS IS” WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, TO THE MAXIMUM EXTENT PERMITTED BY LAW."
+      ]
+    },
+    {
+      "title": "Limitation of liability",
+      "paragraphs": [
+        "TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR DATA, ARISING FROM YOUR USE OF THE SERVICE."
+      ]
+    },
+    {
+      "title": "Changes",
+      "paragraphs": [
+        "We may update these Terms. Continued use after changes constitutes acceptance of the revised Terms where permitted by law."
+      ]
+    },
+    {
+      "title": "Contact",
+      "paragraphs": [
+        "For questions about these Terms once a production service is live, use the official contact method published on the site."
+      ]
+    }
+  ]
+}

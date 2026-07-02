@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { Users, Wallet, ShieldCheck, UserPlus, ArrowUpRight, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { hasAnyUsersModulePermission } from '@/lib/adminPermissions';
 import { AdminStatsRowSkeleton, AdminChartsRowSkeleton } from '@/components/ui/content-skeletons';
 
@@ -23,11 +24,13 @@ const ACCENT_FAINT = 'rgba(201, 162, 39, 0.12)';
 const GRID = 'rgba(255,255,255,0.06)';
 const AXIS = 'rgba(148, 163, 184, 0.45)';
 
-function formatInt(n) {
-  return typeof n === 'number' ? n.toLocaleString() : '—';
+function formatInt(n, locale) {
+  return typeof n === 'number'
+    ? n.toLocaleString(locale === 'es' ? 'es' : 'en')
+    : '—';
 }
 
-function ChartTooltip({ active, payload, label }) {
+function ChartTooltip({ active, payload, label, locale }) {
   if (!active || !payload?.length) return null;
   const v = payload[0]?.value;
   return (
@@ -35,12 +38,14 @@ function ChartTooltip({ active, payload, label }) {
       {label != null && label !== '' ? (
         <p className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-brand-subtle">{String(label)}</p>
       ) : null}
-      <p className="mt-0.5 text-sm font-semibold tabular-nums text-brand-heading">{formatInt(Number(v))}</p>
+      <p className="mt-0.5 text-sm font-semibold tabular-nums text-brand-heading">
+        {formatInt(Number(v), locale)}
+      </p>
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value, hint, href, trend }) {
+function StatCard({ icon: Icon, label, value, hint, href, trend, openLabel }) {
   const inner = (
     <div className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-black/[0.45] via-black/25 to-[#07080c] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_24px_48px_-28px_rgba(0,0,0,0.55)] transition-[transform,box-shadow,border-color] duration-300 hover:border-brand-accent/20 hover:shadow-[0_28px_56px_-32px_rgba(201,162,39,0.18)]">
       <div
@@ -70,7 +75,7 @@ function StatCard({ icon: Icon, label, value, hint, href, trend }) {
       {hint ? <p className="relative mt-1.5 text-xs leading-snug text-brand-muted">{hint}</p> : null}
       {href ? (
         <div className="relative mt-4 flex items-center gap-1 text-xs font-medium text-brand-accent/90 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          Open
+          {openLabel}
           <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
         </div>
       ) : null}
@@ -88,6 +93,7 @@ function StatCard({ icon: Icon, label, value, hint, href, trend }) {
 }
 
 export default function SuperAdminOverviewPage() {
+  const { t, locale } = useWebsiteT();
   const { token, ready, user } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -106,18 +112,18 @@ export default function SuperAdminOverviewPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error || 'Could not load overview.');
+        setError(json.error || t('superadmin.overview.couldNotLoad'));
         setData(null);
         return;
       }
       setData(json);
     } catch {
-      setError('Network error.');
+      setError(t('superadmin.common.networkError'));
       setData(null);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     if (!ready) return;
@@ -133,11 +139,13 @@ export default function SuperAdminOverviewPage() {
       ? stats.newAccountsPrev7d === 0 && stats.newAccounts7d === 0
         ? null
         : stats.newAccountsPrev7d === 0 && stats.newAccounts7d > 0
-          ? 'New'
+          ? t('superadmin.overview.trendNew')
           : stats.newAccountsPrev7d > 0
-            ? `${stats.newAccounts7d >= stats.newAccountsPrev7d ? '+' : ''}${Math.round(
-                ((stats.newAccounts7d - stats.newAccountsPrev7d) / stats.newAccountsPrev7d) * 100
-              )}% vs prior 7d`
+            ? t('superadmin.overview.trendVsPrior', {
+                pct: `${stats.newAccounts7d >= stats.newAccountsPrev7d ? '+' : ''}${Math.round(
+                  ((stats.newAccounts7d - stats.newAccountsPrev7d) / stats.newAccountsPrev7d) * 100
+                )}`,
+              })
             : null
       : null;
 
@@ -150,19 +158,13 @@ export default function SuperAdminOverviewPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-3 border-b border-white/[0.06] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Overview</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
+            {t('superadmin.overview.title')}
+          </h1>
           <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-            {isSuperAdmin ? (
-              <>
-                Live counts from your database. Charts show registration cadence—useful for capacity and onboarding
-                reviews.
-              </>
-            ) : (
-              <>
-                Same live registration metrics as the control center. Charts reflect all non–super-admin accounts;
-                shortcuts below only link to sections your administrator enabled.
-              </>
-            )}
+            {isSuperAdmin
+              ? t('superadmin.overview.subtitleSuperadmin')
+              : t('superadmin.overview.subtitleAdmin')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -171,7 +173,7 @@ export default function SuperAdminOverviewPage() {
               href={usersHref}
               className="inline-flex items-center gap-2 rounded-xl border border-brand-border-muted bg-black/30 px-4 py-2.5 text-sm font-medium text-brand-heading transition hover:border-brand-accent/25 hover:bg-[var(--brand-surface-hover)]"
             >
-              Manage users
+              {t('superadmin.overview.manageUsers')}
               <ArrowUpRight className="h-4 w-4 text-brand-accent" strokeWidth={2} aria-hidden />
             </Link>
           ) : null}
@@ -192,29 +194,31 @@ export default function SuperAdminOverviewPage() {
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               icon={Users}
-              label="Total users"
-              value={formatInt(stats?.totalUsers)}
-              hint="All roles, including operators."
+              label={t('superadmin.overview.totalUsers')}
+              value={formatInt(stats?.totalUsers, locale)}
+              hint={t('superadmin.overview.totalUsersHint')}
               href={usersHref}
+              openLabel={t('superadmin.common.open')}
             />
             <StatCard
               icon={Wallet}
-              label="User wallets"
-              value={formatInt(stats?.memberWallets)}
-              hint="One custodial wallet per user account."
+              label={t('superadmin.overview.userWallets')}
+              value={formatInt(stats?.memberWallets, locale)}
+              hint={t('superadmin.overview.userWalletsHint')}
               href={walletsHref}
+              openLabel={t('superadmin.common.open')}
             />
             <StatCard
               icon={ShieldCheck}
-              label="Verified accounts"
-              value={formatInt(stats?.verifiedAccounts)}
-              hint="Email-verified identities."
+              label={t('superadmin.overview.verifiedAccounts')}
+              value={formatInt(stats?.verifiedAccounts, locale)}
+              hint={t('superadmin.overview.verifiedAccountsHint')}
             />
             <StatCard
               icon={UserPlus}
-              label="New (last 7 days)"
-              value={formatInt(stats?.newAccounts7d)}
-              hint="Registrations in the rolling week."
+              label={t('superadmin.overview.newLast7Days')}
+              value={formatInt(stats?.newAccounts7d, locale)}
+              hint={t('superadmin.overview.newLast7DaysHint')}
               trend={signupTrend}
             />
           </section>
@@ -227,8 +231,12 @@ export default function SuperAdminOverviewPage() {
               />
               <div className="relative mb-5 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h2 className="text-sm font-semibold text-brand-heading">Daily registrations</h2>
-                  <p className="mt-0.5 text-xs text-brand-muted">UTC · Last 7 days</p>
+                  <h2 className="text-sm font-semibold text-brand-heading">
+                    {t('superadmin.overview.dailyRegistrations')}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-brand-muted">
+                    {t('superadmin.overview.dailyRegistrationsSub')}
+                  </p>
                 </div>
               </div>
               <div className="relative h-[260px] w-full min-w-0">
@@ -254,7 +262,10 @@ export default function SuperAdminOverviewPage() {
                       allowDecimals={false}
                       width={36}
                     />
-                    <Tooltip content={<ChartTooltip />} cursor={{ stroke: ACCENT_FAINT, strokeWidth: 1 }} />
+                    <Tooltip
+                      content={<ChartTooltip locale={locale} />}
+                      cursor={{ stroke: ACCENT_FAINT, strokeWidth: 1 }}
+                    />
                     <Area
                       type="monotone"
                       dataKey="count"
@@ -275,8 +286,12 @@ export default function SuperAdminOverviewPage() {
                 aria-hidden
               />
               <div className="relative mb-5">
-                <h2 className="text-sm font-semibold text-brand-heading">Weekly intake</h2>
-                <p className="mt-0.5 text-xs text-brand-muted">Four rolling 7-day blocks</p>
+                <h2 className="text-sm font-semibold text-brand-heading">
+                  {t('superadmin.overview.weeklyIntake')}
+                </h2>
+                <p className="mt-0.5 text-xs text-brand-muted">
+                  {t('superadmin.overview.weeklyIntakeSub')}
+                </p>
               </div>
               <div className="relative h-[260px] w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
@@ -297,17 +312,16 @@ export default function SuperAdminOverviewPage() {
                       allowDecimals={false}
                       width={36}
                     />
-                    <Tooltip content={<ChartTooltip />} cursor={{ fill: ACCENT_FAINT }} />
+                    <Tooltip
+                      content={<ChartTooltip locale={locale} />}
+                      cursor={{ fill: ACCENT_FAINT }}
+                    />
                     <Bar dataKey="count" radius={[6, 6, 0, 0]} fill={ACCENT} maxBarSize={48} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </section>
-
-          {/* <p className="text-center text-[0.65rem] font-medium uppercase tracking-[0.14em] text-brand-subtle/80">
-            Live data · MongoDB
-          </p> */}
         </>
       )}
     </div>

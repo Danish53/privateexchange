@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 /**
  * Loads `/api/user/wallet` for the signed-in member.
  * @returns {{ loading: boolean; error: string; tokens: Array<object>; totalUsdFormatted: string; portfolioUsd: number; reload: () => Promise<void> }}
  */
 export function useUserWallet() {
+  const { t } = useWebsiteT();
   const { token, ready, refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,7 +34,7 @@ export function useUserWallet() {
       const json = await res.json().catch(() => ({}));
       // console.log('Wallet response', { status: res.status, json });
       if (!res.ok) {
-        setError(json.error || 'Could not load wallet.');
+        setError(json.error || t('dashboard.common.couldNotLoadWallet'));
         setTokens([]);
         setTotalUsdFormatted('$0.00');
         setPortfolioUsd(0);
@@ -53,14 +55,14 @@ export function useUserWallet() {
         }
       }
     } catch {
-      setError('Network error.');
+      setError(t('dashboard.common.networkError'));
       setTokens([]);
       setTotalUsdFormatted('$0.00');
       setPortfolioUsd(0);
     } finally {
       setLoading(false);
     }
-  }, [token, refreshUser]);
+  }, [token, refreshUser, t]);
 
   useEffect(() => {
     if (!ready) return;

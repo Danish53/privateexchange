@@ -28,6 +28,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { AdminDataTableSkeleton } from '@/components/ui/content-skeletons';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { cn } from '@/lib/utils';
@@ -35,10 +36,10 @@ import { formatCurrencySmart } from '@/lib/numberFormat';
 import { mergeAdminPermissions, hasAnyWalletsPermission } from '@/lib/adminPermissions';
 import { avatarSrc } from '@/lib/avatarUrl';
 
-function formatDate(iso) {
+function formatDate(iso, locale) {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale === 'es' ? 'es' : 'en', {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(new Date(iso));
@@ -47,10 +48,11 @@ function formatDate(iso) {
   }
 }
 
-function RoleBadge({ role }) {
+function RoleBadge({ role, t }) {
   const map = {
-    user: { label: 'User', className: 'border-slate-500/30 bg-slate-500/10 text-slate-200' },
-    admin: { label: 'Admin', className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
+    user: { label: t('superadmin.common.roleUser'), className: 'border-slate-500/30 bg-slate-500/10 text-slate-200' },
+    admin: { label: t('superadmin.common.roleAdmin'), className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
+    superadmin: { label: t('superadmin.common.roleSuperadmin'), className: 'border-violet-500/35 bg-violet-500/[0.12] text-violet-100' },
   };
   const m = map[role] || { label: role, className: 'border-white/10 bg-white/5 text-brand-muted' };
   return (
@@ -102,6 +104,7 @@ function PermToggle({ id, label, checked, onChange, disabled = false }) {
 }
 
 export default function SuperAdminUsersPage() {
+  const { t, locale } = useWebsiteT();
   const { token, ready, user } = useAuth();
   const isSuperAdmin = user?.role === 'superadmin';
   const usersPerm = useMemo(() => mergeAdminPermissions(user?.adminPermissions), [user]);
@@ -179,7 +182,7 @@ export default function SuperAdminUsersPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error || 'Could not load users.');
+        setError(json.error || t('superadmin.users.couldNotLoad'));
         setRows([]);
         return;
       }
@@ -187,12 +190,12 @@ export default function SuperAdminUsersPage() {
       setTotal(json.total ?? 0);
       setTotalPages(Math.max(1, json.totalPages ?? 1));
     } catch {
-      setError('Network error.');
+      setError(t('superadmin.common.networkError'));
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [token, pagination.pageIndex, pagination.pageSize, search, sortBy, sortOrder, listView, roleFilter]);
+  }, [token, pagination.pageIndex, pagination.pageSize, search, sortBy, sortOrder, listView, roleFilter, t]);
 
   useEffect(() => {
     if (!ready) return;
@@ -202,9 +205,7 @@ export default function SuperAdminUsersPage() {
   const archiveUser = useCallback(
     async (id) => {
       if (
-        !window.confirm(
-          'Archive this account? They will be signed out and cannot log in until you restore them.'
-        )
+        !window.confirm(t('superadmin.users.confirmArchive'))
       ) {
         return;
       }
@@ -218,17 +219,17 @@ export default function SuperAdminUsersPage() {
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setError(json.error || 'Could not archive user.');
+          setError(json.error || t('superadmin.users.couldNotArchive'));
           return;
         }
         await load();
       } catch {
-        setError('Network error.');
+        setError(t('superadmin.common.networkError'));
       } finally {
         setBusyId(null);
       }
     },
-    [token, load]
+    [token, load, t]
   );
 
   const openEdit = useCallback(
@@ -336,7 +337,7 @@ export default function SuperAdminUsersPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setEditError(json.error || 'Could not save changes.');
+        setEditError(json.error || t('superadmin.users.couldNotSave'));
         return;
       }
       if (json.user?.id) {
@@ -347,15 +348,15 @@ export default function SuperAdminUsersPage() {
       setDraft(null);
       await load();
     } catch {
-      setEditError('Network error.');
+      setEditError(t('superadmin.common.networkError'));
     } finally {
       setEditSaving(false);
     }
-  }, [token, load, isSuperAdmin]);
+  }, [token, load, isSuperAdmin, t]);
 
   const restoreUser = useCallback(
     async (id) => {
-      if (!window.confirm('Restore this account? They will be able to sign in again.')) return;
+      if (!window.confirm(t('superadmin.users.confirmRestore'))) return;
       if (!token) return;
       setBusyId(id);
       setError('');
@@ -366,17 +367,17 @@ export default function SuperAdminUsersPage() {
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setError(json.error || 'Could not restore user.');
+          setError(json.error || t('superadmin.users.couldNotRestore'));
           return;
         }
         await load();
       } catch {
-        setError('Network error.');
+        setError(t('superadmin.common.networkError'));
       } finally {
         setBusyId(null);
       }
     },
-    [token, load]
+    [token, load, t]
   );
 
   const myId = user?.id;
@@ -386,7 +387,7 @@ export default function SuperAdminUsersPage() {
       {
         id: 'email',
         accessorKey: 'email',
-        header: 'User',
+        header: t('superadmin.users.colUser'),
         cell: ({ row }) => {
           const u = row.original;
           const initials = emailInitials(u.email);
@@ -413,30 +414,30 @@ export default function SuperAdminUsersPage() {
       {
         id: 'role',
         accessorKey: 'role',
-        header: 'Role',
-        cell: ({ row }) => <RoleBadge role={row.original.role} />,
+        header: t('superadmin.common.role'),
+        cell: ({ row }) => <RoleBadge role={row.original.role} t={t} />,
       },
       {
         id: 'emailVerified',
         accessorKey: 'emailVerified',
-        header: 'Verified',
+        header: t('superadmin.users.colVerified'),
         cell: ({ row }) =>
           row.original.emailVerified ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300/95">
               <ShieldCheck className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-              Yes
+              {t('superadmin.common.yes')}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-200/80">
               <ShieldAlert className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-              Pending
+              {t('superadmin.common.pending')}
             </span>
           ),
       },
       {
         id: 'country',
         accessorKey: 'country',
-        header: 'Location',
+        header: t('superadmin.users.colLocation'),
         cell: ({ row }) => (
           <span className="text-sm text-brand-muted">{row.original.country || '—'}</span>
         ),
@@ -445,10 +446,10 @@ export default function SuperAdminUsersPage() {
       {
         id: 'createdAt',
         accessorKey: 'createdAt',
-        header: 'Joined',
+        header: t('superadmin.users.colJoined'),
         cell: ({ row }) => (
           <span className="whitespace-nowrap text-sm tabular-nums text-brand-muted">
-            {formatDate(row.original.createdAt)}
+            {formatDate(row.original.createdAt, locale)}
           </span>
         ),
       },
@@ -457,10 +458,10 @@ export default function SuperAdminUsersPage() {
           {
             id: 'deletedAt',
             accessorKey: 'deletedAt',
-            header: 'Archived',
+            header: t('superadmin.users.colArchived'),
             cell: ({ row }) => (
               <span className="whitespace-nowrap text-sm tabular-nums text-amber-200/85">
-                {formatDate(row.original.deletedAt)}
+                {formatDate(row.original.deletedAt, locale)}
               </span>
             ),
           },
@@ -484,7 +485,7 @@ export default function SuperAdminUsersPage() {
                     className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent/25 hover:bg-brand-accent/[0.08] hover:text-brand-heading"
                   >
                     <Wallet className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                    Wallet
+                    {t('superadmin.common.walletAction')}
                   </Link>
                 ) : null}
                 {canUsersEdit && canMutateRow ? (
@@ -495,7 +496,7 @@ export default function SuperAdminUsersPage() {
                     className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent/25 hover:bg-brand-accent/[0.08] hover:text-brand-heading disabled:opacity-40"
                   >
                     <Pencil className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                    Edit
+                    {t('superadmin.common.edit')}
                   </button>
                 ) : null}
                 {canUsersDelete && canMutateRow ? (
@@ -503,7 +504,7 @@ export default function SuperAdminUsersPage() {
                     type="button"
                     disabled={self || isBusy}
                     onClick={() => archiveUser(u.id)}
-                    title={self ? 'Cannot archive your own session' : 'Archive user'}
+                    title={self ? t('superadmin.users.cannotArchiveSelf') : t('superadmin.users.archiveUserTitle')}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-red-500/25 hover:bg-red-500/[0.08] hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {isBusy ? (
@@ -511,7 +512,7 @@ export default function SuperAdminUsersPage() {
                     ) : (
                       <Archive className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
                     )}
-                    Archive
+                    {t('superadmin.users.archiveAction')}
                   </button>
                 ) : null}
               </div>
@@ -525,7 +526,7 @@ export default function SuperAdminUsersPage() {
                   className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent/25 hover:bg-brand-accent/[0.08] hover:text-brand-heading"
                 >
                   <Wallet className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  Wallet
+                  {t('superadmin.common.walletAction')}
                 </Link>
               ) : null}
               {canUsersEdit && canMutateRow ? (
@@ -536,7 +537,7 @@ export default function SuperAdminUsersPage() {
                   className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent/25 hover:bg-brand-accent/[0.08] hover:text-brand-heading disabled:opacity-40"
                 >
                   <Pencil className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  Edit
+                  {t('superadmin.common.edit')}
                 </button>
               ) : null}
               {canUsersEdit && canMutateRow ? (
@@ -551,7 +552,7 @@ export default function SuperAdminUsersPage() {
                   ) : (
                     <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
                   )}
-                  Restore
+                  {t('superadmin.users.restoreAction')}
                 </button>
               ) : null}
             </div>
@@ -572,6 +573,8 @@ export default function SuperAdminUsersPage() {
       canUsersDelete,
       canViewWallets,
       canmanageTokens,
+      t,
+      locale,
     ]
   );
 
@@ -616,10 +619,10 @@ export default function SuperAdminUsersPage() {
       <div className="flex flex-col gap-4 border-b border-white/[0.06] pb-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Users</h1>
-            <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-              Operators and users (super admin accounts are not listed). Archive removes access until restored.
-            </p>
+            <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
+              {t('superadmin.users.title')}
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm text-brand-muted">{t('superadmin.users.subtitle')}</p>
           </div>
           {canUsersCreate ? (
             <Link
@@ -627,7 +630,7 @@ export default function SuperAdminUsersPage() {
               className="btn-primary inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-brand-on-accent sm:self-start"
             >
               <UserPlus className="h-4 w-4" strokeWidth={2} aria-hidden />
-              Add user
+              {t('superadmin.users.addUser')}
             </Link>
           ) : null}
         </div>
@@ -643,7 +646,7 @@ export default function SuperAdminUsersPage() {
                   : 'text-brand-muted hover:text-brand-heading'
               )}
             >
-              Active
+              {t('superadmin.users.activeTab')}
             </button>
             <button
               type="button"
@@ -655,7 +658,7 @@ export default function SuperAdminUsersPage() {
                   : 'text-brand-muted hover:text-brand-heading'
               )}
             >
-              Archived
+              {t('superadmin.users.archivedTab')}
             </button>
           </div>
           <div className="flex rounded-xl border border-brand-border-muted bg-black/30 p-0.5">
@@ -671,7 +674,7 @@ export default function SuperAdminUsersPage() {
                     : 'text-brand-muted hover:text-brand-heading'
                 )}
               >
-                {r}
+                {r === 'admin' ? t('superadmin.common.roleAdmin') : t('superadmin.common.roleUser')}
               </button>
             ))}
           </div>
@@ -683,7 +686,7 @@ export default function SuperAdminUsersPage() {
             />
             <input
               type="search"
-              placeholder="Search email or name…"
+              placeholder={t('superadmin.users.searchPlaceholder')}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="w-full rounded-xl border border-brand-border-muted bg-black/30 py-2.5 pl-10 pr-4 text-sm text-brand-heading placeholder:text-brand-subtle/80 focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/25"
@@ -757,8 +760,8 @@ export default function SuperAdminUsersPage() {
                         className="px-5 py-16 text-center text-sm text-brand-muted"
                       >
                         {listView === 'archived'
-                          ? 'No archived accounts.'
-                          : 'No users match your search.'}
+                          ? t('superadmin.users.noArchived')
+                          : t('superadmin.users.noMatch')}
                       </td>
                     </tr>
                   ) : (
@@ -791,19 +794,21 @@ export default function SuperAdminUsersPage() {
 
             <div className="relative flex flex-col gap-4 border-t border-white/[0.06] bg-black/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-brand-muted">
-                <span className="font-medium text-brand-subtle">{total.toLocaleString()}</span> total
+                <span className="font-medium text-brand-subtle">
+                  {t('superadmin.users.totalCount', {
+                    count: total.toLocaleString(locale === 'es' ? 'es' : 'en'),
+                  })}
+                </span>
                 {total > 0 ? (
                   <>
                     {' '}
-                    · Showing{' '}
-                    <span className="font-medium text-brand-subtle tabular-nums">
-                      {pagination.pageIndex * pagination.pageSize + 1}
-                      –
-                      {Math.min((pagination.pageIndex + 1) * pagination.pageSize, total)}
-                    </span>
+                    · {t('superadmin.users.showingRange', {
+                      start: pagination.pageIndex * pagination.pageSize + 1,
+                      end: Math.min((pagination.pageIndex + 1) * pagination.pageSize, total),
+                    })}
                   </>
                 ) : (
-                  <span className="text-brand-subtle/80"> · No rows</span>
+                  <span className="text-brand-subtle/80"> {t('superadmin.users.noRows')}</span>
                 )}
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -813,7 +818,7 @@ export default function SuperAdminUsersPage() {
                     className="rounded-md p-2 text-brand-muted transition hover:bg-[var(--brand-surface-hover)] hover:text-brand-heading disabled:opacity-30"
                     disabled={pagination.pageIndex <= 0}
                     onClick={() => setPagination((p) => ({ ...p, pageIndex: 0 }))}
-                    aria-label="First page"
+                    aria-label={t('superadmin.common.firstPage')}
                   >
                     <ChevronsLeft className="h-4 w-4" strokeWidth={2} />
                   </button>
@@ -824,12 +829,15 @@ export default function SuperAdminUsersPage() {
                     onClick={() =>
                       setPagination((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))
                     }
-                    aria-label="Previous page"
+                    aria-label={t('superadmin.common.previousPage')}
                   >
                     <ChevronLeft className="h-4 w-4" strokeWidth={2} />
                   </button>
                   <span className="min-w-[7rem] px-2 text-center text-xs font-medium tabular-nums text-brand-heading">
-                    Page {pagination.pageIndex + 1} of {totalPages}
+                    {t('superadmin.common.pageOf', {
+                      current: pagination.pageIndex + 1,
+                      total: totalPages,
+                    })}
                   </span>
                   <button
                     type="button"
@@ -841,7 +849,7 @@ export default function SuperAdminUsersPage() {
                         pageIndex: Math.min(totalPages - 1, p.pageIndex + 1),
                       }))
                     }
-                    aria-label="Next page"
+                    aria-label={t('superadmin.common.nextPage')}
                   >
                     <ChevronRight className="h-4 w-4" strokeWidth={2} />
                   </button>
@@ -852,13 +860,13 @@ export default function SuperAdminUsersPage() {
                     onClick={() =>
                       setPagination((p) => ({ ...p, pageIndex: totalPages - 1 }))
                     }
-                    aria-label="Last page"
+                    aria-label={t('superadmin.common.lastPage')}
                   >
                     <ChevronsRight className="h-4 w-4" strokeWidth={2} />
                   </button>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-brand-muted">
-                  <span className="hidden sm:inline">Rows</span>
+                  <span className="hidden sm:inline">{t('superadmin.common.rowsPerPage')}</span>
                   <select
                     value={pagination.pageSize}
                     onChange={(e) => {
@@ -893,14 +901,14 @@ export default function SuperAdminUsersPage() {
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <h2 id="edit-user-title" className="text-lg font-semibold text-brand-heading">
-                Edit user
+                {t('superadmin.users.editUser')}
               </h2>
               <button
                 type="button"
                 onClick={() => setDraft(null)}
                 disabled={editSaving}
                 className="rounded-lg p-1.5 text-brand-muted transition hover:bg-white/[0.06] hover:text-brand-heading disabled:opacity-40"
-                aria-label="Close"
+                aria-label={t('superadmin.common.close')}
               >
                 <X className="h-5 w-5" strokeWidth={2} aria-hidden />
               </button>
@@ -916,7 +924,7 @@ export default function SuperAdminUsersPage() {
                   htmlFor="edit-email"
                   className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
                 >
-                  Email
+                  {t('superadmin.common.email')}
                 </label>
                 <input
                   id="edit-email"
@@ -931,7 +939,7 @@ export default function SuperAdminUsersPage() {
                   htmlFor="edit-name"
                   className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
                 >
-                  Display name
+                  {t('superadmin.users.displayName')}
                 </label>
                 <input
                   id="edit-name"
@@ -947,7 +955,7 @@ export default function SuperAdminUsersPage() {
                     htmlFor="edit-phone"
                     className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
                   >
-                    Phone
+                    {t('superadmin.users.phone')}
                   </label>
                   <input
                     id="edit-phone"
@@ -962,7 +970,7 @@ export default function SuperAdminUsersPage() {
                     htmlFor="edit-country"
                     className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
                   >
-                    Country
+                    {t('superadmin.users.country')}
                   </label>
                   <input
                     id="edit-country"
@@ -978,14 +986,14 @@ export default function SuperAdminUsersPage() {
                   htmlFor="edit-tz"
                   className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
                 >
-                  Timezone
+                  {t('superadmin.users.timezone')}
                 </label>
                 <input
                   id="edit-tz"
                   type="text"
                   value={draft.timezone}
                   onChange={(e) => setDraft((d) => (d ? { ...d, timezone: e.target.value } : d))}
-                  placeholder="e.g. America/New_York"
+                  placeholder={t('superadmin.users.timezonePlaceholder')}
                   className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading placeholder:text-brand-subtle/60 focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
                 />
               </div>
@@ -995,7 +1003,7 @@ export default function SuperAdminUsersPage() {
                     htmlFor="edit-role"
                     className="mb-1 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle"
                   >
-                    Role
+                    {t('superadmin.common.role')}
                   </label>
                   <select
                     id="edit-role"
@@ -1026,60 +1034,64 @@ export default function SuperAdminUsersPage() {
                     }}
                     className="w-full rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2.5 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
                   >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
+                    <option value="user">{t('superadmin.common.roleUser')}</option>
+                    <option value="admin">{t('superadmin.common.roleAdmin')}</option>
                   </select>
                 </div>
               ) : (
                 <div className="rounded-xl border border-brand-border-muted bg-black/25 px-3 py-2.5">
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-brand-subtle">Role</p>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-brand-subtle">
+                    {t('superadmin.common.role')}
+                  </p>
                   <p className="mt-1 text-sm font-medium text-brand-heading">
-                    {draft.role === 'admin' ? 'Admin' : 'User'}
+                    {draft.role === 'admin'
+                      ? t('superadmin.common.roleAdmin')
+                      : t('superadmin.common.roleUser')}
                   </p>
                 </div>
               )}
               {isSuperAdmin && draft.role === 'admin' ? (
                 <div className="space-y-2 rounded-xl border border-white/[0.06] bg-black/25 p-4">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Users permissions
+                    {t('superadmin.users.usersPermissions')}
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <PermToggle
                       id="edit-ap-view"
-                      label="View list"
+                      label={t('superadmin.users.permViewList')}
                       checked={mergeAdminPermissions(draft.adminPermissions).usersView}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { usersView: v }))}
                       disabled={editSaving}
                     />
                     <PermToggle
                       id="edit-ap-create"
-                      label="Create accounts"
+                      label={t('superadmin.users.permCreateAccounts')}
                       checked={mergeAdminPermissions(draft.adminPermissions).usersCreate}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { usersCreate: v }))}
                       disabled={editSaving}
                     />
                     <PermToggle
                       id="edit-ap-edit"
-                      label="Edit users"
+                      label={t('superadmin.users.permEditUsers')}
                       checked={mergeAdminPermissions(draft.adminPermissions).usersEdit}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { usersEdit: v }))}
                       disabled={editSaving}
                     />
                     <PermToggle
                       id="edit-ap-delete"
-                      label="Archive users"
+                      label={t('superadmin.users.permArchiveUsers')}
                       checked={mergeAdminPermissions(draft.adminPermissions).usersDelete}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { usersDelete: v }))}
                       disabled={editSaving}
                     />
                   </div>
                   <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Wallets permissions
+                    {t('superadmin.users.walletsPermissions')}
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <PermToggle
                       id="edit-ap-wallets-view"
-                      label="View user wallets"
+                      label={t('superadmin.users.permViewWallets')}
                       checked={mergeAdminPermissions(draft.adminPermissions).walletsView}
                       onChange={(v) =>
                         setDraft((d) =>
@@ -1093,59 +1105,59 @@ export default function SuperAdminUsersPage() {
                     />
                     <PermToggle
                       id="edit-ap-wallets-adjust"
-                      label="Manage token balances"
+                      label={t('superadmin.users.permManageBalances')}
                       checked={mergeAdminPermissions(draft.adminPermissions).walletsAdjust}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { walletsAdjust: v }))}
                       disabled={editSaving}
                     />
                   </div>
                   <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Settings permissions
+                    {t('superadmin.users.settingsPermissions')}
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <PermToggle
                       id="edit-ap-tokens-edit"
-                      label="Manage tokens"
+                      label={t('superadmin.users.permManageTokens')}
                       checked={mergeAdminPermissions(draft.adminPermissions).manageTokens}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { manageTokens: v }))}
                       disabled={editSaving}
                     />
                   </div>
                   <p className="pt-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Platform modules
+                    {t('superadmin.users.platformModules')}
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <PermToggle
                       id="edit-ap-transactions"
-                      label="View transactions"
+                      label={t('superadmin.users.permViewTransactions')}
                       checked={mergeAdminPermissions(draft.adminPermissions).transactionsView}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { transactionsView: v }))}
                       disabled={editSaving}
                     />
                     <PermToggle
                       id="edit-ap-drawings"
-                      label="Manage drawings"
+                      label={t('superadmin.users.permManageDrawings')}
                       checked={mergeAdminPermissions(draft.adminPermissions).drawingsManage}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { drawingsManage: v }))}
                       disabled={editSaving}
                     />
                     <PermToggle
                       id="edit-ap-membership"
-                      label="Manage membership"
+                      label={t('superadmin.users.permManageMembership')}
                       checked={mergeAdminPermissions(draft.adminPermissions).membershipManage}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { membershipManage: v }))}
                       disabled={editSaving}
                     />
                     <PermToggle
                       id="edit-ap-announcements"
-                      label="Community announcements"
+                      label={t('superadmin.users.permAnnouncements')}
                       checked={mergeAdminPermissions(draft.adminPermissions).announcementsManage}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { announcementsManage: v }))}
                       disabled={editSaving}
                     />
                     <PermToggle
                       id="edit-ap-support"
-                      label="Support tickets"
+                      label={t('superadmin.users.permSupportTickets')}
                       checked={mergeAdminPermissions(draft.adminPermissions).supportTicketsManage}
                       onChange={(v) => setDraft((d) => patchDraftAdminPermissions(d, { supportTicketsManage: v }))}
                       disabled={editSaving}
@@ -1159,14 +1171,14 @@ export default function SuperAdminUsersPage() {
                     <Crown className="h-4 w-4 text-brand-accent" strokeWidth={2} aria-hidden />
                     <div>
                       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                        Membership
+                        {t('superadmin.users.membership')}
                       </p>
                     </div>
                   </div>
                   {!draft._membershipReady && draft.membershipTiersList === null ? (
                     <p className="flex items-center gap-2 text-sm text-brand-muted">
                       <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
-                      Loading tiers…
+                      {t('superadmin.users.loadingTiers')}
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -1206,14 +1218,16 @@ export default function SuperAdminUsersPage() {
                             >
                               <span className="font-semibold text-brand-heading">{tier.name}</span>
                               <span className="mt-0.5 block text-xs text-brand-muted">
-                                Min {formatCurrencySmart(tier.minValueUsd, 'USD')}
+                                {t('superadmin.users.minTier', {
+                                  amount: formatCurrencySmart(tier.minValueUsd, 'USD'),
+                                })}
                               </span>
                             </button>
                           );
                         })}
                       </div>
                       {draft._membershipReady && (draft.membershipTiersList || []).length === 0 ? (
-                        <p className="text-xs text-brand-muted">No tiers configured yet — add them under Membership.</p>
+                        <p className="text-xs text-brand-muted">{t('superadmin.users.noTiersConfigured')}</p>
                       ) : null}
                     </div>
                   )}
@@ -1228,7 +1242,7 @@ export default function SuperAdminUsersPage() {
                   }
                   className="h-4 w-4 rounded border-brand-border-muted bg-black/40 text-brand-accent focus:ring-brand-accent/30"
                 />
-                Email verified
+                {t('superadmin.users.emailVerified')}
               </label>
             </div>
             <div className="mt-6 flex flex-wrap justify-end gap-2">
@@ -1238,7 +1252,7 @@ export default function SuperAdminUsersPage() {
                 disabled={editSaving}
                 className="rounded-xl border border-brand-border-muted px-4 py-2.5 text-sm font-semibold text-brand-heading transition hover:bg-white/[0.04] disabled:opacity-40"
               >
-                Cancel
+                {t('superadmin.common.cancel')}
               </button>
               <button
                 type="button"
@@ -1249,10 +1263,10 @@ export default function SuperAdminUsersPage() {
                 {editSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
-                    Saving…
+                    {t('superadmin.common.saving')}
                   </>
                 ) : (
-                  'Save changes'
+                  t('superadmin.users.saveChanges')
                 )}
               </button>
             </div>

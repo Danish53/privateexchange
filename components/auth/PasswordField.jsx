@@ -2,20 +2,23 @@
 
 import { useId, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 export default function PasswordField({
   label,
   value,
   onChange,
-  placeholder = '••••••••',
+  placeholder,
   autoComplete = 'current-password',
   id: idProp,
   required,
   disabled,
 }) {
+  const { t } = useWebsiteT();
   const genId = useId();
   const id = idProp || genId;
   const [show, setShow] = useState(false);
+  const resolvedPlaceholder = placeholder ?? t('auth.passwordPlaceholder');
 
   return (
     <div>
@@ -28,7 +31,7 @@ export default function PasswordField({
           type={show ? 'text' : 'password'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           autoComplete={autoComplete}
           required={required}
           disabled={disabled}
@@ -39,7 +42,7 @@ export default function PasswordField({
           tabIndex={-1}
           onClick={() => setShow((s) => !s)}
           className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-brand-subtle transition hover:bg-white/[0.06] hover:text-brand-heading"
-          aria-label={show ? 'Hide password' : 'Show password'}
+          aria-label={show ? t('auth.hidePassword') : t('auth.showPassword')}
         >
           {show ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
         </button>

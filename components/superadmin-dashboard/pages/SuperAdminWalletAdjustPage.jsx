@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, Plus, Minus, History } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { cn } from '@/lib/utils';
 import {
   TokenBalanceCardsSkeleton,
@@ -15,10 +16,10 @@ import { PLATFORM_TOKEN_SEED } from '@/lib/tokenCatalog';
 import { mergeAdminPermissions } from '@/lib/adminPermissions';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 
-function formatDateTime(iso) {
+function formatDateTime(iso, locale) {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale === 'es' ? 'es' : 'en', {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(new Date(iso));
@@ -34,6 +35,7 @@ function tokenBalanceFromRow(row, symbolUpper) {
 }
 
 export default function SuperAdminWalletAdjustPage() {
+  const { t, locale } = useWebsiteT();
   const params = useParams();
   const router = useRouter();
   const userId = typeof params?.userId === 'string' ? params.userId : params?.userId?.[0] || '';
@@ -68,21 +70,21 @@ export default function SuperAdminWalletAdjustPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setLoadErr(json.error || 'Could not load wallet.');
+        setLoadErr(json.error || t('superadmin.walletAdjust.couldNotLoad'));
         setAdjustRow(null);
         return;
       }
       if (json.memberWallet === false) {
         setLoadErr(
           json.archived
-            ? 'This user is archived; there is no member wallet to adjust.'
-            : 'This account is not a member wallet (for example admin accounts).'
+            ? t('superadmin.walletAdjust.archivedNoWallet')
+            : t('superadmin.walletAdjust.notMemberWallet')
         );
         setAdjustRow(null);
         return;
       }
       if (!json.wallet) {
-        setLoadErr('Could not load wallet.');
+        setLoadErr(t('superadmin.walletAdjust.couldNotLoad'));
         setAdjustRow(null);
         return;
       }
@@ -93,12 +95,12 @@ export default function SuperAdminWalletAdjustPage() {
       const defaultToken = usdToken ? usdToken.symbol : (activeTokens.length > 0 ? activeTokens[0].symbol : PLATFORM_TOKEN_SEED[0].symbol);
       setAdjustToken(String(first || defaultToken).toUpperCase());
     } catch {
-      setLoadErr('Network error.');
+      setLoadErr(t('superadmin.common.networkError'));
       setAdjustRow(null);
     } finally {
       setLoadingWallet(false);
     }
-  }, [token, userId, activeTokens]);
+  }, [token, userId, activeTokens, t]);
 
   const loadMemberHistory = useCallback(async () => {
     if (!token || !userId) return;
@@ -162,7 +164,7 @@ export default function SuperAdminWalletAdjustPage() {
     if (!token || !adjustRow || !adjustToken) return;
     const amt = Number(String(adjustAmount).replace(/,/g, ''));
     if (!Number.isFinite(amt) || amt <= 0) {
-      setAdjustErr('Enter a valid positive amount.');
+      setAdjustErr(t('superadmin.walletAdjust.invalidAmount'));
       return;
     }
     setAdjustErr('');
@@ -184,7 +186,7 @@ export default function SuperAdminWalletAdjustPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setAdjustErr(json.error || 'Could not apply adjustment.');
+        setAdjustErr(json.error || t('superadmin.walletAdjust.couldNotApply'));
         return;
       }
       if (json.summary && adjustRow) {
@@ -202,12 +204,12 @@ export default function SuperAdminWalletAdjustPage() {
       setAdjustAmount('');
       setAdjustNote('');
       setAdjustErr('');
-      setAdjustSuccess('Adjustment saved. Balances and history are updated.');
+      setAdjustSuccess(t('superadmin.walletAdjust.adjustmentSaved'));
       window.setTimeout(() => setAdjustSuccess(''), 5000);
       await loadMemberHistory();
       await loadWallet();
     } catch {
-      setAdjustErr('Network error.');
+      setAdjustErr(t('superadmin.common.networkError'));
     } finally {
       setAdjustSaving(false);
     }
@@ -220,6 +222,7 @@ export default function SuperAdminWalletAdjustPage() {
     adjustNote,
     loadWallet,
     loadMemberHistory,
+    t,
   ]);
 
   useEffect(() => {
@@ -231,7 +234,11 @@ export default function SuperAdminWalletAdjustPage() {
 
   if (!userId) {
     return (
-      <FeedbackMessage tone="error" title="Invalid Request" message="Missing wallet user id." />
+      <FeedbackMessage
+        tone="error"
+        title={t('superadmin.walletAdjust.invalidRequestTitle')}
+        message={t('superadmin.walletAdjust.missingUserId')}
+      />
     );
   }
 
@@ -244,10 +251,10 @@ export default function SuperAdminWalletAdjustPage() {
             className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent hover:underline"
           >
             <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-            Back to wallets
+            {t('superadmin.walletAdjust.backToWallets')}
           </Link>
           <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
-            Manage balances
+            {t('superadmin.walletAdjust.title')}
           </h1>
           {adjustRow ? (
             <p className="mt-1 truncate text-sm text-brand-muted">{adjustRow.memberEmail}</p>
@@ -268,22 +275,32 @@ export default function SuperAdminWalletAdjustPage() {
           </div>
         </div>
       ) : loadErr || !adjustRow ? (
-        <FeedbackMessage tone="error" title="Wallet Error" message={loadErr || 'Wallet not found.'} />
+        <FeedbackMessage
+          tone="error"
+          title={t('superadmin.walletAdjust.walletErrorTitle')}
+          message={loadErr || t('superadmin.walletAdjust.walletNotFound')}
+        />
       ) : !canAdjustWallets ? null : (
         <div className="space-y-6">
-          {adjustSuccess ? <FeedbackMessage tone="success" title="Saved" message={adjustSuccess} /> : null}
+          {adjustSuccess ? (
+            <FeedbackMessage
+              tone="success"
+              title={t('superadmin.walletAdjust.savedTitle')}
+              message={adjustSuccess}
+            />
+          ) : null}
 
           <div className="flex flex-wrap gap-2 rounded-xl border border-white/[0.06] bg-black/25 px-4 py-3">
             <span className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-              <span className="tabular-nums text-brand-accent">1</span> Token
+              <span className="tabular-nums text-brand-accent">1</span> {t('superadmin.walletAdjust.stepToken')}
             </span>
             <span className="text-brand-subtle/50">→</span>
             <span className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-              <span className="tabular-nums text-brand-accent">2</span> Add / remove
+              <span className="tabular-nums text-brand-accent">2</span> {t('superadmin.walletAdjust.stepAddRemove')}
             </span>
             <span className="text-brand-subtle/50">→</span>
             <span className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-              <span className="tabular-nums text-brand-accent">3</span> Amount
+              <span className="tabular-nums text-brand-accent">3</span> {t('superadmin.walletAdjust.stepAmount')}
             </span>
           </div>
 
@@ -295,7 +312,7 @@ export default function SuperAdminWalletAdjustPage() {
             <div className="relative space-y-8">
               <section>
                 <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Step 1 — Select token
+                  {t('superadmin.walletAdjust.step1Title')}
                 </h2>
                 {loadingActiveTokens ? (
                   <TokenBalanceCardsSkeleton count={6} className="mt-3" />
@@ -345,17 +362,19 @@ export default function SuperAdminWalletAdjustPage() {
                               {t.name}
                             </span>
                             <span className="pl-3 mt-2 border-t border-white/[0.06] pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-brand-subtle">
-                              Balance
+                              {t('superadmin.walletAdjust.balance')}
                             </span>
                             <span className="pl-3 mt-0.5 font-mono text-sm font-semibold tabular-nums text-brand-heading">
                               {bal}
                             </span>
                             {selected ? (
                               <span className="pl-3 mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-brand-accent">
-                                Selected
+                                {t('superadmin.walletAdjust.selected')}
                               </span>
                             ) : (
-                              <span className="pl-3 mt-1 text-[0.6rem] text-brand-subtle">Tap to select</span>
+                              <span className="pl-3 mt-1 text-[0.6rem] text-brand-subtle">
+                                {t('superadmin.walletAdjust.tapToSelect')}
+                              </span>
                             )}
                           </button>
                         );
@@ -367,7 +386,7 @@ export default function SuperAdminWalletAdjustPage() {
 
               <section>
                 <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Step 2 — Credit or debit
+                  {t('superadmin.walletAdjust.step2Title')}
                 </h2>
                 <div className="mt-3 grid max-w-lg grid-cols-2 gap-2">
                   <button
@@ -385,8 +404,10 @@ export default function SuperAdminWalletAdjustPage() {
                     )}
                   >
                     <Plus className="h-5 w-5" strokeWidth={2} aria-hidden />
-                    Credit
-                    <span className="text-[0.65rem] font-normal text-brand-subtle">Add to wallet</span>
+                    {t('superadmin.walletAdjust.credit')}
+                    <span className="text-[0.65rem] font-normal text-brand-subtle">
+                      {t('superadmin.walletAdjust.creditHint')}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -403,23 +424,25 @@ export default function SuperAdminWalletAdjustPage() {
                     )}
                   >
                     <Minus className="h-5 w-5" strokeWidth={2} aria-hidden />
-                    Debit
-                    <span className="text-[0.65rem] font-normal text-brand-subtle">Subtract</span>
+                    {t('superadmin.walletAdjust.debit')}
+                    <span className="text-[0.65rem] font-normal text-brand-subtle">
+                      {t('superadmin.walletAdjust.debitHint')}
+                    </span>
                   </button>
                 </div>
               </section>
 
               <section>
                 <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Step 3 — Amount & note
+                  {t('superadmin.walletAdjust.step3Title')}
                 </h2>
                 <p className="mt-1 text-xs text-brand-muted">
-                  Applies to <span className="font-semibold text-brand-heading">{adjustToken}</span>
+                  {t('superadmin.walletAdjust.appliesTo', { token: adjustToken })}
                 </p>
                 <div className="mt-3 grid max-w-lg gap-3">
                   <div>
                     <label className="auth-label text-xs" htmlFor="adj-page-amt">
-                      Amount
+                      {t('superadmin.common.amount')}
                     </label>
                     <input
                       id="adj-page-amt"
@@ -435,21 +458,27 @@ export default function SuperAdminWalletAdjustPage() {
                   </div>
                   <div>
                     <label className="auth-label text-xs" htmlFor="adj-page-note">
-                      Note (optional)
+                      {t('superadmin.walletAdjust.noteOptional')}
                     </label>
                     <input
                       id="adj-page-note"
                       type="text"
                       value={adjustNote}
                       onChange={(e) => setAdjustNote(e.target.value)}
-                      placeholder="Shown on ledger / user history"
+                      placeholder={t('superadmin.walletAdjust.notePlaceholder')}
                       className="auth-input mt-1.5"
                     />
                   </div>
                 </div>
               </section>
 
-              {adjustErr ? <FeedbackMessage tone="error" title="Adjustment Failed" message={adjustErr} /> : null}
+              {adjustErr ? (
+                <FeedbackMessage
+                  tone="error"
+                  title={t('superadmin.walletAdjust.adjustmentFailedTitle')}
+                  message={adjustErr}
+                />
+              ) : null}
 
               <div className="flex flex-wrap gap-2">
                 <button
@@ -461,10 +490,10 @@ export default function SuperAdminWalletAdjustPage() {
                   {adjustSaving ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
-                      Applying…
+                      {t('superadmin.walletAdjust.applying')}
                     </>
                   ) : (
-                    <>Apply to {adjustToken}</>
+                    t('superadmin.walletAdjust.applyTo', { token: adjustToken })
                   )}
                 </button>
               </div>
@@ -477,10 +506,10 @@ export default function SuperAdminWalletAdjustPage() {
                 <History className="h-4 w-4" strokeWidth={2} aria-hidden />
               </span>
               <div>
-                <h2 className="text-sm font-semibold text-brand-heading">Admin adjustment history</h2>
-                <p className="text-xs text-brand-muted">
-                  Credits and debits for this user (token, amount, balance after each change).
-                </p>
+                <h2 className="text-sm font-semibold text-brand-heading">
+                  {t('superadmin.walletAdjust.historyTitle')}
+                </h2>
+                <p className="text-xs text-brand-muted">{t('superadmin.walletAdjust.historySub')}</p>
               </div>
             </div>
 
@@ -488,7 +517,7 @@ export default function SuperAdminWalletAdjustPage() {
               <AdminAdjustmentHistorySkeleton cards={6} />
             ) : memberHistory.length === 0 ? (
               <p className="mt-6 rounded-xl border border-dashed border-white/[0.1] bg-black/20 px-3 py-4 text-center text-sm text-brand-muted">
-                No admin adjustments yet for this account.
+                {t('superadmin.walletAdjust.noAdjustments')}
               </p>
             ) : (
               <ul className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -499,7 +528,7 @@ export default function SuperAdminWalletAdjustPage() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <time className="text-xs tabular-nums text-brand-subtle" dateTime={h.createdAt}>
-                        {formatDateTime(h.createdAt)}
+                        {formatDateTime(h.createdAt, locale)}
                       </time>
                       <span
                         className={cn(
@@ -509,7 +538,9 @@ export default function SuperAdminWalletAdjustPage() {
                             : 'bg-rose-500/15 text-rose-200/95'
                         )}
                       >
-                        {h.direction === 'credit' ? 'Credit' : 'Debit'}
+                        {h.direction === 'credit'
+                          ? t('superadmin.walletAdjust.credit')
+                          : t('superadmin.walletAdjust.debit')}
                       </span>
                     </div>
                     <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
@@ -525,10 +556,10 @@ export default function SuperAdminWalletAdjustPage() {
                     </div>
                     {h.balanceAfterFormatted ? (
                       <p className="mt-1.5 text-xs text-brand-muted">
-                        Balance after ·{' '}
-                        <span className="font-mono font-medium text-brand-heading">
-                          {h.balanceAfterFormatted} {h.token}
-                        </span>
+                        {t('superadmin.walletAdjust.balanceAfter', {
+                          amount: h.balanceAfterFormatted,
+                          token: h.token,
+                        })}
                       </p>
                     ) : null}
                     {h.note ? (

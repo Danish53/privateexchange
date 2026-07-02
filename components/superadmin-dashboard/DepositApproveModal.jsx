@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, X, Loader2, Coins } from 'lucide-react';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { cn } from '@/lib/utils';
 import { formatNumberSmart } from '@/lib/numberFormat';
 
@@ -11,7 +12,7 @@ function formatAmount(n) {
   return formatNumberSmart(n, { maxFractionDigits: 8 });
 }
 
-function PaymentMethodBadge({ method, payCurrency }) {
+function PaymentMethodBadge({ method, payCurrency, t }) {
   const cryptoLabel =
     payCurrency === 'btc'
       ? 'BTC'
@@ -19,9 +20,9 @@ function PaymentMethodBadge({ method, payCurrency }) {
         ? 'ERC20'
         : payCurrency === 'sol'
           ? 'SOL'
-          : 'Crypto';
+          : t('superadmin.payments.method.crypto');
   const map = {
-    paypal: { label: 'PayPal', className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
+    paypal: { label: t('superadmin.payments.method.paypal'), className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
     crypto: { label: cryptoLabel, className: 'border-amber-500/35 bg-amber-500/[0.1] text-amber-100' },
   };
   const m = map[method] || { label: method, className: 'border-white/10 bg-white/5 text-brand-muted' };
@@ -50,6 +51,7 @@ export default function DepositApproveModal({
   onClose,
   onConfirm,
 }) {
+  const { t } = useWebsiteT();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function DepositApproveModal({
   }, []);
 
   const selectedTokenMeta = tokens.find(
-    (t) => String(t.symbol).toUpperCase() === String(creditToken).toUpperCase()
+    (tok) => String(tok.symbol).toUpperCase() === String(creditToken).toUpperCase()
   );
   const amountNum = Number(String(creditAmount).replace(/,/g, ''));
   const canSubmit =
@@ -92,13 +94,13 @@ export default function DepositApproveModal({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 pr-2">
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
-                Approve deposit
+                {t('superadmin.payments.approveModal.eyebrow')}
               </p>
               <h3 id="approve-deposit-title" className="mt-1 text-lg font-semibold text-brand-heading">
-                Credit user wallet
+                {t('superadmin.payments.approveModal.title')}
               </h3>
               <p className="mt-1 truncate text-sm text-brand-muted">
-                {deposit.user?.email || 'Unknown user'}
+                {deposit.user?.email || t('superadmin.payments.approveModal.unknownUser')}
               </p>
             </div>
             <button
@@ -106,7 +108,7 @@ export default function DepositApproveModal({
               onClick={onClose}
               disabled={saving}
               className="shrink-0 rounded-lg border border-white/10 p-2 text-brand-subtle transition hover:bg-white/5 hover:text-white disabled:opacity-50"
-              aria-label="Close"
+              aria-label={t('superadmin.common.close')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -116,14 +118,14 @@ export default function DepositApproveModal({
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
           <div className="rounded-xl border border-white/[0.08] bg-black/30 p-4 text-sm">
             <div className="flex justify-between gap-2">
-              <span className="text-brand-subtle">Requested (USD)</span>
+              <span className="text-brand-subtle">{t('superadmin.payments.approveModal.requestedUsd')}</span>
               <span className="font-mono font-semibold text-brand-heading">
                 ${formatAmount(deposit.amount)}
               </span>
             </div>
             <div className="mt-2 flex justify-between gap-2">
-              <span className="text-brand-subtle">Method</span>
-              <PaymentMethodBadge method={deposit.paymentMethod} payCurrency={deposit.payCurrency} />
+              <span className="text-brand-subtle">{t('superadmin.payments.approveModal.method')}</span>
+              <PaymentMethodBadge method={deposit.paymentMethod} payCurrency={deposit.payCurrency} t={t} />
             </div>
             {deposit.proofImageUrl ? (
               <a
@@ -132,27 +134,27 @@ export default function DepositApproveModal({
                 rel="noopener noreferrer"
                 className="mt-3 inline-block text-xs font-medium text-brand-accent hover:underline"
               >
-                View payment screenshot
+                {t('superadmin.payments.approveModal.viewPaymentScreenshot')}
               </a>
             ) : null}
           </div>
 
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-              Select token to credit
+              {t('superadmin.payments.approveModal.selectToken')}
             </p>
             {loadingTokens ? (
-              <p className="text-sm text-brand-muted">Loading tokens...</p>
+              <p className="text-sm text-brand-muted">{t('superadmin.payments.approveModal.loadingTokens')}</p>
             ) : tokens.length === 0 ? (
-              <p className="text-sm text-rose-200">No active tokens found.</p>
+              <p className="text-sm text-rose-200">{t('superadmin.payments.approveModal.noActiveTokens')}</p>
             ) : (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {tokens.map((t) => {
-                  const sym = String(t.symbol).toUpperCase();
+                {tokens.map((tok) => {
+                  const sym = String(tok.symbol).toUpperCase();
                   const selected = creditToken === sym;
                   return (
                     <button
-                      key={t._id || sym}
+                      key={tok._id || sym}
                       type="button"
                       onClick={() => setCreditToken(sym)}
                       className={cn(
@@ -171,9 +173,9 @@ export default function DepositApproveModal({
                         />
                         <span className="font-semibold text-brand-heading">{sym}</span>
                       </span>
-                      {t.name ? (
+                      {tok.name ? (
                         <span className="mt-1 block truncate text-[0.65rem] text-brand-muted">
-                          {t.name}
+                          {tok.name}
                         </span>
                       ) : null}
                     </button>
@@ -186,7 +188,7 @@ export default function DepositApproveModal({
           {creditToken ? (
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                Amount to send ({creditToken})
+                {t('superadmin.payments.approveModal.amountToSend', { token: creditToken })}
               </span>
               <input
                 type="number"
@@ -199,14 +201,17 @@ export default function DepositApproveModal({
               />
               {selectedTokenMeta?.usdPerUnit ? (
                 <p className="text-xs text-brand-muted">
-                  Rate: 1 {creditToken} ≈ $
-                  {formatNumberSmart(selectedTokenMeta.usdPerUnit, { maxFractionDigits: 6 })} USD
+                  {t('superadmin.payments.approveModal.rate', {
+                    token: creditToken,
+                    rate: formatNumberSmart(selectedTokenMeta.usdPerUnit, { maxFractionDigits: 6 }),
+                  })}
                 </p>
               ) : null}
               <p className="text-xs text-emerald-200/80">
-                User will receive{' '}
-                <strong className="text-emerald-100">{creditAmount || '0'}</strong> {creditToken} in
-                their wallet balance.
+                {t('superadmin.payments.approveModal.userWillReceive', {
+                  amount: creditAmount || '0',
+                  token: creditToken,
+                })}
               </p>
             </label>
           ) : null}
@@ -225,7 +230,7 @@ export default function DepositApproveModal({
             disabled={saving}
             className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-brand-heading hover:bg-white/5 disabled:opacity-50"
           >
-            Cancel
+            {t('superadmin.common.cancel')}
           </button>
           <button
             type="button"
@@ -236,12 +241,14 @@ export default function DepositApproveModal({
             {saving ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Approving...
+                {t('superadmin.payments.approveModal.approving')}
               </>
             ) : (
               <>
                 <Check className="h-4 w-4" />
-                Approve & credit {creditToken || 'token'}
+                {t('superadmin.payments.approveModal.approveAndCredit', {
+                  token: creditToken || t('superadmin.payments.approveModal.tokenFallback'),
+                })}
               </>
             )}
           </button>

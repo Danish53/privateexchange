@@ -7,10 +7,12 @@ import AuthShell from '@/components/auth/AuthShell';
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '@/components/auth-context';
 import { clearPendingRegister, getPendingRegister } from '@/lib/auth-flow';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 const LENGTH = 6;
 
 export default function VerifyOtpPage() {
+  const { t } = useWebsiteT();
   const router = useRouter();
   const { login } = useAuth();
   const [digits, setDigits] = useState(() => Array.from({ length: LENGTH }, () => ''));
@@ -69,7 +71,7 @@ export default function VerifyOtpPage() {
     e.preventDefault();
     const code = digits.join('');
     if (code.length !== LENGTH) {
-      setError('Enter the full 6-digit code.');
+      setError(t('auth.verify.codeIncomplete'));
       return;
     }
     setLoading(true);
@@ -82,7 +84,7 @@ export default function VerifyOtpPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'Verification failed.');
+        setError(data.error || t('auth.verify.verificationFailed'));
         return;
       }
       clearPendingRegister();
@@ -94,7 +96,7 @@ export default function VerifyOtpPage() {
           : '/dashboard/user';
       router.push(dest);
     } catch {
-      setError('Something went wrong. Try again.');
+      setError(t('auth.verify.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -111,14 +113,14 @@ export default function VerifyOtpPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'Could not resend.');
+        setError(data.error || t('auth.verify.couldNotResend'));
         return;
       }
       if (data.devOtp && typeof window !== 'undefined') {
         console.info('[dev] OTP:', data.devOtp);
       }
     } catch {
-      setError('Could not resend. Try again.');
+      setError(t('auth.verify.resendFailed'));
     } finally {
       setResendBusy(false);
     }
@@ -129,7 +131,7 @@ export default function VerifyOtpPage() {
       <div className="flex min-h-screen items-center justify-center bg-brand-page font-sans">
         <div className="flex flex-col items-center gap-4">
           <Spinner size="md" variant="accent" />
-          <p className="text-xs font-medium text-brand-subtle">Preparing verification…</p>
+          <p className="text-xs font-medium text-brand-subtle">{t('auth.verify.preparing')}</p>
         </div>
       </div>
     );
@@ -137,16 +139,16 @@ export default function VerifyOtpPage() {
 
   return (
     <AuthShell
-      title="Verify your email"
-      subtitle={`We sent a 6-digit code to ${email}. Enter it below to activate your account.`}
-      badge="Verification"
+      title={t('auth.verify.title')}
+      subtitle={t('auth.verify.subtitle', { email })}
+      badge={t('auth.verify.badge')}
       backHref="/register"
-      backLabel="Back to register"
+      backLabel={t('auth.verify.backToRegister')}
       footer={
         <span className="text-brand-muted">
-          Wrong email?{' '}
+          {t('auth.verify.wrongEmail')}{' '}
           <Link href="/register" className="auth-link text-brand-heading">
-            Start over
+            {t('auth.verify.startOver')}
           </Link>
         </span>
       }
@@ -162,7 +164,7 @@ export default function VerifyOtpPage() {
         ) : null}
 
         <div>
-          <p className="auth-label text-center">One-time code</p>
+          <p className="auth-label text-center">{t('auth.verify.oneTimeCode')}</p>
           <div className="flex justify-center gap-2 sm:gap-3" onPaste={handlePaste}>
             {digits.map((d, i) => (
               <input
@@ -178,13 +180,11 @@ export default function VerifyOtpPage() {
                 onChange={(e) => handleChange(i, e)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 className="auth-input h-14 w-11 text-center text-lg font-semibold tracking-widest sm:h-16 sm:w-12"
-                aria-label={`Digit ${i + 1}`}
+                aria-label={t('auth.verify.digitAria', { n: i + 1 })}
               />
             ))}
           </div>
-          <p className="auth-hint text-center">
-            Check your inbox (or server logs if email is not configured).
-          </p>
+          <p className="auth-hint text-center">{t('auth.verify.inboxHint')}</p>
         </div>
 
         <button
@@ -194,7 +194,7 @@ export default function VerifyOtpPage() {
           className="btn-primary w-full justify-center gap-2 disabled:opacity-60"
         >
           {loading ? <Spinner size="sm" variant="onAccent" /> : null}
-          <span>{loading ? 'Verifying…' : 'Verify & continue'}</span>
+          <span>{loading ? t('auth.verify.verifying') : t('auth.verify.verifyContinue')}</span>
         </button>
 
         <div className="flex justify-center">
@@ -206,7 +206,7 @@ export default function VerifyOtpPage() {
             className="inline-flex items-center gap-2 text-sm font-medium text-brand-muted transition-colors hover:text-brand-accent disabled:opacity-50"
           >
             {resendBusy ? <Spinner size="sm" variant="accent" /> : null}
-            <span>{resendBusy ? 'Sending…' : 'Resend code'}</span>
+            <span>{resendBusy ? t('auth.verify.resending') : t('auth.verify.resendCode')}</span>
           </button>
         </div>
       </form>

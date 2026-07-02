@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/auth-context';
 import AuthShell from '@/components/auth/AuthShell';
 import PasswordField from '@/components/auth/PasswordField';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import Spinner from '@/components/ui/Spinner';
 import { setPendingRegister } from '@/lib/auth-flow';
 
@@ -13,6 +14,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
+  const { t } = useWebsiteT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,9 +24,9 @@ function LoginForm() {
   const registered = searchParams.get('registered') === '1';
   const reset = searchParams.get('reset') === '1';
   const banner = reset
-    ? 'Password updated. Sign in with your new password.'
+    ? t('auth.login.bannerReset')
     : verified || registered
-      ? 'Email verified. Sign in to your workspace.'
+      ? t('auth.login.bannerVerified')
       : null;
 
   const handleSubmit = async (e) => {
@@ -44,7 +46,7 @@ function LoginForm() {
         return;
       }
       if (!res.ok) {
-        setError(data.error || 'Sign in failed.');
+        setError(data.error || t('auth.login.errorSignInFailed'));
         return;
       }
       login({ token: data.token, user: data.user });
@@ -55,7 +57,7 @@ function LoginForm() {
           : '/dashboard/user';
       router.push(dest);
     } catch {
-      setError('Something went wrong. Try again.');
+      setError(t('auth.login.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -81,14 +83,14 @@ function LoginForm() {
 
         <div>
           <label htmlFor="login-email" className="auth-label">
-            Email
+            {t('auth.login.email')}
           </label>
           <input
             id="login-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t('auth.login.emailPlaceholder')}
             autoComplete="email"
             required
             className="auth-input"
@@ -96,7 +98,7 @@ function LoginForm() {
         </div>
 
         <PasswordField
-          label="Password"
+          label={t('auth.login.password')}
           value={password}
           onChange={setPassword}
           autoComplete="current-password"
@@ -104,7 +106,7 @@ function LoginForm() {
 
         <div className="flex justify-end">
           <Link href="/forgot-password" className="auth-link text-sm">
-            Forgot password?
+            {t('auth.login.forgotPassword')}
           </Link>
         </div>
 
@@ -115,14 +117,14 @@ function LoginForm() {
           className="btn-primary w-full justify-center gap-2 disabled:opacity-60"
         >
           {loading ? <Spinner size="sm" variant="onAccent" /> : null}
-          <span>{loading ? 'Signing in…' : 'Sign in'}</span>
+          <span>{loading ? t('auth.login.signingIn') : t('auth.login.signIn')}</span>
         </button>
       </form>
 
       <div className="mt-8 border-t border-brand-border-muted pt-6 text-center text-sm text-brand-muted">
-        No account?{' '}
+        {t('auth.login.noAccount')}{' '}
         <Link href="/register" className="auth-link text-brand-heading">
-          Create one
+          {t('auth.login.createOne')}
         </Link>
       </div>
     </>
@@ -130,14 +132,16 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+  const { t } = useWebsiteT();
+
   return (
     <AuthShell
-      title="Welcome back"
-      subtitle="Sign in to the 759 Private Exchange workspace."
-      badge="Sign in"
+      title={t('auth.login.title')}
+      subtitle={t('auth.login.subtitle')}
+      badge={t('auth.login.badge')}
       footer={
         <Link href="/" className="auth-link">
-          ← Return to marketing site
+          {t('auth.returnMarketing')}
         </Link>
       }
     >

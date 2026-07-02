@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { formatPayPalUserError } from '@/lib/formatPayPalUserError';
 import {
   PAYPAL_SANDBOX_TEST_CARD,
@@ -30,14 +31,16 @@ function getPayPalEnvironment() {
     : 'sandbox';
 }
 
-function PayPalUserErrorAlert({ message, title = 'Payment error' }) {
+function PayPalUserErrorAlert({ message, title }) {
+  const { t } = useWebsiteT();
+  const resolvedTitle = title ?? t('dashboard.deposit.paymentErrorTitle');
   if (!message) return null;
   return (
     <div
       role="alert"
       className="rounded-lg border border-rose-500/40 bg-rose-950/50 px-4 py-3 text-sm text-rose-100"
     >
-      <p className="font-semibold text-rose-50">{title}</p>
+      <p className="font-semibold text-rose-50">{resolvedTitle}</p>
       <p className="mt-1.5 text-xs leading-relaxed text-rose-200/95">{message}</p>
     </div>
   );
@@ -124,13 +127,14 @@ async function captureWithRetries({ depositId, orderId, authToken, maxAttempts =
 }
 
 function PayPalSdkGate({ children }) {
+  const { t } = useWebsiteT();
   const { loadingStatus, error, isHydrated } = usePayPal();
 
   if (!isHydrated || loadingStatus === INSTANCE_LOADING_STATE.PENDING) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-blue-500/25 bg-blue-950/30 px-4 py-5 text-sm text-blue-100">
         <Loader2 className="h-5 w-5 animate-spin" />
-        Loading PayPal...
+        {t('dashboard.paypal.loading')}
       </div>
     );
   }
@@ -138,11 +142,8 @@ function PayPalSdkGate({ children }) {
   if (loadingStatus === INSTANCE_LOADING_STATE.REJECTED || error) {
     return (
       <PayPalUserErrorAlert
-        title="PayPal could not load"
-        message={formatPayPalUserError(
-          error,
-          'Check your connection and refresh the page. If this continues, use Pay with PayPal account below.'
-        )}
+        title={t('dashboard.deposit.paymentErrorTitle')}
+        message={formatPayPalUserError(error, t('dashboard.paypal.sdkLoadHint'))}
       />
     );
   }
@@ -165,6 +166,7 @@ function PayPalCardFieldsSection({
   onRetry,
   toast,
 }) {
+  const { t } = useWebsiteT();
   const { error: fieldsError } = usePayPalCardFields();
   const { submit, submitResponse, error: submitError } =
     usePayPalCardFieldsOneTimePaymentSession();
@@ -180,20 +182,14 @@ function PayPalCardFieldsSection({
 
   useEffect(() => {
     if (!fieldsError) return;
-    showError(
-      fieldsError,
-      'Card fields could not load. You can still try entering your card or use Pay with PayPal account below.'
-    );
-  }, [fieldsError, showError]);
+    showError(fieldsError, t('dashboard.paypal.cardFieldsLoadError'));
+  }, [fieldsError, showError, t]);
 
   useEffect(() => {
     if (!submitError) return;
     setProcessingPayment(false);
-    showError(
-      submitError,
-      'Card payment could not be submitted. Check your card number, expiry, and CVV, then try again.'
-    );
-  }, [submitError, setProcessingPayment, showError]);
+    showError(submitError, t('dashboard.paypal.cardSubmitError'));
+  }, [submitError, setProcessingPayment, showError, t]);
 
   useEffect(() => {
     if (!submitResponse) return;
@@ -204,9 +200,7 @@ function PayPalCardFieldsSection({
 
       if (state === 'canceled') {
         setProcessingPayment(false);
-        setPaypalInlineError(
-          'Bank verification (3D Secure) was cancelled. Your card was not charged. You can try again.'
-        );
+        setPaypalInlineError(t('dashboard.paypal.cancelled3ds'));
         return;
       }
 
@@ -216,7 +210,11 @@ function PayPalCardFieldsSection({
           data?.message
             ? new Error(String(data.message))
             : null,
-          `Card payment was declined. Sandbox test card: ${PAYPAL_SANDBOX_TEST_CARD.visa}, exp ${PAYPAL_SANDBOX_TEST_CARD.expiry}, CVV ${PAYPAL_SANDBOX_TEST_CARD.cvv}.`
+          t('dashboard.paypal.cardDeclinedSandbox', {
+            card: PAYPAL_SANDBOX_TEST_CARD.visa,
+            expiry: PAYPAL_SANDBOX_TEST_CARD.expiry,
+            cvc: PAYPAL_SANDBOX_TEST_CARD.cvv,
+          })
         );
         setPaypalInlineError(msg);
         return;
@@ -224,7 +222,7 @@ function PayPalCardFieldsSection({
 
       if (state !== 'succeeded') return;
 
-      setPaypalStatusNote('Payment authorized. Crediting USD to your wallet...');
+      setPaypalStatusNote(t('dashboard.paypal.creditingWallet'));
       try {
         await new Promise((r) => setTimeout(r, 1200));
         const json = await captureWithRetries({
@@ -238,8 +236,10 @@ function PayPalCardFieldsSection({
         onPaymentComplete(json);
       } catch (err) {
         setProcessingPayment(false);
-        showError(err, 'Payment was approved but crediting your wallet failed. Please contact support if USD does not appear.');
-        toast.error(formatPayPalUserError(err), { title: 'Deposit Error' });
+        showError(err, t('dashboard.paypal.captureFailedWallet'));
+        toast.error(formatPayPalUserError(err, t('dashboard.paypal.error')), {
+          title: t('dashboard.deposit.paymentErrorTitle'),
+        });
       }
     };
 
@@ -255,22 +255,23 @@ function PayPalCardFieldsSection({
     setProcessingPayment,
     showError,
     toast,
+    t,
   ]);
 
   const handlePayWithCard = async () => {
     if (!orderId) {
-      showError(null, 'Payment session expired. Click “Start new payment attempt” and try again.');
+      showError(null, t('dashboard.paypal.sessionExpired'));
       return;
     }
     setProcessingPayment(true);
     setPaypalInlineError('');
-    setPaypalStatusNote('Checking your card — your bank may ask you to verify (3D Secure)...');
+    setPaypalStatusNote(t('dashboard.paypal.verifying3ds'));
     try {
       await submit(orderId, { billingAddress: PAYPAL_BILLING_ADDRESS });
     } catch (err) {
       setProcessingPayment(false);
       setPaypalStatusNote('');
-      showError(err, 'Could not submit card payment. Check card number, expiry, and CVV.');
+      showError(err, t('dashboard.paypal.cardSubmitFailed'));
     }
   };
 
@@ -289,10 +290,10 @@ function PayPalCardFieldsSection({
 
       <div className="mt-3 paypal-deposit-card-fields space-y-1 rounded-xl border border-blue-400/20 bg-transparent p-4">
         <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-blue-200/80">
-          Card number
+          {t('dashboard.paypal.cardNumber')}
         </label>
         <PayPalCardNumberField
-          placeholder="Card number"
+          placeholder={t('dashboard.paypal.cardNumber')}
           containerStyles={fieldContainerStyle}
           containerClassName="paypal-card-field-host"
           style={paypalCardFieldStyle}
@@ -300,10 +301,10 @@ function PayPalCardFieldsSection({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-blue-200/80">
-              Expiry
+              {t('dashboard.paypal.expiry')}
             </label>
             <PayPalCardExpiryField
-              placeholder="MM / YY"
+              placeholder={t('dashboard.paypal.expiryPlaceholder')}
               containerStyles={fieldContainerStyle}
               containerClassName="paypal-card-field-host"
               style={paypalCardFieldStyle}
@@ -311,10 +312,10 @@ function PayPalCardFieldsSection({
           </div>
           <div>
             <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-blue-200/80">
-              CVV
+              {t('dashboard.paypal.cvc')}
             </label>
             <PayPalCardCvvField
-              placeholder="CVV"
+              placeholder={t('dashboard.paypal.cvc')}
               containerStyles={fieldContainerStyle}
               containerClassName="paypal-card-field-host"
               style={paypalCardFieldStyle}
@@ -341,7 +342,7 @@ function PayPalCardFieldsSection({
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-200 hover:text-white"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Start new payment attempt
+            {t('dashboard.paypal.newAttempt')}
           </button>
         ) : null}
       </div>
@@ -355,10 +356,12 @@ function PayPalCardFieldsSection({
         {processingPayment ? (
           <span className="inline-flex items-center justify-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Processing secure payment...
+            {t('dashboard.paypal.processing')}
           </span>
         ) : (
-          `Pay $${Number(amountUsd).toFixed(2)} with card`
+          t('dashboard.paypal.payWithCardAmount', {
+            amount: `$${Number(amountUsd).toFixed(2)}`,
+          })
         )}
       </button>
     </div>
@@ -376,14 +379,15 @@ function PayPalAccountButtonSection({
   setPaypalStatusNote,
   onPaymentComplete,
 }) {
+  const { t } = useWebsiteT();
   const onApprove = async (data) => {
     const oid = String(data?.orderId || orderId || '');
     if (!oid) {
-      setPaypalInlineError('PayPal did not return an order id.');
+      setPaypalInlineError(t('dashboard.paypal.orderIdMissing'));
       return;
     }
     setProcessingPayment(true);
-    setPaypalStatusNote('Confirming payment and crediting USD to your wallet...');
+    setPaypalStatusNote(t('dashboard.paypal.confirmingPayment'));
     setPaypalInlineError('');
     try {
       const json = await captureWithRetries({ depositId, orderId: oid, authToken });
@@ -391,7 +395,7 @@ function PayPalAccountButtonSection({
       onPaymentComplete(json);
     } catch (e) {
       setPaypalInlineError(
-        formatPayPalUserError(e, 'PayPal payment could not be completed. Please try again.')
+        formatPayPalUserError(e, t('dashboard.paypal.paymentNotCompleted'))
       );
     } finally {
       setProcessingPayment(false);
@@ -411,10 +415,10 @@ function PayPalAccountButtonSection({
           onApprove={onApprove}
           onError={(err) => {
             setPaypalInlineError(
-              formatPayPalUserError(err, 'PayPal checkout failed. Please try again.')
+              formatPayPalUserError(err, t('dashboard.paypal.checkoutFailed'))
             );
           }}
-          onCancel={() => setPaypalInlineError('Payment cancelled. You can try again.')}
+          onCancel={() => setPaypalInlineError(t('dashboard.paypal.cancelledRetry'))}
         />
       </div>
     </div>
@@ -444,6 +448,7 @@ function PayPalDepositCardCheckout(props) {
 }
 
 export default function PayPalDepositPayment(props) {
+  const { t } = useWebsiteT();
   const clientId = getPayPalClientId();
   const { authToken } = props;
   const [clientToken, setClientToken] = useState('');
@@ -479,8 +484,7 @@ export default function PayPalDepositPayment(props) {
   if (!clientId) {
     return (
       <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-        PayPal is not configured. Set NEXT_PUBLIC_PAYPAL_CLIENT_ID, then restart{' '}
-        <code className="text-amber-50">npm run dev</code>.
+        {t('dashboard.paypal.notConfiguredDev')}
       </p>
     );
   }

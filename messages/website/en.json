@@ -1,0 +1,281 @@
+{
+  "brand": {
+    "name": "Private Exchange",
+    "tagline": "759 Ecosystem"
+  },
+  "nav": {
+    "overview": "Overview",
+    "tokens": "Tokens",
+    "features": "Features",
+    "winners": "Winners",
+    "payments": "Payments",
+    "dashboard": "Dashboard",
+    "signOut": "Sign out",
+    "signIn": "Sign in",
+    "register": "Register",
+    "createAccount": "Create account",
+    "navigate": "Navigate",
+    "account": "Account",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "hero": {
+    "eyebrow": "Multi-token wallet · Fiat & crypto rails",
+    "title": "Balances, transfers, and drawings—one private exchange workspace.",
+    "subtitle": "Built for the 759 ecosystem: five tokens, member tiers, ledger-backed movements, and admin controls you can trace end to end.",
+    "openDashboard": "Open dashboard",
+    "exploreCapabilities": "Explore capabilities",
+    "snapshotLabel": "Operations snapshot",
+    "snapshotText": "Volume, transfers, and tier rules in one place"
+  },
+  "stats": {
+    "tokensLive": "Tokens live",
+    "uptime": "Designed uptime target",
+    "transferFee": "Transfer fee (standard)",
+    "vipFee": "VIP fee",
+    "yes": "Yes"
+  },
+  "winners": {
+    "eyebrow": "Drawings",
+    "title": "Recent drawing winners",
+    "subtitle": "Latest completed drawings and the members who won them. Join the workspace to enter open pools and see full history in your dashboard.",
+    "viewDrawings": "View drawings",
+    "createAccount": "Create account",
+    "empty": "Winners will appear here once drawings complete and results are published. Sign in to join active pools from your member dashboard.",
+    "signIn": "Sign in",
+    "win": "Win",
+    "won": "Won",
+    "drawing": "Drawing",
+    "prize": "Prize",
+    "drawDate": "Draw date",
+    "viewDrawing": "View drawing",
+    "signInToExplore": "Sign in to explore",
+    "member": "Member",
+    "eventAccess": "Event access",
+    "physicalPrize": "Physical prize",
+    "prizeFallback": "Prize"
+  },
+  "why": {
+    "ledgerLabel": "Ledger & controls",
+    "ledgerText": "Every movement traceable in the workspace",
+    "eyebrow": "Why it exists",
+    "title": "Built for members who want clarity—not noise",
+    "subtitle": "Private Exchange ties balances, transfers, drawings, and tiers into one audited flow. You see fees, status, and history in plain language—no buzzwords, no mystery mechanics.",
+    "bullet1": "Role-based dashboards for users and admins",
+    "bullet2": "Transparent fee rules and VIP benefits",
+    "bullet3": "Funding rails phased in with verification"
+  },
+  "tokensSection": {
+    "title": "Supported tokens",
+    "subtitle": "Five ecosystem assets on the ledger—each with its own rules and display metadata as the platform grows.",
+    "caption": "Ecosystem assets · illustrative",
+    "primary": "Primary",
+    "premium": "Premium",
+    "reserve": "Reserve",
+    "entries": "Entries",
+    "community": "Community"
+  },
+  "features": {
+    "title": "Platform modules",
+    "subtitle": "Wallet ledger, transaction engine, payments, drawings, and membership—wired for operations and admin oversight.",
+    "bannerEyebrow": "One workspace",
+    "bannerTitle": "From deposits to drawings—modules stay connected to the same ledger",
+    "walletTitle": "Multi-Token Wallet",
+    "walletDesc": "One ledger-backed wallet for every supported token, with a clear history of movement.",
+    "secureTitle": "Secure Platform",
+    "secureDesc": "Role-based access, audited adjustments, and transaction validation built into the core.",
+    "transferTitle": "Instant Transfers",
+    "transferDesc": "Peer-to-peer token sends with transparent fees and VIP benefits when applicable.",
+    "tiersTitle": "Community Tiers",
+    "tiersDesc": "Member and VIP tiers with fee rules and privileges you can see upfront.",
+    "drawingTitle": "Drawing System",
+    "drawingDesc": "Enter drawings with tokens, track participation, and review past results.",
+    "adminTitle": "Admin dashboards",
+    "adminDesc": "Operational views for volume, engagement, and platform health—role-gated."
+  },
+  "payments": {
+    "imageEyebrow": "In person & online",
+    "imageText": "Card, wallet, and on-chain rails are rolled out in phases—with verification before funds move.",
+    "title": "Funding rails",
+    "subtitle": "Deposit paths are phased: live where available, with admin checks behind the scenes. Statuses are shown upfront.",
+    "available": "Available",
+    "roadmap": "Roadmap"
+  },
+  "cta": {
+    "title": "Sign in to the workspace",
+    "subtitle": "Use demo credentials on the login screen to preview user and admin dashboards while services are connected.",
+    "button": "Continue to login"
+  },
+  "footer": {
+    "blurb": "One workspace for balances, transfers, drawings, and tiers—built for clarity and auditability.",
+    "sessionProtected": "Session-protected access",
+    "onThisPage": "On this page",
+    "workspace": "Workspace",
+    "legal": "Legal",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "copyright": "© {year} 759 Private Exchange. All rights reserved.",
+    "disclaimer": "Utility platform · Not investment advice · For eligible members only"
+  },
+  "overlay": {
+    "translating": "Translating page…",
+    "switchingTo": "Switching to {language}"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "auth": {
+    "backHome": "Back to home",
+    "returnMarketing": "← Return to marketing site",
+    "login": {
+      "badge": "Sign in",
+      "title": "Welcome back",
+      "subtitle": "Sign in to the 759 Private Exchange workspace.",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "signIn": "Sign in",
+      "signingIn": "Signing in…",
+      "noAccount": "No account?",
+      "createOne": "Create one",
+      "bannerReset": "Password updated. Sign in with your new password.",
+      "bannerVerified": "Email verified. Sign in to your workspace.",
+      "errorSignInFailed": "Sign in failed.",
+      "errorGeneric": "Something went wrong. Try again.",
+      "emailPlaceholder": "you@example.com"
+    },
+    "register": {
+      "badge": "Register",
+      "title": "Create your account",
+      "subtitle": "Register to access the workspace. You will verify your email with a one-time code.",
+      "fullName": "Full name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "passwordHint": "At least 8 characters.",
+      "signUpNotePrefix": "Public sign-up creates a",
+      "signUpNoteRole": "user",
+      "signUpNoteSuffix": "account only. Admin accounts are created by your platform super admin.",
+      "continue": "Continue to verification",
+      "sendingCode": "Sending code…",
+      "alreadyRegistered": "Already registered?",
+      "signIn": "Sign in",
+      "errorPasswordMismatch": "Passwords do not match.",
+      "errorPasswordLength": "Use at least 8 characters for your password.",
+      "errorRegistrationFailed": "Registration failed.",
+      "errorGeneric": "Something went wrong. Try again.",
+      "namePlaceholder": "Jane Doe",
+      "emailPlaceholder": "you@example.com"
+    },
+    "forgot": {
+      "badge": "Recovery",
+      "badgeSent": "Forgot password",
+      "title": "Forgot password",
+      "titleSent": "Check your inbox",
+      "subtitle": "Enter the email for your account. We will send a reset code.",
+      "subtitleSent": "If an account exists for that email, we sent a 6-digit code to reset your password.",
+      "backToSignIn": "Back to sign in",
+      "remembered": "Remembered?",
+      "signIn": "Sign in",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "sendCode": "Send reset code",
+      "sending": "Sending…",
+      "sentHint": "Enter the code on the next screen with your new password. If SMTP is not configured, check the server console for the code.",
+      "enterCode": "Enter code & new password",
+      "returnToSignIn": "Return to sign in",
+      "requestFailed": "Request failed.",
+      "errorGeneric": "Something went wrong. Try again."
+    },
+    "reset": {
+      "badge": "Reset password",
+      "title": "Set a new password",
+      "subtitle": "Enter the code from your email and choose a strong new password.",
+      "back": "Back",
+      "needHelp": "Need help?",
+      "contactViaSite": "Contact via site",
+      "formHint": "Use the 6-digit code we sent and choose a new password.",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "resetCode": "Reset code",
+      "codePlaceholder": "6-digit code",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "passwordHint": "At least 8 characters.",
+      "updatePassword": "Update password",
+      "updating": "Updating…",
+      "backToSignIn": "Back to sign in",
+      "passwordMismatch": "Passwords do not match.",
+      "passwordLength": "Use at least 8 characters.",
+      "codeRequired": "Enter the 6-digit code from your email.",
+      "emailRequired": "Email is required.",
+      "resetFailed": "Reset failed.",
+      "errorGeneric": "Something went wrong. Try again."
+    },
+    "verify": {
+      "badge": "Verification",
+      "title": "Verify your email",
+      "subtitle": "We sent a 6-digit code to {email}. Enter it below to activate your account.",
+      "backToRegister": "Back to register",
+      "wrongEmail": "Wrong email?",
+      "startOver": "Start over",
+      "preparing": "Preparing verification…",
+      "oneTimeCode": "One-time code",
+      "digitAria": "Digit {n}",
+      "inboxHint": "Check your inbox (or server logs if email is not configured).",
+      "verifyContinue": "Verify & continue",
+      "verifying": "Verifying…",
+      "resendCode": "Resend code",
+      "resending": "Sending…",
+      "codeIncomplete": "Enter the full 6-digit code.",
+      "verificationFailed": "Verification failed.",
+      "couldNotResend": "Could not resend.",
+      "resendFailed": "Could not resend. Try again.",
+      "errorGeneric": "Something went wrong. Try again."
+    },
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "passwordPlaceholder": "••••••••"
+    },
+  "legal": {
+    "backHome": "Back to home",
+    "signIn": "Sign in",
+    "badge": "Legal",
+    "home": "Home",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "footerNote": "759 Private Exchange · Demo legal copy — replace with counsel-approved text before production.",
+    "privacyTitle": "Privacy Policy",
+    "privacyUpdated": "Last updated: April 7, 2026",
+    "termsTitle": "Terms of Service",
+    "termsUpdated": "Last updated: April 7, 2026"
+  },
+  "images": {
+    "hero": "Analytics dashboard on a monitor in a dim office",
+    "operations": "Secure workspace with laptop and documents",
+    "tokens": "Stacked precious metal coins in soft light",
+    "payments": "Contactless payment at a retail terminal",
+    "modules": "Colleagues reviewing documents at a meeting table",
+    "cta": "Desk with notebook, pen, and coffee in warm light"
+  },
+  "membershipFeatures": {
+    "includedDefault": "Included with this tier",
+    "activeCount": "{count} active",
+    "transfer_fee": {
+      "label": "Waived transfer fees",
+      "description": "No transfer fees on this membership tier."
+    },
+    "vip_drawings": {
+      "label": "VIP drawings",
+      "description": "Access to VIP-only drawings and campaigns."
+    },
+    "executive_events": {
+      "label": "Executive events",
+      "description": "Invitations to executive-level events."
+    },
+    "priority_support": {
+      "label": "Priority support",
+      "description": "Faster, prioritized member support."
+    }
+  }
+}

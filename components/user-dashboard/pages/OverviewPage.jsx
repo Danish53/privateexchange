@@ -8,6 +8,8 @@ import { MEMBERSHIP } from '@/components/user-dashboard/constants';
 import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { useUserWalletHistory } from '@/components/user-dashboard/useUserWalletHistory';
 import { UsdHeroSkeleton, TokenBalanceCardsSkeleton } from '@/components/ui/content-skeletons';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
+import { getLedgerTypeLabel } from '@/lib/i18n/dashboard-helpers';
 
 function overviewHistoryIcon(type) {
   if (type === 'fee') return 'fee';
@@ -16,6 +18,7 @@ function overviewHistoryIcon(type) {
 }
 
 export default function OverviewPage() {
+  const { t, locale } = useWebsiteT();
   const { loading, error, tokens, totalUsdFormatted } = useUserWallet();
   const hist = useUserWalletHistory({ limit: 4, enableTokenFilter: false });
 
@@ -25,13 +28,13 @@ export default function OverviewPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
-              Dashboard
+              {t('dashboard.overview.eyebrow')}
             </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem]">
-              Overview
+              {t('dashboard.overview.title')}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Wallet value in USD (reference rates), token balances, and shortcuts to send funds or open drawings.
+              {t('dashboard.overview.subtitle')}
             </p>
           </div>
           {/* <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
@@ -49,16 +52,16 @@ export default function OverviewPage() {
             />
             <div className="relative flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-brand-muted">Total balance (USD)</p>
+                <p className="text-sm font-medium text-brand-muted">{t('dashboard.common.totalBalanceUsd')}</p>
                 <p className="mt-2 text-3xl font-semibold tabular-nums tracking-[-0.04em] text-brand-heading sm:text-[2.25rem] sm:leading-none">
                   {loading ? <UsdHeroSkeleton className="mt-0" /> : totalUsdFormatted}
                 </p>
                 <p className="mt-2 text-xs text-brand-subtle">
-                  USD Balance
+                  {t('dashboard.common.usdBalance')}
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full border border-white/[0.1] bg-black/30 px-3.5 py-1.5 text-xs font-semibold text-brand-heading shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
-                {MEMBERSHIP.tier} account
+                {t('dashboard.overview.accountSuffix', { tier: MEMBERSHIP.tier })}
               </span>
             </div>
             <div className="relative mt-7 flex flex-col gap-3 sm:flex-row">
@@ -67,20 +70,20 @@ export default function OverviewPage() {
                 className="btn-primary inline-flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-center text-sm font-semibold"
               >
                 <Wallet className="h-4 w-4" strokeWidth={2} aria-hidden />
-                Wallet
+                {t('dashboard.overview.wallet')}
               </Link>
               <Link
                 href="/dashboard/user/transfer"
                 className="btn-secondary inline-flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-center text-sm font-semibold"
               >
                 <ArrowRightLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
-                Send tokens
+                {t('dashboard.overview.sendTokens')}
               </Link>
             </div>
           </div>
         </div>
 
-        <Panel title="Token balances" subtitle="Your current token balances.">
+        <Panel title={t('dashboard.overview.tokenBalances')} subtitle={t('dashboard.overview.tokenBalancesSub')}>
           {error ? (
             <div className="rounded-xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200/95">
               {error}
@@ -95,19 +98,19 @@ export default function OverviewPage() {
         {!hist.loading && hist.totalForUser > 0 ? (
           <div>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold tracking-tight text-brand-heading">Recent activity</h2>
+              <h2 className="text-sm font-semibold tracking-tight text-brand-heading">{t('dashboard.overview.recentActivity')}</h2>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Link
                   href="/dashboard/user/history"
                   className="text-xs font-medium text-brand-accent transition hover:text-brand-accent-hover"
                 >
-                  Full history
+                  {t('dashboard.overview.fullHistory')}
                 </Link>
                 <Link
                   href="/dashboard/user/wallet"
                   className="text-xs font-medium text-brand-muted transition hover:text-brand-accent"
                 >
-                  Wallet
+                  {t('dashboard.overview.wallet')}
                 </Link>
               </div>
             </div>
@@ -133,12 +136,24 @@ export default function OverviewPage() {
                                   : 'bg-sky-500/15 text-sky-300'
                             }`}
                           >
-                            {icon === 'in' ? 'In' : icon === 'fee' ? 'Fee' : 'Out'}
+                            {icon === 'in'
+                              ? t('dashboard.common.in')
+                              : icon === 'fee'
+                                ? t('dashboard.common.fee')
+                                : t('dashboard.common.out')}
                           </span>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-brand-heading">{tx.typeLabel}</p>
+                            <p className="text-sm font-medium text-brand-heading">
+                              {getLedgerTypeLabel(tx.type, t)}
+                            </p>
                             <p className="text-xs text-brand-subtle">
-                              {tx.token} · {tx.dateDisplay}
+                              {tx.token} ·{' '}
+                              {tx.date
+                                ? new Date(tx.date).toLocaleString(locale === 'es' ? 'es' : 'en', {
+                                    dateStyle: 'medium',
+                                    timeStyle: 'short',
+                                  })
+                                : tx.dateDisplay}
                             </p>
                           </div>
                         </div>
@@ -169,9 +184,9 @@ export default function OverviewPage() {
               </span>
               <ArrowRight className="h-5 w-5 shrink-0 text-brand-subtle transition duration-200 group-hover:translate-x-0.5 group-hover:text-brand-accent" />
             </div>
-            <h3 className="mt-4 text-base font-semibold text-brand-heading">Peer-to-peer transfer</h3>
+            <h3 className="mt-4 text-base font-semibold text-brand-heading">{t('dashboard.overview.p2pTitle')}</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-brand-muted">
-              Send to email or username. Network fees may apply.
+              {t('dashboard.overview.p2pSub')}
             </p>
           </Link>
           <Link
@@ -184,9 +199,9 @@ export default function OverviewPage() {
               </span>
               <ArrowRight className="h-5 w-5 shrink-0 text-brand-subtle transition duration-200 group-hover:translate-x-0.5 group-hover:text-brand-accent" />
             </div>
-            <h3 className="mt-4 text-base font-semibold text-brand-heading">Drawings</h3>
+            <h3 className="mt-4 text-base font-semibold text-brand-heading">{t('dashboard.overview.drawingsTitle')}</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-brand-muted">
-              View open pools when they are published on the platform.
+              {t('dashboard.overview.drawingsSub')}
             </p>
           </Link>
         </div>

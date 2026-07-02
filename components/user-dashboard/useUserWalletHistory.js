@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 /**
  * @param {{ limit?: number; enableTokenFilter?: boolean }} [options]
  */
 export function useUserWalletHistory(options = {}) {
+  const { t } = useWebsiteT();
   const { limit = 100, enableTokenFilter = true } = options;
   const { token, ready } = useAuth();
   const [tokenFilter, setTokenFilter] = useState('all');
@@ -36,7 +38,7 @@ export function useUserWalletHistory(options = {}) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error || 'Could not load history.');
+        setError(json.error || t('dashboard.common.couldNotLoadHistory'));
         setEntries([]);
         setTotalForUser(0);
         return;
@@ -44,13 +46,13 @@ export function useUserWalletHistory(options = {}) {
       setEntries(Array.isArray(json.entries) ? json.entries : []);
       setTotalForUser(typeof json.totalForUser === 'number' ? json.totalForUser : 0);
     } catch {
-      setError('Network error.');
+      setError(t('dashboard.common.networkError'));
       setEntries([]);
       setTotalForUser(0);
     } finally {
       setLoading(false);
     }
-  }, [token, effectiveToken, limit]);
+  }, [token, effectiveToken, limit, t]);
 
   useEffect(() => {
     if (!ready) return;

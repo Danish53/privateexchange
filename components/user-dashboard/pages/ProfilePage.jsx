@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import {
   Mail,
   User,
@@ -18,19 +18,24 @@ import Spinner from '@/components/ui/Spinner';
 import Panel from '@/components/user-dashboard/Panel';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { avatarSrc } from '@/lib/avatarUrl';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
-const TIMEZONES = [
-  { value: '', label: 'Select timezone' },
-  { value: 'America/New_York', label: 'Eastern (US)' },
-  { value: 'America/Chicago', label: 'Central (US)' },
-  { value: 'America/Denver', label: 'Mountain (US)' },
-  { value: 'America/Los_Angeles', label: 'Pacific (US)' },
-  { value: 'Europe/London', label: 'London' },
-  { value: 'Asia/Dubai', label: 'Dubai' },
-  { value: 'Asia/Karachi', label: 'Karachi' },
-];
+function getTimezones(t) {
+  return [
+    { value: '', label: t('dashboard.profile.selectTimezone') },
+    { value: 'America/New_York', label: t('dashboard.profile.timezones.eastern') },
+    { value: 'America/Chicago', label: t('dashboard.profile.timezones.central') },
+    { value: 'America/Denver', label: t('dashboard.profile.timezones.mountain') },
+    { value: 'America/Los_Angeles', label: t('dashboard.profile.timezones.pacific') },
+    { value: 'Europe/London', label: t('dashboard.profile.timezones.london') },
+    { value: 'Asia/Dubai', label: t('dashboard.profile.timezones.dubai') },
+    { value: 'Asia/Karachi', label: t('dashboard.profile.timezones.karachi') },
+  ];
+}
 
 export default function ProfilePage() {
+  const { t, locale } = useWebsiteT();
+  const timezones = useMemo(() => getTimezones(t), [t]);
   const { user, updateProfile, token } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
@@ -78,7 +83,7 @@ export default function ProfilePage() {
     setError('');
     setSaved(false);
     if (!token) {
-      setError('You are not signed in.');
+      setError(t('dashboard.profile.notSignedIn'));
       return;
     }
     setSaving(true);
@@ -99,7 +104,7 @@ export default function ProfilePage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = [data.error, data.detail].filter(Boolean).join(' — ');
-        setError(msg || 'Could not save profile.');
+        setError(msg || t('dashboard.profile.couldNotSave'));
         return;
       }
       if (data.user) {
@@ -111,7 +116,7 @@ export default function ProfilePage() {
       setSaved(true);
       window.setTimeout(() => setSaved(false), 3500);
     } catch {
-      setError('Network error. Try again.');
+      setError(t('dashboard.common.networkError'));
     } finally {
       setSaving(false);
     }
@@ -134,7 +139,7 @@ export default function ProfilePage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = [data.error, data.detail].filter(Boolean).join(' — ');
-        setAvatarError(msg || 'Could not upload image.');
+        setAvatarError(msg || t('dashboard.profile.couldNotUpload'));
         return;
       }
       if (data.user) {
@@ -144,7 +149,7 @@ export default function ProfilePage() {
         });
       }
     } catch {
-      setAvatarError('Network error. Try again.');
+      setAvatarError(t('dashboard.common.networkError'));
     } finally {
       setAvatarUploading(false);
     }
@@ -155,15 +160,15 @@ export default function ProfilePage() {
     setPwError('');
     setPwSaved(false);
     if (newPw !== confirmPw) {
-      setPwError('New passwords do not match.');
+      setPwError(t('dashboard.profile.passwordMismatch'));
       return;
     }
     if (newPw.length < 8) {
-      setPwError('Use at least 8 characters for the new password.');
+      setPwError(t('dashboard.profile.passwordMinLength'));
       return;
     }
     if (!token) {
-      setPwError('You are not signed in.');
+      setPwError(t('dashboard.profile.notSignedIn'));
       return;
     }
     setPwLoading(true);
@@ -181,7 +186,7 @@ export default function ProfilePage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setPwError(data.error || 'Could not update password.');
+        setPwError(data.error || t('dashboard.profile.couldNotSave'));
         return;
       }
       setCurrentPw('');
@@ -190,7 +195,7 @@ export default function ProfilePage() {
       setPwSaved(true);
       window.setTimeout(() => setPwSaved(false), 3500);
     } catch {
-      setPwError('Network error. Try again.');
+      setPwError(t('dashboard.common.networkError'));
     } finally {
       setPwLoading(false);
     }
@@ -200,7 +205,7 @@ export default function ProfilePage() {
     user?.createdAt &&
     (() => {
       try {
-        return new Date(user.createdAt).toLocaleDateString('en-US', {
+        return new Date(user.createdAt).toLocaleDateString(locale === 'es' ? 'es' : 'en', {
           month: 'short',
           year: 'numeric',
         });
@@ -215,22 +220,22 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
-              Account
+              {t('dashboard.profile.eyebrow')}
             </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem]">
-              Profile
+              {t('dashboard.profile.title')}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Your identity, contact preferences, and security — synced with your account.
+              {t('dashboard.profile.subtitle')}
             </p>
           </div>
           <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
             {user?.role === 'user'
-              ? 'User'
+              ? t('dashboard.shell.user')
               : user?.role === 'superadmin'
-                ? 'Platform operations'
+                ? t('dashboard.profile.platformOperations')
                 : user?.role === 'admin'
-                  ? 'Admin'
+                  ? t('dashboard.profile.admin')
                   : user?.role}
           </p>
         </div>
@@ -250,7 +255,7 @@ export default function ProfilePage() {
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   className="sr-only"
-                  aria-label="Upload profile photo"
+                aria-label={t('dashboard.profile.uploadPhoto')}
                   onChange={handleAvatarChange}
                   disabled={avatarUploading}
                 />
@@ -289,35 +294,35 @@ export default function ProfilePage() {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-lg font-semibold text-brand-heading sm:text-xl">
-                  {displayName?.trim() || user?.email?.split('@')[0] || 'User'}
+                  {displayName?.trim() || user?.email?.split('@')[0] || t('dashboard.shell.user')}
                 </p>
                 <p className="mt-1 truncate text-sm text-brand-muted">{user?.email}</p>
                 {avatarError ? (
                   <p className="mt-2 text-xs text-red-300/90">{avatarError}</p>
                 ) : null}
                 <p className="mt-2 text-xs text-brand-subtle">
-                  Click photo to upload — JPEG, PNG, WebP, or GIF, max 2MB.
+                  {t('dashboard.profile.avatarUploadHint')}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/[0.1] px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-200/95">
                     <Mail className="h-3 w-3" strokeWidth={2} aria-hidden />
-                    Email verified
+                    {t('dashboard.profile.email')}
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
                     <Shield className="h-3 w-3 text-brand-accent" strokeWidth={2} aria-hidden />
-                    Session active
+                    {t('dashboard.membership.active')}
                   </span>
                 </div>
               </div>
             </div>
             <div className="rounded-xl border border-white/[0.08] bg-black/35 px-4 py-3 text-sm text-brand-muted shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] sm:max-w-xs sm:text-right">
-              <p className="font-medium text-brand-heading">Account since</p>
+              <p className="font-medium text-brand-heading">{t('dashboard.common.date')}</p>
               <p className="mt-1 text-xs">{memberSince || '—'}</p>
             </div>
           </div>
         </section>
 
-        <Panel title="Update profile" subtitle="Name, phone, country, and timezone are saved to your account.">
+        <Panel title={t('dashboard.profile.updateProfile')} subtitle={t('dashboard.profile.updateProfileSub')}>
           <form className="mx-auto max-w-2xl space-y-6" onSubmit={handleSubmit}>
             {error ? (
               <div
@@ -329,7 +334,7 @@ export default function ProfilePage() {
             ) : null}
             <div className="rounded-xl border border-white/[0.06] bg-black/[0.2] px-4 py-4 sm:px-5">
               <label className="auth-label" htmlFor="profile-email">
-                Email
+                  {t('dashboard.profile.email')}
               </label>
               <input
                 id="profile-email"
@@ -339,20 +344,20 @@ export default function ProfilePage() {
                 disabled
                 readOnly
               />
-              <p className="auth-hint mt-2">Sign-in email — contact support to change.</p>
+              <p className="auth-hint mt-2">{t('dashboard.profile.emailChangeHint')}</p>
             </div>
 
             <div className="grid gap-6 sm:grid-cols-2">
               <div>
                 <label className="auth-label" htmlFor="displayName">
-                  Display name
+                  {t('dashboard.profile.displayName')}
                 </label>
                 <div className="relative mt-2">
                   <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-subtle" aria-hidden />
                   <input
                     id="displayName"
                     className="auth-input pl-10"
-                    placeholder="Your name"
+                  placeholder={t('dashboard.profile.displayName')}
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     autoComplete="name"
@@ -361,7 +366,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label className="auth-label" htmlFor="phone">
-                  Phone
+                  {t('dashboard.profile.phone')}
                 </label>
                 <div className="relative mt-2">
                   <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-subtle" aria-hidden />
@@ -381,7 +386,7 @@ export default function ProfilePage() {
             <div className="grid gap-6 sm:grid-cols-2">
               <div>
                 <label className="auth-label" htmlFor="country">
-                  Country / region
+                  {t('dashboard.profile.country')}
                 </label>
                 <div className="relative mt-2">
                   <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-subtle" aria-hidden />
@@ -397,7 +402,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label className="auth-label" htmlFor="timezone">
-                  Timezone
+                  {t('dashboard.profile.timezone')}
                 </label>
                 <div className="relative mt-2">
                   <Clock className="pointer-events-none absolute left-3 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-brand-subtle" aria-hidden />
@@ -407,7 +412,7 @@ export default function ProfilePage() {
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
                   >
-                    {TIMEZONES.map((tz) => (
+                    {timezones.map((tz) => (
                       <option key={tz.value || 'empty'} value={tz.value}>
                         {tz.label}
                       </option>
@@ -425,7 +430,7 @@ export default function ProfilePage() {
             {saved ? (
               <div className="flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-3 text-sm text-emerald-200/95">
                 <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                Profile saved.
+                {t('dashboard.profile.profileSaved')}
               </div>
             ) : null}
 
@@ -437,36 +442,36 @@ export default function ProfilePage() {
                 className="btn-primary w-full justify-center gap-2 rounded-xl px-8 py-3.5 text-sm font-semibold disabled:opacity-60 sm:w-auto"
               >
                 {saving ? <Spinner size="sm" variant="onAccent" /> : null}
-                <span>{saving ? 'Saving…' : 'Save changes'}</span>
+                <span>{saving ? t('dashboard.common.saving') : t('dashboard.profile.saveChanges')}</span>
               </button>
             </div>
           </form>
         </Panel>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Panel title="Verification" subtitle="Identity checks for higher limits when KYC is required.">
+          <Panel title={t('dashboard.profile.verification')} subtitle={t('dashboard.profile.verificationSub')}>
             <ul className="space-y-3">
               <li className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/[0.2] px-4 py-3">
                 <span className="flex items-center gap-2 text-sm text-brand-heading">
                   <Mail className="h-4 w-4 text-brand-accent" strokeWidth={2} aria-hidden />
-                  Email
+                  {t('dashboard.profile.email')}
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-emerald-300/95">
                   <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  Verified
+                  {t('dashboard.common.approved')}
                 </span>
               </li>
               <li className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-white/[0.1] bg-black/[0.12] px-4 py-3">
                 <span className="flex items-center gap-2 text-sm text-brand-muted">
                   <Shield className="h-4 w-4 text-brand-subtle" strokeWidth={2} aria-hidden />
-                  ID document
+                  {t('dashboard.profile.idDocument')}
                 </span>
-                <span className="text-xs font-medium text-brand-subtle">When KYC goes live</span>
+                <span className="text-xs font-medium text-brand-subtle">{t('dashboard.profile.kycLiveLabel')}</span>
               </li>
             </ul>
           </Panel>
 
-          <Panel title="Security" subtitle="Change your password with your current password.">
+          <Panel title={t('dashboard.profile.security')} subtitle={t('dashboard.profile.securitySub')}>
             <form
               className="flex flex-col gap-4 rounded-xl border border-white/[0.06] bg-black/[0.2] px-4 py-5"
               onSubmit={handlePasswordSubmit}
@@ -476,9 +481,9 @@ export default function ProfilePage() {
                   <Lock className="h-5 w-5" strokeWidth={1.75} aria-hidden />
                 </span>
                 <div>
-                  <p className="font-medium text-brand-heading">Password</p>
+                  <p className="font-medium text-brand-heading">{t('dashboard.profile.updatePassword')}</p>
                   <p className="mt-1 text-sm text-brand-muted">
-                    Enter your current password, then choose a new one (at least 8 characters).
+                    {t('dashboard.profile.passwordChangeHint')}
                   </p>
                 </div>
               </div>
@@ -492,25 +497,25 @@ export default function ProfilePage() {
               ) : null}
               {pwSaved ? (
                 <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-2 text-sm text-emerald-200/95">
-                  Password updated.
+                  {t('dashboard.profile.passwordUpdated')}
                 </div>
               ) : null}
               <PasswordField
-                label="Current password"
+                label={t('dashboard.profile.currentPassword')}
                 value={currentPw}
                 onChange={setCurrentPw}
                 autoComplete="current-password"
                 id="profile-current-pw"
               />
               <PasswordField
-                label="New password"
+                label={t('dashboard.profile.newPassword')}
                 value={newPw}
                 onChange={setNewPw}
                 autoComplete="new-password"
                 id="profile-new-pw"
               />
               <PasswordField
-                label="Confirm new password"
+                label={t('dashboard.profile.confirmPassword')}
                 value={confirmPw}
                 onChange={setConfirmPw}
                 autoComplete="new-password"
@@ -523,7 +528,7 @@ export default function ProfilePage() {
                 className="btn-secondary w-full justify-center gap-2 rounded-xl border-brand-border py-3 text-sm font-semibold disabled:opacity-60"
               >
                 {pwLoading ? <Spinner size="sm" variant="accent" /> : null}
-                <span>{pwLoading ? 'Updating…' : 'Update password'}</span>
+                <span>{pwLoading ? t('dashboard.common.saving') : t('dashboard.profile.updatePassword')}</span>
               </button>
             </form>
           </Panel>

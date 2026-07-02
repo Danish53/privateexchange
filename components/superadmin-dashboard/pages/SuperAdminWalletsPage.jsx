@@ -21,16 +21,17 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { AdminDataTableSkeleton } from '@/components/ui/content-skeletons';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { cn } from '@/lib/utils';
 import { mergeAdminPermissions } from '@/lib/adminPermissions';
 import { avatarSrc } from '@/lib/avatarUrl';
 
-function formatDate(iso) {
+function formatDate(iso, locale) {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale === 'es' ? 'es' : 'en', {
       dateStyle: 'medium',
     }).format(new Date(iso));
   } catch {
@@ -44,6 +45,7 @@ function shortId(id) {
 }
 
 export default function SuperAdminWalletsPage() {
+  const { t, locale } = useWebsiteT();
   const router = useRouter();
   const { token, ready, user } = useAuth();
   const canAdjustWallets =
@@ -90,7 +92,7 @@ export default function SuperAdminWalletsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error || 'Could not load wallets.');
+        setError(json.error || t('superadmin.wallets.couldNotLoad'));
         setRows([]);
         return;
       }
@@ -98,12 +100,12 @@ export default function SuperAdminWalletsPage() {
       setTotal(json.total ?? 0);
       setTotalPages(Math.max(1, json.totalPages ?? 1));
     } catch {
-      setError('Network error.');
+      setError(t('superadmin.common.networkError'));
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [token, pagination.pageIndex, pagination.pageSize, search, sortBy, sortOrder]);
+  }, [token, pagination.pageIndex, pagination.pageSize, search, sortBy, sortOrder, t]);
 
   useEffect(() => {
     if (!ready) return;
@@ -115,7 +117,7 @@ export default function SuperAdminWalletsPage() {
       {
         id: 'memberEmail',
         accessorKey: 'memberEmail',
-        header: 'User',
+        header: t('superadmin.users.colUser'),
         cell: ({ row }) => {
           const w = row.original;
           const initials = emailInitials(w.memberEmail);
@@ -142,7 +144,7 @@ export default function SuperAdminWalletsPage() {
       {
         id: 'walletId',
         accessorKey: 'walletId',
-        header: 'Wallet ID',
+        header: t('superadmin.wallets.colWalletId'),
         cell: ({ row }) => (
           <code className="rounded-md border border-white/[0.08] bg-black/40 px-2 py-1 text-[0.7rem] text-brand-subtle">
             {shortId(row.original.walletId)}
@@ -153,24 +155,24 @@ export default function SuperAdminWalletsPage() {
       {
         id: 'emailVerified',
         accessorKey: 'emailVerified',
-        header: 'KYC',
+        header: t('superadmin.wallets.colKyc'),
         cell: ({ row }) =>
           row.original.emailVerified ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300/95">
               <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-              Verified
+              {t('superadmin.wallets.kycVerified')}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-200/80">
               <ShieldAlert className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-              Pending
+              {t('superadmin.common.pending')}
             </span>
           ),
       },
       {
         id: 'balanceDisplay',
         accessorKey: 'balanceDisplay',
-        header: 'Total (USD eq.)',
+        header: t('superadmin.wallets.colTotalUsd'),
         cell: ({ row }) => (
           <span className="font-medium tabular-nums text-brand-heading">{row.original.balanceDisplay}</span>
         ),
@@ -180,7 +182,7 @@ export default function SuperAdminWalletsPage() {
     if (canAdjustWallets) {
       base.push({
         id: 'actions',
-        header: 'Adjust',
+        header: t('superadmin.wallets.colAdjust'),
         cell: ({ row }) => (
           <button
             type="button"
@@ -190,7 +192,7 @@ export default function SuperAdminWalletsPage() {
             className="inline-flex items-center gap-1.5 rounded-lg border border-brand-accent/35 bg-[var(--brand-accent-soft)]/25 px-3 py-2 text-xs font-semibold text-brand-accent transition hover:bg-[var(--brand-accent-soft)]/40"
           >
             <Wallet className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-            Manage
+            {t('superadmin.wallets.manage')}
           </button>
         ),
         enableSorting: false,
@@ -199,7 +201,7 @@ export default function SuperAdminWalletsPage() {
     base.push({
         id: 'country',
         accessorKey: 'country',
-        header: 'Region',
+        header: t('superadmin.wallets.colRegion'),
         cell: ({ row }) => (
           <span className="text-sm text-brand-muted">{row.original.country || '—'}</span>
         ),
@@ -208,16 +210,16 @@ export default function SuperAdminWalletsPage() {
       {
         id: 'createdAt',
         accessorKey: 'openedAt',
-        header: 'Opened',
+        header: t('superadmin.wallets.colOpened'),
         cell: ({ row }) => (
           <span className="whitespace-nowrap text-sm tabular-nums text-brand-muted">
-            {formatDate(row.original.openedAt)}
+            {formatDate(row.original.openedAt, locale)}
           </span>
         ),
       }
     );
     return base;
-  }, [router, canAdjustWallets]);
+  }, [router, canAdjustWallets, t, locale]);
 
   const table = useReactTable({
     data: rows,
@@ -255,7 +257,9 @@ export default function SuperAdminWalletsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 border-b border-white/[0.06] pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Wallets</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
+            {t('superadmin.wallets.title')}
+          </h1>
           {/* <p className="mt-1 max-w-2xl text-sm text-brand-muted">
             Wallet
           </p> */}
@@ -268,7 +272,7 @@ export default function SuperAdminWalletsPage() {
           />
           <input
             type="search"
-            placeholder="Search user email or name…"
+            placeholder={t('superadmin.wallets.searchPlaceholder')}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full rounded-xl border border-brand-border-muted bg-black/30 py-2.5 pl-10 pr-4 text-sm text-brand-heading placeholder:text-brand-subtle/80 focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/25"
@@ -298,22 +302,21 @@ export default function SuperAdminWalletsPage() {
         <div className="rounded-2xl border border-white/[0.08] bg-black/[0.28] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
           <div className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
             <Wallet className="h-3.5 w-3.5 text-brand-accent" strokeWidth={2} aria-hidden />
-            Scope
+            {t('superadmin.wallets.scope')}
           </div>
-          <p className="mt-2 text-sm text-brand-muted">User wallets only · one row per user</p>
+          <p className="mt-2 text-sm text-brand-muted">{t('superadmin.wallets.scopeHint')}</p>
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-black/[0.28] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-          <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">Balances</div>
-          <p className="mt-2 text-sm text-brand-muted">
-            Per-token amounts come from the database; credits and debits write ledger lines the user can see in
-            wallet history.
-          </p>
+          <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
+            {t('superadmin.wallets.balances')}
+          </div>
+          <p className="mt-2 text-sm text-brand-muted">{t('superadmin.wallets.balancesHint')}</p>
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-black/[0.28] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-          <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">Archived users</div>
-          <p className="mt-2 text-sm text-brand-muted">
-            Soft-deleted users are hidden here until restored under Users → Archived.
-          </p>
+          <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
+            {t('superadmin.wallets.archivedUsers')}
+          </div>
+          <p className="mt-2 text-sm text-brand-muted">{t('superadmin.wallets.archivedUsersHint')}</p>
         </div>
       </div>
 
@@ -372,7 +375,7 @@ export default function SuperAdminWalletsPage() {
                         colSpan={columns.length}
                         className="px-5 py-16 text-center text-sm text-brand-muted"
                       >
-                        No user wallets found.
+                        {t('superadmin.wallets.noWallets')}
                       </td>
                     </tr>
                   ) : (
@@ -404,19 +407,21 @@ export default function SuperAdminWalletsPage() {
 
             <div className="relative flex flex-col gap-4 border-t border-white/[0.06] bg-black/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-brand-muted">
-                <span className="font-medium text-brand-subtle">{total.toLocaleString()}</span> user wallets
+                <span className="font-medium text-brand-subtle">
+                  {t('superadmin.wallets.userWalletsCount', {
+                    count: total.toLocaleString(locale === 'es' ? 'es' : 'en'),
+                  })}
+                </span>
                 {total > 0 ? (
                   <>
                     {' '}
-                    · Showing{' '}
-                    <span className="font-medium text-brand-subtle tabular-nums">
-                      {pagination.pageIndex * pagination.pageSize + 1}
-                      –
-                      {Math.min((pagination.pageIndex + 1) * pagination.pageSize, total)}
-                    </span>
+                    · {t('superadmin.wallets.showingRange', {
+                      start: pagination.pageIndex * pagination.pageSize + 1,
+                      end: Math.min((pagination.pageIndex + 1) * pagination.pageSize, total),
+                    })}
                   </>
                 ) : (
-                  <span className="text-brand-subtle/80"> · No rows</span>
+                  <span className="text-brand-subtle/80"> {t('superadmin.wallets.noRows')}</span>
                 )}
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -426,7 +431,7 @@ export default function SuperAdminWalletsPage() {
                     className="rounded-md p-2 text-brand-muted transition hover:bg-[var(--brand-surface-hover)] hover:text-brand-heading disabled:opacity-30"
                     disabled={pagination.pageIndex <= 0}
                     onClick={() => setPagination((p) => ({ ...p, pageIndex: 0 }))}
-                    aria-label="First page"
+                    aria-label={t('superadmin.common.firstPage')}
                   >
                     <ChevronsLeft className="h-4 w-4" strokeWidth={2} />
                   </button>
@@ -437,12 +442,15 @@ export default function SuperAdminWalletsPage() {
                     onClick={() =>
                       setPagination((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))
                     }
-                    aria-label="Previous page"
+                    aria-label={t('superadmin.common.previousPage')}
                   >
                     <ChevronLeft className="h-4 w-4" strokeWidth={2} />
                   </button>
                   <span className="min-w-[7rem] px-2 text-center text-xs font-medium tabular-nums text-brand-heading">
-                    Page {pagination.pageIndex + 1} of {totalPages}
+                    {t('superadmin.common.pageOf', {
+                      current: pagination.pageIndex + 1,
+                      total: totalPages,
+                    })}
                   </span>
                   <button
                     type="button"
@@ -454,7 +462,7 @@ export default function SuperAdminWalletsPage() {
                         pageIndex: Math.min(totalPages - 1, p.pageIndex + 1),
                       }))
                     }
-                    aria-label="Next page"
+                    aria-label={t('superadmin.common.nextPage')}
                   >
                     <ChevronRight className="h-4 w-4" strokeWidth={2} />
                   </button>
@@ -465,13 +473,13 @@ export default function SuperAdminWalletsPage() {
                     onClick={() =>
                       setPagination((p) => ({ ...p, pageIndex: totalPages - 1 }))
                     }
-                    aria-label="Last page"
+                    aria-label={t('superadmin.common.lastPage')}
                   >
                     <ChevronsRight className="h-4 w-4" strokeWidth={2} />
                   </button>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-brand-muted">
-                  <span className="hidden sm:inline">Rows</span>
+                  <span className="hidden sm:inline">{t('superadmin.common.rowsPerPage')}</span>
                   <select
                     value={pagination.pageSize}
                     onChange={(e) => {

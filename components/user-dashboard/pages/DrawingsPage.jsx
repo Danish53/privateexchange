@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import Panel from '@/components/user-dashboard/Panel';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
+import { getDrawingPrizeLine } from '@/lib/i18n/dashboard-helpers';
 
 const formatToTwoDecimals = (value) => {
   const num = Number(value);
@@ -34,30 +36,8 @@ function winnerInitials(name) {
   return n.slice(0, 2).toUpperCase() || 'M';
 }
 
-function prizeLine(row) {
-  const type = String(row.reward_type || '').toLowerCase();
-  if (type === 'token' && row.reward_token_symbol) {
-    return `${row.reward_token_amount || '0'} ${row.reward_token_symbol}`.trim();
-  }
-  if (row.prize_title) return row.prize_title;
-  if (type === 'event_access') return 'Event access';
-  if (type === 'physical') return 'Physical prize';
-  return 'Prize';
-}
-
-function activeRewardSummary(draw) {
-  const type = String(draw.reward_type || '').toLowerCase();
-  if (type === 'token' && draw.reward_token?.symbol) {
-    return `${draw.reward_token_amount || '0'} ${draw.reward_token.symbol}`.trim();
-  }
-  if (draw.prize_title) return draw.prize_title;
-  if (type === 'event_access') return 'Event access';
-  if (type === 'physical') return 'Physical prize';
-  if (type === 'custom') return draw.prize_title || 'Custom reward';
-  return '—';
-}
-
 export default function DrawingsPage() {
+  const { t, locale, translateRowFields } = useWebsiteT();
   const { token, ready, user } = useAuth();
   const [rows, setRows] = useState([]);
   const [winnerRows, setWinnerRows] = useState([]);
@@ -84,19 +64,20 @@ export default function DrawingsPage() {
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || !json.ok) {
-          setError(json.error || 'Could not load drawings.');
+          setError(json.error || t('dashboard.drawings.errors.couldNotLoad'));
           return;
         }
         setTierDrawingsEnabled(json.tier_drawings_enabled !== false);
-        setRows(Array.isArray(json.drawings) ? json.drawings : []);
+        const nextRows = Array.isArray(json.drawings) ? json.drawings : [];
+        setRows(await translateRowFields(nextRows, ['title', 'prize_title']));
       } catch {
-        setError('Network error while loading drawings.');
+        setError(t('dashboard.drawings.errors.networkLoad'));
       } finally {
         setLoading(false);
       }
     };
     void load();
-  }, [ready, token]);
+  }, [ready, token, translateRowFields, t, locale]);
 
   useEffect(() => {
     const loadWinners = async () => {
@@ -105,7 +86,8 @@ export default function DrawingsPage() {
         const res = await fetch('/api/drawings/winners', { cache: 'no-store' });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || !json.ok) return;
-        setWinnerRows(Array.isArray(json.winners) ? json.winners : []);
+        const winners = Array.isArray(json.winners) ? json.winners : [];
+        setWinnerRows(await translateRowFields(winners, ['title', 'prize_title']));
       } catch {
         // Keep section graceful on network errors.
       } finally {
@@ -113,7 +95,7 @@ export default function DrawingsPage() {
       }
     };
     void loadWinners();
-  }, []);
+  }, [translateRowFields, locale]);
 
   const imageSrc = (value) => {
     const raw = String(value || '').trim();
@@ -136,12 +118,12 @@ export default function DrawingsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setJoinError(json.error || 'Could not load join info.');
+        setJoinError(json.error || t('dashboard.drawings.errors.couldNotLoadJoinInfo'));
         return;
       }
       setJoinPreview({ ...(json.preview || null), slug });
     } catch {
-      setJoinError('Network error while loading join info.');
+      setJoinError(t('dashboard.drawings.errors.networkJoinInfo'));
     } finally {
       setJoinPreviewLoading(false);
     }
@@ -158,7 +140,7 @@ export default function DrawingsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setJoinError(json.error || 'Failed to join drawing.');
+        setJoinError(json.error || t('dashboard.drawings.errors.joinFailed'));
         return;
       }
 
@@ -175,9 +157,9 @@ export default function DrawingsPage() {
       setShowJoinModal(false);
       setJoinPreview(null);
       setJoinPreviewLoading(false);
-      setJoinSuccess(json.message || 'Drawing joined successfully.');
+      setJoinSuccess(json.message || t('dashboard.drawings.joinSuccess'));
     } catch {
-      setJoinError('Network error while joining drawing.');
+      setJoinError(t('dashboard.drawings.errors.networkJoin'));
     } finally {
       setIsJoining(false);
     }
@@ -188,11 +170,15 @@ export default function DrawingsPage() {
       <header className="mb-8 sm:mb-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">Rewards</p>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
+              {t('dashboard.drawings.eyebrow')}
+            </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem]">
-              Drawings
+              {t('dashboard.drawings.title')}
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">Live drawings published by superadmin are listed here.</p>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
+              {t('dashboard.drawings.subtitle')}
+            </p>
           </div>
         </div>
       </header>
@@ -212,13 +198,13 @@ export default function DrawingsPage() {
               onClick={() => setJoinError('')}
               className="shrink-0 rounded-lg border border-white/10 px-2 py-0.5 text-xs font-semibold text-brand-muted transition hover:border-white/20 hover:text-brand-heading"
             >
-              Dismiss
+              {t('dashboard.common.dismiss')}
             </button>
           </div>
         ) : null}
 
         {loading ? (
-          <Panel title="Active drawings" subtitle="Loading your pools…">
+          <Panel title={t('dashboard.drawings.activeDrawings')} subtitle={t('dashboard.drawings.activeDrawingsLoading')}>
             <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               {[0, 1, 2, 3].map((i) => (
                 <div
@@ -237,13 +223,13 @@ export default function DrawingsPage() {
             </div>
           </Panel>
         ) : error ? (
-          <Panel title="Active drawings" subtitle="Could not load drawings">
+          <Panel title={t('dashboard.drawings.activeDrawings')} subtitle={t('dashboard.drawings.activeDrawingsError')}>
             <p className="text-sm leading-relaxed text-red-200/90">{error}</p>
           </Panel>
         ) : rows.length > 0 ? (
           <Panel
-            title="Active drawings"
-            subtitle="Open pools you can join, plus drawings you participated in that have finished."
+            title={t('dashboard.drawings.activeDrawings')}
+            subtitle={t('dashboard.drawings.activeDrawingsSub')}
           >
             <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               {rows.map((draw) => {
@@ -254,13 +240,13 @@ export default function DrawingsPage() {
                 const isWinner = draw.status === 'completed' && draw.is_winner;
                 const cover = String(draw.drawing_image || draw.prize_image || '').trim();
                 const drawWhen = draw.draw_date
-                  ? new Date(draw.draw_date).toLocaleString(undefined, {
+                  ? new Date(draw.draw_date).toLocaleString(locale === 'es' ? 'es' : 'en', {
                       dateStyle: 'medium',
                       timeStyle: 'short',
                     })
-                  : 'TBD';
+                  : '—';
                 const entrySym = draw.entry_token?.symbol || draw.entry_token?.name || '—';
-                const rewardText = activeRewardSummary(draw);
+                const rewardText = getDrawingPrizeLine(draw, t);
                 const fillPct = total > 0 ? Math.min(100, Math.round((joined / total) * 100)) : null;
 
                 return (
@@ -278,16 +264,16 @@ export default function DrawingsPage() {
                       {isActive ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-accent/35 bg-brand-accent/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--brand-accent-hover)]">
                           <Sparkles className="h-3.5 w-3.5 shrink-0 text-brand-accent" aria-hidden />
-                          Live pool
+                          {t('dashboard.drawings.activeDrawings')}
                         </span>
                       ) : isWinner ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-200">
                           <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                          You won
+                          {t('dashboard.drawings.you')} {t('dashboard.drawings.won')}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                          Ended
+                          {t('dashboard.drawings.joinClosed')}
                         </span>
                       )}
                     </div>
@@ -298,7 +284,7 @@ export default function DrawingsPage() {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={imageSrc(cover)}
-                            alt={draw.title || 'Drawing'}
+                            alt={draw.title || t('dashboard.drawings.drawingAlt')}
                             className="h-32 w-full object-cover sm:h-36"
                           />
                         </>
@@ -314,7 +300,7 @@ export default function DrawingsPage() {
                     <div className="mt-3 min-w-0">
                       <h3 className="truncate text-base font-semibold text-brand-heading sm:text-lg">{draw.title}</h3>
                       <p className="mt-1 text-sm text-brand-muted">
-                        <span className="text-brand-subtle">Prize</span>{' '}
+                        <span className="text-brand-subtle">{t('dashboard.drawings.prize')}</span>{' '}
                         <span className="font-medium text-brand-heading">{draw.prize_title || '—'}</span>
                       </p>
                       {draw.description ? (
@@ -324,7 +310,7 @@ export default function DrawingsPage() {
 
                     {isWinner ? (
                       <div className="mt-3 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-2 text-xs leading-relaxed text-emerald-100">
-                        You were selected for this drawing. Open details for full information.
+                        {t('dashboard.drawings.winnerBanner')}
                       </div>
                     ) : null}
 
@@ -333,7 +319,7 @@ export default function DrawingsPage() {
                         <div className="mb-1 flex items-center justify-between gap-2 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
                           <span className="inline-flex min-w-0 items-center gap-1">
                             <Users className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-brand-accent' : ''}`} aria-hidden />
-                            <span className="truncate">Pool fill</span>
+                            <span className="truncate">{t('dashboard.drawings.poolFill')}</span>
                           </span>
                           <span className="shrink-0 tabular-nums text-brand-muted">
                             {joined.toLocaleString()} / {total.toLocaleString()}
@@ -354,8 +340,7 @@ export default function DrawingsPage() {
                       </div>
                     ) : (
                       <p className="mt-3 text-xs text-brand-muted">
-                        <span className="font-semibold text-brand-heading">{joined.toLocaleString()}</span> joined · no
-                        cap
+                        {t('dashboard.drawings.joinedNoCap', { count: joined.toLocaleString(locale === 'es' ? 'es' : 'en') })}
                       </p>
                     )}
 
@@ -367,7 +352,7 @@ export default function DrawingsPage() {
                         />
                         <div className="min-w-0 flex-1">
                           <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                            Draw date
+                            {t('dashboard.common.date')}
                           </dt>
                           <dd className="mt-0.5 break-words font-medium text-brand-heading">{drawWhen}</dd>
                         </div>
@@ -376,7 +361,7 @@ export default function DrawingsPage() {
                         <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" aria-hidden />
                         <div className="min-w-0 flex-1">
                           <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                            Entry
+                            {t('dashboard.membership.entry')}
                           </dt>
                           <dd className="mt-0.5 break-words font-medium text-brand-heading">
                             {[String(draw.entry_cost ?? ''), entrySym !== '—' ? entrySym : '']
@@ -389,7 +374,7 @@ export default function DrawingsPage() {
                         <Award className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent/90" aria-hidden />
                         <div className="min-w-0 flex-1">
                           <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                            Reward
+                            {t('dashboard.drawings.prize')}
                           </dt>
                           <dd className="mt-0.5 break-words font-medium text-brand-heading">{rewardText}</dd>
                         </div>
@@ -401,7 +386,7 @@ export default function DrawingsPage() {
                         href={`/dashboard/user/drawings/${encodeURIComponent(draw.slug)}`}
                         className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-brand-border-muted bg-black/30 py-2.5 text-sm font-semibold text-brand-heading transition hover:border-brand-accent/40 hover:bg-brand-accent/10 sm:flex-initial sm:px-4"
                       >
-                        View details
+                        {t('dashboard.drawings.viewDrawing')}
                         <ChevronRight className="h-4 w-4 opacity-70" aria-hidden />
                       </Link>
                       {isActive ? (
@@ -410,7 +395,7 @@ export default function DrawingsPage() {
                           disabled={isFull}
                           onClick={() => {
                             if (isFull) {
-                              setJoinError('Drawing capacity is full. Join is closed.');
+                              setJoinError(t('dashboard.drawings.capacityFull'));
                               setJoinSuccess('');
                               return;
                             }
@@ -420,7 +405,7 @@ export default function DrawingsPage() {
                             isFull ? 'pointer-events-none opacity-50' : ''
                           }`}
                         >
-                          {isFull ? 'Join closed' : 'Join'}
+                          {isFull ? t('dashboard.drawings.joinClosed') : t('dashboard.drawings.join')}
                         </button>
                       ) : null}
                     </div>
@@ -431,23 +416,24 @@ export default function DrawingsPage() {
           </Panel>
         ) : (
           <Panel
-            title="Active drawings"
-            subtitle="No pools are open at the moment."
+            title={t('dashboard.drawings.activeDrawings')}
+            subtitle={t('dashboard.drawings.activeDrawingsEmpty')}
           >
             <div className="flex flex-col items-center rounded-2xl border border-white/[0.08] bg-black/20 px-6 py-10 text-center">
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.1] bg-white/[0.04] text-brand-muted">
                 <Sparkles className="h-7 w-7" strokeWidth={1.5} aria-hidden />
               </span>
               <p className="mt-4 max-w-md text-sm leading-relaxed text-brand-muted">
-                Drawings set to <span className="font-semibold text-brand-heading">All users</span> appear here for
-                every member, even without VIP. VIP-only pools require VIP status and VIP drawings on your plan.
+                {t('dashboard.drawings.activeDrawingsEmptySub', {
+                  allUsers: t('dashboard.announcements.allUsers'),
+                })}
                 {!tierDrawingsEnabled ? (
                   <>
                     {' '}
                     <Link href="/dashboard/user/membership" className="font-semibold text-brand-accent hover:underline">
-                      View membership
+                      {t('dashboard.support.viewMembership')}
                     </Link>{' '}
-                    for exclusive pools.
+                    {t('dashboard.drawings.exclusivePoolsHint')}
                   </>
                 ) : null}
               </p>
@@ -455,7 +441,7 @@ export default function DrawingsPage() {
           </Panel>
         )}
 
-        <Panel title="Recent winners" subtitle="Latest completed drawings and who won each pool.">
+        <Panel title={t('dashboard.drawings.recentWinners')} subtitle={t('dashboard.drawings.recentWinnersSub')}>
           {winnersLoading ? (
             <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               {[0, 1, 2, 3].map((i) => (
@@ -477,20 +463,20 @@ export default function DrawingsPage() {
             </div>
           ) : winnerRows.length === 0 ? (
             <div className="rounded-2xl border border-white/[0.08] bg-black/25 p-6 text-center text-sm text-brand-muted">
-              No winners announced yet. Completed drawings with a selected winner will appear here.
+              {t('dashboard.drawings.noWinnersYet')}
             </div>
           ) : (
             <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               {winnerRows.map((row) => {
                 const isYou = user?.id && row.winner?.id && String(user.id) === String(row.winner.id);
-                const name = row.winner?.name || 'Member';
+                const name = row.winner?.name || t('dashboard.drawings.member');
                 const drawLabel = row.draw_date
-                  ? new Date(row.draw_date).toLocaleString(undefined, {
+                  ? new Date(row.draw_date).toLocaleString(locale === 'es' ? 'es' : 'en', {
                       dateStyle: 'medium',
                       timeStyle: 'short',
                     })
                   : '—';
-                const prize = prizeLine(row);
+                const prize = getDrawingPrizeLine(row, t);
                 const detailHref = row.slug ? `/dashboard/user/drawings/${encodeURIComponent(row.slug)}` : '';
 
                 return (
@@ -503,11 +489,11 @@ export default function DrawingsPage() {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--brand-accent-hover)]">
                         <Trophy className="h-3.5 w-3.5 shrink-0 text-brand-accent" aria-hidden />
-                        Win
+                        {t('dashboard.drawings.win')}
                       </span>
                       {isYou ? (
                         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-200">
-                          You
+                          {t('dashboard.drawings.you')}
                         </span>
                       ) : null}
                     </div>
@@ -522,8 +508,10 @@ export default function DrawingsPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-brand-heading">{name}</p>
                         <p className="mt-0.5 text-xs leading-relaxed text-brand-muted">
-                          <span className="text-brand-subtle">Won</span>{' '}
-                          <span className="font-medium text-brand-heading">&ldquo;{row.title || 'Untitled'}&rdquo;</span>
+                          <span className="text-brand-subtle">{t('dashboard.drawings.won')}</span>{' '}
+                          <span className="font-medium text-brand-heading">
+                            &ldquo;{row.title || t('dashboard.drawings.untitled')}&rdquo;
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -532,7 +520,9 @@ export default function DrawingsPage() {
                       <div className="flex gap-2">
                         <Award className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" aria-hidden />
                         <div className="min-w-0">
-                          <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">Prize</dt>
+                          <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                            {t('dashboard.drawings.prize')}
+                          </dt>
                           <dd className="mt-0.5 break-words font-medium text-brand-heading">{prize}</dd>
                         </div>
                       </div>
@@ -540,7 +530,7 @@ export default function DrawingsPage() {
                         <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-brand-subtle" aria-hidden />
                         <div className="min-w-0">
                           <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                            Draw completed
+                            {t('dashboard.drawings.drawCompleted')}
                           </dt>
                           <dd className="mt-0.5 break-words text-brand-muted">{drawLabel}</dd>
                         </div>
@@ -554,7 +544,7 @@ export default function DrawingsPage() {
                         className="mt-3 inline-flex w-full min-w-0 items-center justify-center gap-1 rounded-lg border border-brand-border-muted bg-black/30 py-2.5 text-sm font-semibold text-brand-heading transition hover:border-brand-accent/40 hover:bg-brand-accent/10"
                       >
                         <Sparkles className="h-4 w-4 shrink-0 text-brand-accent" aria-hidden />
-                        <span className="truncate">View drawing</span>
+                        <span className="truncate">{t('dashboard.drawings.viewDrawing')}</span>
                         <ChevronRight className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
                       </Link>
                     ) : null}
@@ -569,12 +559,12 @@ export default function DrawingsPage() {
       {showJoinModal ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#07080c] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:p-6">
-            <h3 className="text-lg font-semibold text-brand-heading">Confirm drawing join</h3>
+            <h3 className="text-lg font-semibold text-brand-heading">{t('dashboard.drawings.confirmJoin')}</h3>
             <p className="mt-1 text-sm text-brand-muted">
-              Joining this drawing will deduct entry cost from your wallet.
+              {t('dashboard.drawings.joinModalHint')}
             </p>
             <p className="mt-1 text-xs text-brand-subtle">
-              This deduction will be added to your transaction history.
+              {t('dashboard.drawings.deductionHistoryNote')}
             </p>
             {joinPreviewLoading ? (
               <div className="mt-4 grid gap-3 rounded-xl border border-white/[0.08] bg-black/25 p-4 animate-pulse">
@@ -588,26 +578,29 @@ export default function DrawingsPage() {
             ) : (
               <div className="mt-4 grid gap-2 rounded-xl border border-white/[0.08] bg-black/25 p-4 text-sm">
                 <p className="text-brand-muted">
-                  Entry token: <span className="text-brand-heading">{joinPreview?.entryToken?.symbol || '—'}</span>
+                  {t('dashboard.drawings.entryToken')}:{' '}
+                  <span className="text-brand-heading">{joinPreview?.entryToken?.symbol || '—'}</span>
                 </p>
                 <p className="text-brand-muted">
-                  Entry cost: <span className="text-brand-heading">{joinPreview?.entryCost ?? '—'}</span>
+                  {t('dashboard.drawings.entryCost')}:{' '}
+                  <span className="text-brand-heading">{joinPreview?.entryCost ?? '—'}</span>
                 </p>
                 <p className="text-brand-muted">
-                  Your balance: <span className="text-brand-heading">{formatToTwoDecimals(joinPreview?.walletBalance)}</span>
+                  {t('dashboard.transfer.availableBalance', { token: t('dashboard.common.token'), amount: formatToTwoDecimals(joinPreview?.walletBalance) })}:{' '}
+                  <span className="text-brand-heading">{formatToTwoDecimals(joinPreview?.walletBalance)}</span>
                 </p>
                 <p className="text-brand-muted">
-                  Balance after join:{' '}
+                  {t('dashboard.transfer.estimatedTotal')}:{' '}
                   <span className="text-brand-heading">{joinPreview?.walletBalanceAfterJoin ?? '—'}</span>
                 </p>
                 <p className="text-brand-muted">
-                  Deduction:{' '}
+                  {t('dashboard.common.out')}:{' '}
                   <span className="text-rose-300">
                     -{joinPreview?.entryCost ?? '—'} {joinPreview?.entryToken?.symbol || ''}
                   </span>
                 </p>
                 <p className="text-brand-muted">
-                  Reward:{' '}
+                  {t('dashboard.drawings.prize')}:{' '}
                   <span className="text-brand-heading">
                     {joinPreview?.reward?.type === 'token'
                       ? `${joinPreview?.reward?.tokenAmount || '0'} ${joinPreview?.reward?.token?.symbol || ''}`.trim()
@@ -628,7 +621,7 @@ export default function DrawingsPage() {
                 }}
                 className="rounded-xl border border-white/[0.1] px-4 py-2 text-sm font-semibold text-brand-muted"
               >
-                Cancel
+                {t('dashboard.common.cancel')}
               </button>
               <button
                 type="button"
@@ -636,7 +629,7 @@ export default function DrawingsPage() {
                 onClick={onConfirmJoin}
                 className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
               >
-                {isJoining ? 'Joining...' : 'Confirm join'}
+                {isJoining ? t('dashboard.drawings.joining') : t('dashboard.drawings.confirmJoin')}
               </button>
             </div>
           </div>

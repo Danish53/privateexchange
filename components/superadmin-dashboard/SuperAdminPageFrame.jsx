@@ -1,9 +1,12 @@
 'use client';
 
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
+
 /**
  * @param {{ title: string; description?: string; children?: import('react').ReactNode }} props
  */
 export default function SuperAdminPageFrame({ title, description, children }) {
+  const { t } = useWebsiteT();
   return (
     <div className="space-y-6">
       <div>
@@ -14,7 +17,7 @@ export default function SuperAdminPageFrame({ title, description, children }) {
       </div>
       <div className="rounded-2xl border border-brand-border-muted bg-[var(--brand-surface)]/40 p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
         {children ?? (
-          <p className="text-sm text-brand-muted">Module content will be wired here.</p>
+          <p className="text-sm text-brand-muted">{t('superadmin.common.modulePlaceholder')}</p>
         )}
       </div>
     </div>

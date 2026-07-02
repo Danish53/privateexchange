@@ -4,10 +4,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { Headphones, Loader2, MessageSquare, X } from 'lucide-react';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 import { useAuth } from '@/components/auth-context';
-import { SUPPORT_STATUS_LABELS, SUPPORT_TICKET_STATUSES } from '@/lib/supportTickets';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
+import { SUPPORT_TICKET_STATUSES } from '@/lib/supportTickets';
 import { cn } from '@/lib/utils';
 
-function StatusPill({ status }) {
+function getStatusLabel(status, t) {
+  const key = `superadmin.support.statusLabels.${status}`;
+  const label = t(key);
+  return label === key ? status : label;
+}
+
+function StatusPill({ status, t }) {
   const map = {
     pending: 'border-amber-500/35 bg-amber-500/10 text-amber-100',
     in_progress: 'border-sky-500/35 bg-sky-500/10 text-sky-100',
@@ -21,21 +28,22 @@ function StatusPill({ status }) {
         map[status] || map.pending
       )}
     >
-      {SUPPORT_STATUS_LABELS[status] || status}
+      {getStatusLabel(status, t)}
     </span>
   );
 }
 
-function formatWhen(iso) {
+function formatWhen(iso, locale) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return new Date(iso).toLocaleString(locale === 'es' ? 'es' : 'en', { dateStyle: 'medium', timeStyle: 'short' });
   } catch {
     return '—';
   }
 }
 
 export default function SuperAdminSupportTicketsPage() {
+  const { t, locale } = useWebsiteT();
   const { token, ready } = useAuth();
   const [rows, setRows] = useState([]);
   const [filter, setFilter] = useState('');
@@ -59,16 +67,16 @@ export default function SuperAdminSupportTicketsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setError(json.error || 'Could not load tickets.');
+        setError(json.error || t('superadmin.support.errors.couldNotLoad'));
         return;
       }
       setRows(Array.isArray(json.tickets) ? json.tickets : []);
     } catch {
-      setError('Network error while loading tickets.');
+      setError(t('superadmin.support.errors.networkLoad'));
     } finally {
       setLoading(false);
     }
-  }, [ready, token, filter]);
+  }, [ready, token, filter, t]);
 
   useEffect(() => {
     void load();
@@ -104,15 +112,15 @@ export default function SuperAdminSupportTicketsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setError(json.error || 'Could not update ticket.');
+        setError(json.error || t('superadmin.support.errors.couldNotUpdate'));
         return;
       }
       const saved = json.ticket;
       setRows((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
       setSelected(saved);
-      setSuccess('Ticket updated. The member will see your reply on their Support page.');
+      setSuccess(t('superadmin.support.ticketUpdated'));
     } catch {
-      setError('Network error while saving.');
+      setError(t('superadmin.support.errors.networkSave'));
     } finally {
       setSaving(false);
     }
@@ -125,15 +133,16 @@ export default function SuperAdminSupportTicketsPage() {
       <div className="border-b border-white/[0.06] pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Support tickets</h1>
-            <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-              Member requests from the user dashboard. Update status and send a reply visible to the user.
-            </p>
+            <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
+              {t('superadmin.support.title')}
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm text-brand-muted">{t('superadmin.support.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-4 py-2.5 text-sm">
             <Headphones className="h-4 w-4 text-brand-accent" aria-hidden />
             <span className="text-brand-muted">
-              Pending: <span className="font-semibold tabular-nums text-brand-heading">{pendingCount}</span>
+              {t('superadmin.support.pendingCount')}{' '}
+              <span className="font-semibold tabular-nums text-brand-heading">{pendingCount}</span>
             </span>
           </div>
         </div>
@@ -155,7 +164,7 @@ export default function SuperAdminSupportTicketsPage() {
             !filter ? 'border-brand-accent/40 bg-brand-accent/15 text-brand-accent' : 'border-white/10 text-brand-muted hover:text-brand-heading'
           )}
         >
-          All
+          {t('superadmin.common.all')}
         </button>
         {SUPPORT_TICKET_STATUSES.map((s) => (
           <button
@@ -169,7 +178,7 @@ export default function SuperAdminSupportTicketsPage() {
                 : 'border-white/10 text-brand-muted hover:text-brand-heading'
             )}
           >
-            {SUPPORT_STATUS_LABELS[s]}
+            {getStatusLabel(s, t)}
           </button>
         ))}
       </div>
@@ -181,16 +190,16 @@ export default function SuperAdminSupportTicketsPage() {
               <Loader2 className="h-8 w-8 animate-spin text-brand-accent" aria-hidden />
             </div>
           ) : rows.length === 0 ? (
-            <p className="px-6 py-12 text-center text-sm text-brand-muted">No tickets in this filter.</p>
+            <p className="px-6 py-12 text-center text-sm text-brand-muted">{t('superadmin.support.noTicketsInFilter')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-white/[0.06] bg-black/40 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                    <th className="px-5 py-3">Member</th>
-                    <th className="px-4 py-3">Subject</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-5 py-3">Created</th>
+                    <th className="px-5 py-3">{t('superadmin.support.member')}</th>
+                    <th className="px-4 py-3">{t('superadmin.support.subject')}</th>
+                    <th className="px-4 py-3">{t('superadmin.common.status')}</th>
+                    <th className="px-5 py-3">{t('superadmin.support.created')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -211,9 +220,9 @@ export default function SuperAdminSupportTicketsPage() {
                         {row.subject}
                       </td>
                       <td className="px-4 py-3.5">
-                        <StatusPill status={row.status} />
+                        <StatusPill status={row.status} t={t} />
                       </td>
-                      <td className="px-5 py-3.5 text-brand-muted">{formatWhen(row.createdAt)}</td>
+                      <td className="px-5 py-3.5 text-brand-muted">{formatWhen(row.createdAt, locale)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -227,13 +236,13 @@ export default function SuperAdminSupportTicketsPage() {
             <div className="mb-4 flex items-start justify-between gap-2 border-b border-white/[0.06] pb-4">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-brand-accent" aria-hidden />
-                <h2 className="text-sm font-semibold text-brand-heading">Respond</h2>
+                <h2 className="text-sm font-semibold text-brand-heading">{t('superadmin.support.respond')}</h2>
               </div>
               <button
                 type="button"
                 onClick={closePanel}
                 className="rounded-lg border border-white/10 p-1.5 text-brand-muted hover:text-brand-heading"
-                aria-label="Close"
+                aria-label={t('superadmin.support.closePanel')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -245,13 +254,17 @@ export default function SuperAdminSupportTicketsPage() {
             </p>
 
             <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/30 p-3">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">Member message</p>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
+                {t('superadmin.support.memberMessage')}
+              </p>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-brand-muted">{selected.detail}</p>
-              <p className="mt-2 text-xs text-brand-subtle">{formatWhen(selected.createdAt)}</p>
+              <p className="mt-2 text-xs text-brand-subtle">{formatWhen(selected.createdAt, locale)}</p>
             </div>
 
             <label className="mt-4 block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-brand-subtle">Status</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-brand-subtle">
+                {t('superadmin.common.status')}
+              </span>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
@@ -259,20 +272,22 @@ export default function SuperAdminSupportTicketsPage() {
               >
                 {SUPPORT_TICKET_STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {SUPPORT_STATUS_LABELS[s]}
+                    {getStatusLabel(s, t)}
                   </option>
                 ))}
               </select>
             </label>
 
             <label className="mt-4 block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-brand-subtle">Reply to member</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-brand-subtle">
+                {t('superadmin.support.replyToMember')}
+              </span>
               <textarea
                 rows={6}
                 value={adminReply}
                 onChange={(e) => setAdminReply(e.target.value)}
                 className="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading"
-                placeholder="Your answer will appear on the user's Support page…"
+                placeholder={t('superadmin.support.replyPlaceholder')}
               />
             </label>
 
@@ -282,12 +297,12 @@ export default function SuperAdminSupportTicketsPage() {
               onClick={onSave}
               className="btn-primary mt-5 w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
             >
-              {saving ? 'Saving…' : 'Save status & reply'}
+              {saving ? t('superadmin.common.saving') : t('superadmin.support.saveStatusReply')}
             </button>
           </aside>
         ) : (
           <aside className="hidden rounded-2xl border border-dashed border-white/[0.1] bg-black/20 p-8 text-center text-sm text-brand-muted xl:block">
-            Select a ticket from the table to update status and reply.
+            {t('superadmin.support.selectTicketHint')}
           </aside>
         )}
       </div>

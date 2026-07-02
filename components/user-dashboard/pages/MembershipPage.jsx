@@ -8,6 +8,7 @@ import { formatCurrencySmart, formatNumberSmart } from '@/lib/numberFormat';
 import { cn } from '@/lib/utils';
 import MembershipTierFeatures from '@/components/membership/MembershipTierFeatures';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 function TierCardSkeleton() {
   return (
@@ -35,11 +36,11 @@ function TierCardSkeleton() {
   );
 }
 
-function assignmentTypeLabel(type) {
-  const t = String(type || '').toLowerCase();
-  if (t === 'manual') return 'Manual assignment';
-  if (t === 'automatic') return 'Automatic';
-  return t || 'Assigned';
+function assignmentTypeLabel(type, tr) {
+  const value = String(type || '').toLowerCase();
+  if (value === 'manual') return tr('dashboard.membership.manualAssignment');
+  if (value === 'automatic') return tr('dashboard.membership.automatic');
+  return value || tr('dashboard.membership.assigned');
 }
 
 function formatTokenQty(n) {
@@ -61,6 +62,7 @@ function tierForFeatureDisplay(tier, isActiveTier, isVip) {
 }
 
 export default function MembershipPage() {
+  const { t } = useWebsiteT();
   const { token, ready, refreshUser, user } = useAuth();
   const {
     loading: walletLoading,
@@ -84,7 +86,7 @@ export default function MembershipPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        setError(data.error || 'Could not load membership.');
+        setError(data.error || t('dashboard.membership.couldNotLoad'));
         setTiers([]);
         setAssignment(null);
         return;
@@ -99,7 +101,7 @@ export default function MembershipPage() {
         }
       }
     } catch {
-      setError('Could not load membership.');
+      setError(t('dashboard.membership.couldNotLoad'));
       setTiers([]);
       setAssignment(null);
     } finally {
@@ -123,22 +125,24 @@ export default function MembershipPage() {
       <header className="mb-8 sm:mb-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">Account</p>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">{t('dashboard.membership.eyebrow')}</p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem]">
-              Membership
+              {t('dashboard.membership.title')}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Plans configured on the platform. When your account is assigned a tier, it is highlighted below.
+              {t('dashboard.membership.subtitle')}
             </p>
           </div>
           {assignment ? (
             <div className="shrink-0 rounded-xl border border-white/[0.06] bg-black/[0.28] px-4 py-3 text-right">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">Your tier</p>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('dashboard.membership.yourTier')}</p>
               <p className="mt-1 text-sm font-semibold text-brand-heading">{assignment.tierName || '—'}</p>
               {/* <p className="mt-0.5 text-xs text-brand-muted">{assignmentTypeLabel(assignment.assignmentType)}</p> */}
             </div>
           ) : (
-            <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">Catalog · {tiers.length} tiers</p>
+            <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
+              {t('dashboard.membership.catalogTiers', { count: tiers.length })}
+            </p>
           )}
         </div>
       </header>
@@ -148,19 +152,19 @@ export default function MembershipPage() {
           <div className="rounded-2xl border border-white/[0.08] bg-black/[0.28] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
             <div className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
               <Shield className="h-3.5 w-3.5 text-brand-accent" strokeWidth={2} aria-hidden />
-              Tiers
+              {t('dashboard.membership.tiers')}
             </div>
             <p className="mt-2 text-lg font-semibold tabular-nums text-brand-heading">{loading ? '—' : tiers.length}</p>
-            <p className="mt-1 text-xs text-brand-muted">Published membership levels.</p>
+            <p className="mt-1 text-xs text-brand-muted">{t('dashboard.membership.tiersSub')}</p>
           </div>
           <div className="rounded-2xl border border-brand-border-muted bg-black/[0.28] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-            <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">Total USD value</div>
+            <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">{t('dashboard.membership.totalUsdValue')}</div>
             <p className="mt-2 text-lg font-semibold tabular-nums text-brand-heading">{formatCurrencySmart(portfolioUsd, 'USD')}</p>
           </div>
           <div className="rounded-2xl border border-brand-border-muted bg-black/[0.28] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-            <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">Currency</div>
+            <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">{t('dashboard.membership.currency')}</div>
             <p className="mt-2 text-lg font-semibold text-brand-heading">USD</p>
-            <p className="mt-1 text-xs text-brand-muted">Minimum balance thresholds.</p>
+            <p className="mt-1 text-xs text-brand-muted">{t('dashboard.membership.minimumBalanceThresholds')}</p>
           </div>
         </div>
 
@@ -168,8 +172,7 @@ export default function MembershipPage() {
 
         {assignment && !user?.isVip ? (
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3 text-sm leading-relaxed text-amber-100/95">
-            Your tier is active. VIP benefits (waived fees, drawings, executive events) unlock when your portfolio
-            reaches the next membership level and your account is marked VIP.
+            {t('dashboard.membership.vipBenefitsHint')}
           </div>
         ) : null}
 
@@ -189,9 +192,9 @@ export default function MembershipPage() {
               <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-brand-accent/25 bg-black/40 text-brand-accent">
                 <Crown className="h-7 w-7" strokeWidth={1.5} aria-hidden />
               </span>
-              <h2 className="mt-5 text-lg font-semibold text-brand-heading">No membership tiers yet</h2>
+              <h2 className="mt-5 text-lg font-semibold text-brand-heading">{t('dashboard.membership.noTiersTitle')}</h2>
               <p className="mt-2 text-sm leading-relaxed text-brand-muted">
-                When the team publishes tiers, they will show here with benefits and minimum balance in USD.
+                {t('dashboard.membership.noTiersSub')}
               </p>
             </div>
           </div>
@@ -257,11 +260,11 @@ export default function MembershipPage() {
                           {isYours ? (
                             <span className="inline-flex items-center gap-1 rounded-full border border-brand-accent/35 bg-black/40 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-accent">
                               <Sparkles className="h-3 w-3" strokeWidth={2.5} aria-hidden />
-                              Active
+                              {t('dashboard.membership.active')}
                             </span>
                           ) : !hasAssignment && index === 0 ? (
                             <span className="inline-flex items-center gap-1 rounded-full border border-white/[0.12] bg-black/35 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-muted">
-                              Entry
+                              {t('dashboard.membership.entry')}
                             </span>
                           ) : null}
                         </div>
@@ -278,7 +281,7 @@ export default function MembershipPage() {
                       )}
                     >
                       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-subtle">
-                        Minimum balance
+                        {t('dashboard.membership.minimumBalance')}
                       </p>
                       <p
                         className={cn(
@@ -298,8 +301,8 @@ export default function MembershipPage() {
                       tier={tierForFeatureDisplay(tier, isActive, Boolean(user?.isVip))}
                       title={
                         isActive && !user?.isVip
-                          ? 'Unlocks when you reach VIP'
-                          : 'Included with this tier'
+                          ? t('dashboard.membership.unlocksAtVip')
+                          : t('dashboard.membership.includedWithTier')
                       }
                       muted={isInactive || (isActive && !user?.isVip)}
                       className="!mt-4"
@@ -315,7 +318,7 @@ export default function MembershipPage() {
                         )}
                       >
                         {Array.isArray(tier.benefits) ? tier.benefits.length : 0}{' '}
-                        {(tier.benefits || []).length === 1 ? 'benefit' : 'benefits'}
+                        {(tier.benefits || []).length === 1 ? t('dashboard.membership.benefit') : t('dashboard.membership.benefits')}
                       </span>
                     </div>
 

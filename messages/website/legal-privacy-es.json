@@ -1,0 +1,48 @@
+{
+  "sections": [
+    {
+      "title": "Introducción",
+      "paragraphs": [
+        "Esta Política de Privacidad describe cómo 759 Private Exchange (“nosotros”) maneja la información en el entorno actual de demostración y vista previa. Se proporciona con fines de transparencia y debe reemplazarse con texto revisado por asesoría legal antes de cualquier lanzamiento en producción."
+      ]
+    },
+    {
+      "title": "Información que usted proporciona",
+      "paragraphs": [
+        "Cuando crea una cuenta o utiliza formularios, puede proporcionar identificadores como dirección de correo electrónico, nombre para mostrar o número de teléfono. Solo debe enviar información que tenga permiso para compartir."
+      ]
+    },
+    {
+      "title": "Almacenamiento local de demostración",
+      "paragraphs": [
+        "En esta versión, el estado de inicio de sesión y los campos de perfil pueden almacenarse en su navegador (por ejemplo, mediante localStorage) para que la interfaz pueda demostrarse sin una API en vivo. Esos datos permanecen en su dispositivo a menos que borre los datos del sitio o use otro navegador."
+      ]
+    },
+    {
+      "title": "Cuando se conecta un backend",
+      "paragraphs": [
+        "Un despliegue en producción normalmente procesaría datos en servidores seguros, aplicaría reglas de retención e integraría su proveedor de autenticación. Esos detalles se documentarán aquí y en sus acuerdos de producto antes del lanzamiento."
+      ]
+    },
+    {
+      "title": "Cookies y tecnologías similares",
+      "paragraphs": [
+        "La aplicación puede usar cookies o almacenamiento local para la continuidad de sesión y preferencias. Puede controlar las cookies a través de la configuración de su navegador."
+      ]
+    },
+    {
+      "title": "Sus opciones",
+      "list": [
+        "Actualizar campos de perfil donde el producto lo permita.",
+        "Cerrar sesión y borrar datos del sitio para eliminar el almacenamiento local de demostración.",
+        "Contactar al operador si necesita eliminar su cuenta una vez que exista un servicio en vivo."
+      ]
+    },
+    {
+      "title": "Contacto",
+      "paragraphs": [
+        "Para preguntas de privacidad relacionadas con un futuro servicio en producción, use el canal de contacto publicado en el sitio oficial una vez esté disponible."
+      ]
+    }
+  ]
+}

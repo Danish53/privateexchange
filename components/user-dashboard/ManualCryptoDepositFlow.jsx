@@ -2,9 +2,11 @@
 
 import { Check, Coins, Copy, Loader2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 /** Step 1: shown when user picks BTC / ETH / SOL */
 export function CryptoDepositAddressPanel({ selectedCrypto, copied, onCopyAddress }) {
+  const { t } = useWebsiteT();
   if (!selectedCrypto) return null;
 
   return (
@@ -15,7 +17,7 @@ export function CryptoDepositAddressPanel({ selectedCrypto, copied, onCopyAddres
           <p className="font-semibold text-white">
             {selectedCrypto.name} — {selectedCrypto.network}
           </p>
-          <p className="text-sm text-amber-200/75">Send payment to this address</p>
+          <p className="text-sm text-amber-200/75">{t('dashboard.crypto.sendToAddress')}</p>
         </div>
       </div>
 
@@ -24,14 +26,14 @@ export function CryptoDepositAddressPanel({ selectedCrypto, copied, onCopyAddres
           <div className="rounded-xl bg-white p-3 shadow-lg">
             <img
               src={selectedCrypto.qrImage}
-              alt={`${selectedCrypto.name} QR code`}
+              alt={t('dashboard.crypto.qrAlt', { name: selectedCrypto.name })}
               className="h-44 w-44 object-contain sm:h-48 sm:w-48"
             />
           </div>
         ) : null}
         <div className="w-full flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-200/80">
-            Deposit address
+            {t('dashboard.deposit.depositAddress')}
           </p>
           <div className="mt-2 flex items-start gap-2 rounded-lg border border-white/10 bg-black/40 p-3">
             <code className="flex-1 break-all font-mono text-sm leading-relaxed text-white">
@@ -41,7 +43,7 @@ export function CryptoDepositAddressPanel({ selectedCrypto, copied, onCopyAddres
               type="button"
               onClick={() => onCopyAddress(selectedCrypto.address)}
               className="shrink-0 rounded-lg bg-white/10 p-2 hover:bg-white/20"
-              aria-label="Copy address"
+              aria-label={t('dashboard.crypto.copyAddress')}
             >
               {copied ? (
                 <Check className="h-5 w-5 text-emerald-400" />
@@ -70,6 +72,7 @@ export default function ManualCryptoDepositFlow({
   processingPayment,
   onSubmit,
 }) {
+  const { t } = useWebsiteT();
   const hasProof = Boolean(transactionRef?.trim()) || Boolean(proofPreview);
   const minAmount = selectedMethodData?.minAmount ?? 1;
   const hasValidAmount =
@@ -81,7 +84,7 @@ export default function ManualCryptoDepositFlow({
     <div className="space-y-6">
       {selectedCrypto ? (
         <div className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-brand-subtle">
-          Depositing via{' '}
+          {t('dashboard.crypto.depositingVia')}{' '}
           <span className="font-semibold text-white">
             {selectedCrypto.name} ({selectedCrypto.network})
           </span>
@@ -89,8 +92,12 @@ export default function ManualCryptoDepositFlow({
       ) : null}
 
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h4 className="text-lg font-semibold text-white">Deposit amount ({coinLabel})</h4>
-        <p className="mt-1 text-sm text-brand-subtle">Enter the {coinLabel} amount you sent</p>
+        <h4 className="text-lg font-semibold text-white">
+          {t('dashboard.crypto.depositAmount')} ({coinLabel})
+        </h4>
+        <p className="mt-1 text-sm text-brand-subtle">
+          {t('dashboard.crypto.enterCoinAmount', { coin: coinLabel })}
+        </p>
         <div className="mt-4 flex items-center rounded-xl border border-white/10 bg-black/30 p-4">
           <input
             type="number"
@@ -108,29 +115,27 @@ export default function ManualCryptoDepositFlow({
         </div>
         {amount && !hasValidAmount ? (
           <p className="mt-2 text-xs text-amber-200/80">
-            Minimum deposit is {minAmount} {coinLabel}.
+            {t('dashboard.crypto.minimumDeposit', { amount: minAmount, coin: coinLabel })}
           </p>
         ) : null}
       </div>
 
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h4 className="text-lg font-semibold text-white">Payment proof</h4>
-        <p className="mt-1 text-sm text-brand-subtle">
-          Fill transaction hash <span className="text-white">or</span> upload screenshot (one required)
-        </p>
+        <h4 className="text-lg font-semibold text-white">{t('dashboard.crypto.paymentProof')}</h4>
+        <p className="mt-1 text-sm text-brand-subtle">{t('dashboard.crypto.proofOr')}</p>
         <div className="mt-4 space-y-4">
           <div>
-            <label className="mb-2 block text-sm text-brand-subtle">Transaction ID / hash</label>
+            <label className="mb-2 block text-sm text-brand-subtle">{t('dashboard.crypto.txIdOrHash')}</label>
             <input
               type="text"
               value={transactionRef}
               onChange={(e) => setTransactionRef(e.target.value)}
-              placeholder="Paste transaction hash or ID"
+              placeholder={t('dashboard.crypto.pasteHash')}
               className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-amber-400/50"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm text-brand-subtle">Payment screenshot</label>
+            <label className="mb-2 block text-sm text-brand-subtle">{t('dashboard.crypto.paymentScreenshot')}</label>
             <label
               className={cn(
                 'flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-black/20 px-4 py-8 transition hover:border-amber-400/40 hover:bg-black/30'
@@ -145,14 +150,14 @@ export default function ManualCryptoDepositFlow({
               {proofPreview ? (
                 <img
                   src={proofPreview}
-                  alt="Payment proof preview"
+                  alt={t('dashboard.crypto.paymentProof')}
                   className="max-h-40 rounded-lg object-contain"
                 />
               ) : (
                 <>
                   <Upload className="h-8 w-8 text-amber-400/80" />
-                  <p className="mt-2 text-sm text-white">Click to upload screenshot</p>
-                  <p className="mt-1 text-xs text-brand-subtle">JPEG, PNG or WebP — max 5MB</p>
+                  <p className="mt-2 text-sm text-white">{t('dashboard.crypto.clickUpload')}</p>
+                  <p className="mt-1 text-xs text-brand-subtle">{t('dashboard.crypto.fileFormats')}</p>
                 </>
               )}
             </label>
@@ -161,7 +166,7 @@ export default function ManualCryptoDepositFlow({
 
         {!hasProof ? (
           <p className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-            Enter a transaction hash or upload a screenshot to submit your request.
+            {t('dashboard.crypto.hashOrScreenshotRequired')}
           </p>
         ) : null}
 
@@ -182,14 +187,14 @@ export default function ManualCryptoDepositFlow({
               {processingPayment ? (
                 <>
                   <Loader2 className="mr-2 inline h-5 w-5 animate-spin" />
-                  Submitting request...
+                  {t('dashboard.crypto.submittingRequest')}
                 </>
               ) : (
-                'Submit deposit request'
+                t('dashboard.crypto.submitDeposit')
               )}
             </button>
             <p className="mt-3 text-center text-xs text-amber-200/70">
-              Your request will appear as pending until admin approves it.
+              {t('dashboard.crypto.pendingUntilApproved')}
             </p>
           </>
         ) : null}

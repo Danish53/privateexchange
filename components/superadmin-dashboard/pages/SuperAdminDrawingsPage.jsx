@@ -6,19 +6,27 @@ import { Calendar, Gift, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { openDateInputPicker } from '@/lib/openDateInputPicker';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 const STATUS_OPTIONS = ['pending', 'active', 'completed'];
 const REWARD_OPTIONS = ['physical', 'token', 'event_access', 'custom'];
 
-const AUDIENCE_OPTIONS = [
-  { value: 'all_users', label: 'All users' },
-  { value: 'vip_only', label: 'VIP users only' },
-  { value: 'non_vip_only', label: 'Non-VIP users only' },
-];
+const AUDIENCE_VALUES = ['all_users', 'vip_only', 'non_vip_only'];
 
-function audienceLabel(value) {
-  const opt = AUDIENCE_OPTIONS.find((o) => o.value === value);
-  return opt ? opt.label : value || 'All users';
+function audienceLabel(value, t) {
+  const map = {
+    all_users: t('superadmin.drawings.audience.allUsers'),
+    vip_only: t('superadmin.drawings.audience.vipOnly'),
+    non_vip_only: t('superadmin.drawings.audience.nonVipOnly'),
+  };
+  return map[value] || map.all_users;
+}
+
+function rewardTypeLabel(type, t) {
+  if (!type) return '—';
+  const key = `superadmin.drawings.rewardType.${type}`;
+  const label = t(key);
+  return label !== key ? label : type;
 }
 
 const initialFormState = {
@@ -53,18 +61,18 @@ function StatChip({ icon: Icon, label, value, hint }) {
   );
 }
 
-function StatusPill({ status }) {
+function StatusPill({ status, t }) {
   const map = {
     active: {
-      label: 'Active',
+      label: t('superadmin.drawings.status.active'),
       className: 'border-emerald-500/30 bg-emerald-500/[0.12] text-emerald-100/95',
     },
     pending: {
-      label: 'Pending',
+      label: t('superadmin.drawings.status.pending'),
       className: 'border-sky-500/30 bg-sky-500/[0.1] text-sky-100/90',
     },
     completed: {
-      label: 'Completed',
+      label: t('superadmin.drawings.status.completed'),
       className: 'border-violet-400/30 bg-violet-400/[0.12] text-violet-100',
     },
   };
@@ -82,6 +90,7 @@ function StatusPill({ status }) {
 }
 
 export default function SuperAdminDrawingsPage() {
+  const { t, locale } = useWebsiteT();
   const { token, ready } = useAuth();
   const [rows, setRows] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -98,6 +107,15 @@ export default function SuperAdminDrawingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const drawDateInputRef = useRef(null);
+
+  const audienceOptions = useMemo(
+    () =>
+      AUDIENCE_VALUES.map((value) => ({
+        value,
+        label: audienceLabel(value, t),
+      })),
+    [t]
+  );
 
   const totalEntries = useMemo(
     () => rows.reduce((acc, drawing) => acc + Number(drawing.total_entries || 0), 0),
@@ -127,16 +145,16 @@ export default function SuperAdminDrawingsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setListError(json.error || 'Could not load drawings.');
+        setListError(json.error || t('superadmin.drawings.errors.couldNotLoad'));
         return;
       }
       setRows(Array.isArray(json.drawings) ? json.drawings : []);
     } catch {
-      setListError('Network error while loading drawings.');
+      setListError(t('superadmin.drawings.errors.networkLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   const loadTokens = useCallback(async () => {
     setLoadingTokens(true);
@@ -242,32 +260,32 @@ export default function SuperAdminDrawingsPage() {
       !formData.total_entries ||
       !formData.draw_date
     ) {
-      setFormError('Please fill all required fields.');
+      setFormError(t('superadmin.drawings.errors.fillRequired'));
       return;
     }
     if (!drawingImageFile && !formData.drawing_image_name) {
-      setFormError('Drawing image is required.');
+      setFormError(t('superadmin.drawings.errors.drawingImageRequired'));
       return;
     }
     if (!prizeImageFile && !formData.prize_image_name) {
-      setFormError('Prize image is required.');
+      setFormError(t('superadmin.drawings.errors.prizeImageRequired'));
       return;
     }
     if (formData.reward_type === 'token' && !formData.reward_token_id) {
-      setFormError('Reward token is required when reward type is token.');
+      setFormError(t('superadmin.drawings.errors.rewardTokenRequired'));
       return;
     }
     if (!String(formData.reward_token_amount || '').trim()) {
-      setFormError('Reward amount is required.');
+      setFormError(t('superadmin.drawings.errors.rewardAmountRequired'));
       return;
     }
     if (formData.draw_date && new Date(formData.draw_date).getTime() <= Date.now()) {
-      setFormError('Draw date must be in the future.');
+      setFormError(t('superadmin.drawings.errors.drawDateFuture'));
       return;
     }
 
     if (!token) {
-      setFormError('Unauthorized. Please login again.');
+      setFormError(t('superadmin.drawings.errors.unauthorized'));
       return;
     }
 
@@ -304,13 +322,16 @@ export default function SuperAdminDrawingsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setFormError(json.error || `Could not ${isEdit ? 'update' : 'create'} drawing.`);
+        setFormError(
+          json.error ||
+            (isEdit ? t('superadmin.drawings.errors.couldNotUpdate') : t('superadmin.drawings.errors.couldNotCreate'))
+        );
         return;
       }
       closeModal();
       await loadDrawings();
     } catch {
-      setFormError('Network error while creating drawing.');
+      setFormError(t('superadmin.drawings.errors.networkSave'));
     } finally {
       setIsSaving(false);
     }
@@ -326,13 +347,13 @@ export default function SuperAdminDrawingsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setListError(json.error || 'Could not delete drawing.');
+        setListError(json.error || t('superadmin.drawings.errors.couldNotDelete'));
         return;
       }
       setDeleteTarget(null);
       await loadDrawings();
     } catch {
-      setListError('Network error while deleting drawing.');
+      setListError(t('superadmin.drawings.errors.networkDelete'));
     } finally {
       setIsDeleting(false);
     }
@@ -343,9 +364,9 @@ export default function SuperAdminDrawingsPage() {
       <div className="border-b border-white/[0.06] pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Drawings</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">{t('superadmin.drawings.title')}</h1>
             <p className="mt-1 max-w-3xl text-sm text-brand-muted">
-              Superadmin can create drawings from this page and view all created records in the table.
+              {t('superadmin.drawings.subtitle')}
             </p>
           </div>
           <button
@@ -354,21 +375,21 @@ export default function SuperAdminDrawingsPage() {
             className="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
           >
             <Plus className="h-4 w-4" strokeWidth={2} aria-hidden />
-            Create drawing
+            {t('superadmin.drawings.createDrawing')}
           </button>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatChip icon={Gift} label="Total drawings" value={String(rows.length)} hint="Current listing rows" />
+        <StatChip icon={Gift} label={t('superadmin.drawings.stats.totalDrawings')} value={String(rows.length)} hint={t('superadmin.drawings.stats.totalDrawingsHint')} />
         <StatChip
           icon={Calendar}
-          label="Recipients (all pools)"
-          value={totalEntries.toLocaleString()}
-          hint="Aggregated from table data"
+          label={t('superadmin.drawings.stats.recipientsAllPools')}
+          value={totalEntries.toLocaleString(locale === 'es' ? 'es' : 'en')}
+          hint={t('superadmin.drawings.stats.recipientsHint')}
         />
-        <StatChip icon={Gift} label="Reward types" value={String(REWARD_OPTIONS.length)} hint="physical / token / event / custom" />
-        <StatChip icon={Gift} label="Statuses" value={String(STATUS_OPTIONS.length)} hint="pending / active / completed" />
+        <StatChip icon={Gift} label={t('superadmin.drawings.stats.rewardTypes')} value={String(REWARD_OPTIONS.length)} hint={t('superadmin.drawings.stats.rewardTypesHint')} />
+        <StatChip icon={Gift} label={t('superadmin.drawings.stats.statuses')} value={String(STATUS_OPTIONS.length)} hint={t('superadmin.drawings.stats.statusesHint')} />
       </div>
 
       {showCreateModal ? (
@@ -376,7 +397,7 @@ export default function SuperAdminDrawingsPage() {
           <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#07080c] p-5 sm:p-6">
             <div className="mb-4 flex items-start justify-between gap-4 border-b border-white/[0.06] pb-4">
               <div>
-                <h3 className="text-lg font-semibold text-brand-heading">{editingDrawingId ? 'Update' : 'Create'}</h3>
+                <h3 className="text-lg font-semibold text-brand-heading">{editingDrawingId ? t('superadmin.drawings.form.update') : t('superadmin.drawings.form.create')}</h3>
               </div>
               <button
                 type="button"
@@ -390,13 +411,13 @@ export default function SuperAdminDrawingsPage() {
             <form onSubmit={onSubmitCreate} className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-1">
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Title *</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.title')}</span>
                   <input required name="title" value={formData.title} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
               </div>
 
               <label className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Drawing image</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.drawingImage')}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -404,27 +425,27 @@ export default function SuperAdminDrawingsPage() {
                   required={!formData.drawing_image_name}
                   className="w-full cursor-pointer rounded-lg border border-white/[0.12] bg-[#0a0c12] px-3 py-2 text-sm text-brand-heading transition hover:border-brand-accent/45 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-white/[0.2] file:bg-[#374151] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-200"
                 />
-                {drawingImageFile ? <p className="text-xs text-brand-muted">Selected: {drawingImageFile.name}</p> : null}
+                {drawingImageFile ? <p className="text-xs text-brand-muted">{t('superadmin.drawings.form.selected', { name: drawingImageFile.name })}</p> : null}
                 {!drawingImageFile && formData.drawing_image_name ? (
-                  <p className="text-xs text-brand-muted">Current: {formData.drawing_image_name}</p>
+                  <p className="text-xs text-brand-muted">{t('superadmin.drawings.form.current', { name: formData.drawing_image_name })}</p>
                 ) : null}
               </label>
 
               <label className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Description</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.description')}</span>
                 <textarea required name="description" rows={3} value={formData.description} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
               </label>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <p className="sm:col-span-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Prize fields
+                  {t('superadmin.drawings.form.prizeFields')}
                 </p>
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Prize title *</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.prizeTitle')}</span>
                   <input required name="prize_title" value={formData.prize_title} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Prize image</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.prizeImage')}</span>
                   {/* <div className="rounded-xl border border-white/[0.08] bg-black/30 p-2"> */}
                     <input
                       type="file"
@@ -434,33 +455,33 @@ export default function SuperAdminDrawingsPage() {
                       className="w-full cursor-pointer rounded-lg border border-white/[0.12] bg-[#0a0c12] px-3 py-2 text-sm text-brand-heading transition hover:border-brand-accent/45 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-white/[0.2] file:bg-[#374151] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-200"
                     />
                   {/* </div> */}
-                  {prizeImageFile ? <p className="text-xs text-brand-muted">Selected: {prizeImageFile.name}</p> : null}
+                  {prizeImageFile ? <p className="text-xs text-brand-muted">{t('superadmin.drawings.form.selected', { name: prizeImageFile.name })}</p> : null}
                   {!prizeImageFile && formData.prize_image_name ? (
-                    <p className="text-xs text-brand-muted">Current: {formData.prize_image_name}</p>
+                    <p className="text-xs text-brand-muted">{t('superadmin.drawings.form.current', { name: formData.prize_image_name })}</p>
                   ) : null}
                 </label>
               </div>
 
               <label className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Prize description</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.prizeDescription')}</span>
                 <textarea required name="prize_description" rows={2} value={formData.prize_description} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
               </label>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <p className="sm:col-span-2 lg:col-span-4 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Reward fields
+                  {t('superadmin.drawings.form.rewardFields')}
                 </p>
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Reward type</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.rewardType')}</span>
                   <select required name="reward_type" value={formData.reward_type} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
-                    {REWARD_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    {REWARD_OPTIONS.map((opt) => <option key={opt} value={opt}>{rewardTypeLabel(opt, t)}</option>)}
                   </select>
                 </label>
                 {formData.reward_type === 'token' ? (
                   <label className="space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Reward token *</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.rewardToken')}</span>
                     <select required name="reward_token_id" value={formData.reward_token_id} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
-                      <option value="">{loadingTokens ? 'Loading tokens...' : 'Select token'}</option>
+                      <option value="">{loadingTokens ? t('superadmin.drawings.form.loadingTokens') : t('superadmin.drawings.form.selectToken')}</option>
                       {tokenOptions.map((t) => (
                         <option key={t._id} value={t._id}>
                           {t.symbol} - {t.name}
@@ -472,18 +493,18 @@ export default function SuperAdminDrawingsPage() {
                   null
                 )}
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Reward amount</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.rewardAmount')}</span>
                   <input required type="number" step="0.00000001" name="reward_token_amount" value={formData.reward_token_amount} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <p className="sm:col-span-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Entry fields
+                  {t('superadmin.drawings.form.entryFields')}
                 </p>
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Entry token *</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.entryToken')}</span>
                   <select required name="entry_token_id" value={formData.entry_token_id} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
-                    <option value="">{loadingTokens ? 'Loading tokens...' : 'Select token'}</option>
+                    <option value="">{loadingTokens ? t('superadmin.drawings.form.loadingTokens') : t('superadmin.drawings.form.selectToken')}</option>
                     {tokenOptions.map((t) => (
                       <option key={t._id} value={t._id}>
                         {t.symbol} - {t.name}
@@ -492,18 +513,18 @@ export default function SuperAdminDrawingsPage() {
                   </select>
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Entry cost *</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.entryCost')}</span>
                   <input required type="number" step="0.00000001" name="entry_cost" value={formData.entry_cost} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Total recipients</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.totalRecipients')}</span>
                   <input required type="number" min="0" name="total_entries" value={formData.total_entries} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Audience *</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.audience')}</span>
                   <select
                     required
                     name="audience"
@@ -511,18 +532,18 @@ export default function SuperAdminDrawingsPage() {
                     onChange={onFormField}
                     className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
                   >
-                    {AUDIENCE_OPTIONS.map((opt) => (
+                    {audienceOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
                     ))}
                   </select>
                   <p className="text-xs text-brand-muted">
-                    Shown only to members who match this audience and have VIP drawings on their plan.
+                    {t('superadmin.drawings.form.audienceHint')}
                   </p>
                 </label>
                 <label className="space-y-1.5 cursor-pointer" onClick={openDrawDatePicker}>
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Draw date</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.drawDate')}</span>
                   <input required ref={drawDateInputRef} min={nowInputMin} type="datetime-local" name="draw_date" value={formData.draw_date} onChange={onFormField} onClick={openDrawDatePicker} onFocus={openDrawDatePicker} className="w-full cursor-pointer rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60" />
                 </label>
               </div>
@@ -535,10 +556,10 @@ export default function SuperAdminDrawingsPage() {
                   onClick={closeModal}
                   className="rounded-xl border border-white/[0.1] px-4 py-2 text-sm font-semibold text-brand-muted"
                 >
-                  Cancel
+                  {t('superadmin.common.cancel')}
                 </button>
                 <button type="submit" disabled={isSaving} className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                  {isSaving ? 'Saving...' : editingDrawingId ? 'Update drawing' : 'Save drawing'}
+                  {isSaving ? t('superadmin.common.saving') : editingDrawingId ? t('superadmin.drawings.form.updateDrawing') : t('superadmin.drawings.form.saveDrawing')}
                 </button>
               </div>
             </form>
@@ -549,9 +570,9 @@ export default function SuperAdminDrawingsPage() {
       {deleteTarget ? (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-[#07080c] p-5 sm:p-6">
-            <h3 className="text-lg font-semibold text-brand-heading">Delete drawing?</h3>
+            <h3 className="text-lg font-semibold text-brand-heading">{t('superadmin.drawings.delete.title')}</h3>
             <p className="mt-2 text-sm text-brand-muted">
-              Are you sure you want to delete <span className="font-semibold text-brand-heading">{deleteTarget.title}</span>? This action cannot be undone.
+              {t('superadmin.drawings.delete.body', { title: deleteTarget.title })}
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button
@@ -560,7 +581,7 @@ export default function SuperAdminDrawingsPage() {
                 onClick={() => setDeleteTarget(null)}
                 className="rounded-xl border border-white/[0.1] px-4 py-2 text-sm font-semibold text-brand-muted disabled:opacity-60"
               >
-                Cancel
+                {t('superadmin.common.cancel')}
               </button>
               <button
                 type="button"
@@ -568,7 +589,7 @@ export default function SuperAdminDrawingsPage() {
                 onClick={onConfirmDelete}
                 className="rounded-xl border border-rose-500/35 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/20 disabled:opacity-60"
               >
-                {isDeleting ? 'Deleting...' : 'Confirm delete'}
+                {isDeleting ? t('superadmin.drawings.delete.deleting') : t('superadmin.drawings.delete.confirm')}
               </button>
             </div>
           </div>
@@ -579,10 +600,10 @@ export default function SuperAdminDrawingsPage() {
         <div className="relative border-b border-white/[0.06] px-5 py-4 sm:px-6">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-subtle">Drawings list</h2>
-              <p className="mt-1 text-xs text-brand-muted">All drawings created by superadmin are visible here.</p>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('superadmin.drawings.list.title')}</h2>
+              <p className="mt-1 text-xs text-brand-muted">{t('superadmin.drawings.list.subtitle')}</p>
             </div>
-            <span className="text-xs font-medium text-brand-subtle">Total rows: {rows.length}</span>
+            <span className="text-xs font-medium text-brand-subtle">{t('superadmin.drawings.list.totalRows', { count: rows.length })}</span>
           </div>
         </div>
 
@@ -599,28 +620,28 @@ export default function SuperAdminDrawingsPage() {
             <thead>
               <tr className="border-b border-white/[0.06] bg-black/40">
                 <th className="whitespace-nowrap px-5 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle sm:pl-6">
-                  Title / slug
+                  {t('superadmin.drawings.list.colTitleSlug')}
                 </th>
                 <th className="whitespace-nowrap px-4 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Status
+                  {t('superadmin.drawings.list.colStatus')}
                 </th>
                 <th className="whitespace-nowrap px-4 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Draw date
+                  {t('superadmin.drawings.list.colDrawDate')}
                 </th>
                 <th className="whitespace-nowrap px-4 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Prize
+                  {t('superadmin.drawings.list.colPrize')}
                 </th>
                 <th className="whitespace-nowrap px-4 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Audience
+                  {t('superadmin.drawings.list.colAudience')}
                 </th>
                 <th className="whitespace-nowrap px-4 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Reward type
+                  {t('superadmin.drawings.list.colRewardType')}
                 </th>
                 <th className="whitespace-nowrap px-4 py-3.5 text-right text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle">
-                  Actions
+                  {t('superadmin.drawings.list.colActions')}
                 </th>
                 <th className="whitespace-nowrap px-5 py-3.5 text-right text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-brand-subtle sm:pr-6">
-                  Total recipients
+                  {t('superadmin.drawings.list.colTotalRecipients')}
                 </th>
               </tr>
             </thead>
@@ -645,23 +666,23 @@ export default function SuperAdminDrawingsPage() {
                     </div>
                   </td>
                   <td className="px-4 py-4 align-middle">
-                    <StatusPill status={row.status} />
+                    <StatusPill status={row.status} t={t} />
                   </td>
                   <td className="px-4 py-4 align-middle">
                     <span className="inline-flex items-center gap-1.5 text-sm text-brand-muted">
                       <Calendar className="h-3.5 w-3.5 shrink-0 text-brand-subtle" strokeWidth={2} aria-hidden />
-                      {row.draw_date ? new Date(row.draw_date).toLocaleString() : '—'}
+                      {row.draw_date ? new Date(row.draw_date).toLocaleString(locale === 'es' ? 'es' : 'en') : '—'}
                     </span>
                   </td>
                   <td className="px-4 py-4 align-middle">
                     <span className="font-medium text-brand-accent">{row.prize_title || '—'}</span>
                   </td>
                   <td className="px-4 py-4 align-middle">
-                    <span className="text-sm text-brand-muted">{audienceLabel(row.audience)}</span>
+                    <span className="text-sm text-brand-muted">{audienceLabel(row.audience, t)}</span>
                   </td>
                   <td className="px-4 py-4 align-middle">
-                    <span className="capitalize text-brand-muted">{row.reward_type === "event_access" ? "Event Access" : row.reward_type || '—'}</span>
-                    <p className="mt-0.5 text-xs text-brand-subtle">Entry cost: {row.entry_cost || '—'}</p>
+                    <span className="capitalize text-brand-muted">{rewardTypeLabel(row.reward_type, t)}</span>
+                    <p className="mt-0.5 text-xs text-brand-subtle">{t('superadmin.drawings.list.entryCost', { cost: row.entry_cost || '—' })}</p>
                   </td>
                   <td className="px-4 py-4 text-right align-middle">
                     <div className="flex items-center justify-end gap-2">
@@ -670,25 +691,25 @@ export default function SuperAdminDrawingsPage() {
                         onClick={() => openEditModal(row)}
                         className="rounded-md border border-white/[0.1] px-2.5 py-1 text-xs font-semibold text-brand-subtle transition hover:border-brand-accent/40 hover:text-brand-heading"
                       >
-                        Edit
+                        {t('superadmin.common.edit')}
                       </button>
                       <Link
                         href={`/dashboard/superadmin/drawings/${encodeURIComponent(row.slug)}`}
                         className="rounded-md border border-brand-accent/35 px-2.5 py-1 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10"
                       >
-                        Details
+                        {t('superadmin.common.details')}
                       </Link>
                       <button
                         type="button"
                         onClick={() => setDeleteTarget({ id: row.id, title: row.title })}
                         className="rounded-md border border-rose-500/35 px-2.5 py-1 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10"
                       >
-                        Delete
+                        {t('superadmin.common.delete')}
                       </button>
                     </div>
                   </td>
                   <td className="px-5 py-4 text-right tabular-nums text-brand-heading sm:pr-6">
-                    {Number(row.total_entries || 0).toLocaleString()}
+                    {Number(row.total_entries || 0).toLocaleString(locale === 'es' ? 'es' : 'en')}
                   </td>
                 </tr>
               ))}
@@ -699,7 +720,7 @@ export default function SuperAdminDrawingsPage() {
             <p className="px-5 py-4 text-sm text-rose-300 sm:px-6">{listError}</p>
           ) : null}
           {!isLoading && !listError && rows.length === 0 ? (
-            <p className="px-5 py-4 text-sm text-brand-muted sm:px-6">No drawings found.</p>
+            <p className="px-5 py-4 text-sm text-brand-muted sm:px-6">{t('superadmin.drawings.list.noDrawings')}</p>
           ) : null}
         </div>
       </div>

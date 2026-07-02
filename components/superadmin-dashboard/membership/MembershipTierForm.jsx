@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Plus, X } from 'lucide-react';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 import { cn } from '@/lib/utils';
 
@@ -100,7 +101,7 @@ function TierFeatureSwitch({ id, label, description, checked, onChange, disabled
  */
 export default function MembershipTierForm({
   backHref = '/dashboard/superadmin/membership',
-  backLabel = 'Back to membership',
+  backLabel,
   title,
   description,
   initialName = '',
@@ -117,6 +118,9 @@ export default function MembershipTierForm({
   setError,
   onSave,
 }) {
+  const { t } = useWebsiteT();
+  const resolvedBackLabel = backLabel ?? t('superadmin.membership.form.backToMembership');
+
   const [name, setName] = useState(initialName);
   const [minUsd, setMinUsd] = useState(initialMinUsd);
   const [transferFee, setTransferFee] = useState(Boolean(initialTransferFee));
@@ -162,9 +166,9 @@ export default function MembershipTierForm({
   }, [initialName, initialMinUsd, initialBenefitsKey, initialFlagsKey, initialTransferFee, initialVipDrawings, initialExecutiveEvents, initialPrioritySupport]);
 
   const addBenefit = useCallback(() => {
-    const t = benefitDraft.trim();
-    if (!t) return;
-    setBenefits((prev) => [...prev, t]);
+    const trimmed = benefitDraft.trim();
+    if (!trimmed) return;
+    setBenefits((prev) => [...prev, trimmed]);
     setBenefitDraft('');
     setError('');
   }, [benefitDraft, setError]);
@@ -177,22 +181,22 @@ export default function MembershipTierForm({
     e.preventDefault();
     setError('');
     if (!ready) {
-      setError('Sign in again to continue.');
+      setError(t('superadmin.membership.errors.signInAgain'));
       return;
     }
 
     const trimmed = name.trim();
     if (!trimmed) {
-      setError('Enter a tier name.');
+      setError(t('superadmin.membership.form.enterTierName'));
       return;
     }
     const minNum = Number.parseFloat(String(minUsd).replace(/,/g, ''));
     if (!Number.isFinite(minNum) || minNum < 0) {
-      setError('Minimum value must be a valid USD amount (zero or greater).');
+      setError(t('superadmin.membership.form.invalidMinValue'));
       return;
     }
     if (benefits.length === 0) {
-      setError('Add at least one benefit using the plus button.');
+      setError(t('superadmin.membership.form.addOneBenefit'));
       return;
     }
 
@@ -219,7 +223,7 @@ export default function MembershipTierForm({
           className="inline-flex items-center gap-2 text-sm font-medium text-brand-muted transition hover:text-brand-heading"
         >
           <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
-          {backLabel}
+          {resolvedBackLabel}
         </Link>
         <h1 className="mt-4 text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">{title}</h1>
         <p className="mt-1 max-w-2xl text-sm text-brand-muted">{description}</p>
@@ -239,7 +243,7 @@ export default function MembershipTierForm({
 
           <div>
             <label htmlFor="tier-name" className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-              Tier name
+              {t('superadmin.membership.form.tierName')}
             </label>
             <input
               id="tier-name"
@@ -249,7 +253,7 @@ export default function MembershipTierForm({
                 setName(e.target.value);
                 setError('');
               }}
-              placeholder="Enter Name"
+              placeholder={t('superadmin.membership.form.tierNamePlaceholder')}
               autoComplete="off"
               className="mt-2 w-full rounded-xl border border-white/[0.1] bg-black/35 px-4 py-3 text-sm text-brand-heading outline-none ring-brand-accent/20 placeholder:text-brand-subtle/60 focus:border-brand-accent/40 focus:ring-2"
             />
@@ -257,7 +261,7 @@ export default function MembershipTierForm({
 
           <div>
             <label htmlFor="tier-min" className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-              Minimum value (USD)
+              {t('superadmin.membership.form.minimumValueUsd')}
             </label>
             <div className="relative mt-2">
               <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-brand-muted">
@@ -280,16 +284,16 @@ export default function MembershipTierForm({
 
           <fieldset className="rounded-xl border-2 border-brand-accent/35 bg-black/35 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
             <legend className="px-1 text-xs font-bold uppercase tracking-[0.14em] text-brand-accent">
-              Tier features
+              {t('superadmin.membership.form.tierFeaturesLegend')}
             </legend>
             <p className="mb-3 text-xs leading-relaxed text-brand-muted">
-              Toggle what this membership includes. Values are stored on the tier and shown on the member membership page.
+              {t('superadmin.membership.form.tierFeaturesHint')}
             </p>
             <div className="space-y-2">
               <TierFeatureSwitch
                 id="tier-flag-transfer-fee"
-                label="Waived transfer fees"
-                description="When on, members see this tier as including transfer-fee relief."
+                label={t('superadmin.membership.form.waivedTransferFees')}
+                description={t('superadmin.membership.form.waivedTransferFeesDesc')}
                 checked={transferFee}
                 onChange={(v) => {
                   setTransferFee(v);
@@ -299,8 +303,8 @@ export default function MembershipTierForm({
               />
               <TierFeatureSwitch
                 id="tier-flag-vip-drawings"
-                label="VIP drawings"
-                description="Access to VIP-only drawings."
+                label={t('superadmin.membership.form.vipDrawings')}
+                description={t('superadmin.membership.form.vipDrawingsDesc')}
                 checked={vipDrawings}
                 onChange={(v) => {
                   setVipDrawings(v);
@@ -310,8 +314,8 @@ export default function MembershipTierForm({
               />
               <TierFeatureSwitch
                 id="tier-flag-executive-events"
-                label="Executive events"
-                description="Invitations or access to executive-level events."
+                label={t('superadmin.membership.form.executiveEvents')}
+                description={t('superadmin.membership.form.executiveEventsDesc')}
                 checked={executiveEvents}
                 onChange={(v) => {
                   setExecutiveEvents(v);
@@ -321,8 +325,8 @@ export default function MembershipTierForm({
               />
               <TierFeatureSwitch
                 id="tier-flag-priority-support"
-                label="Priority support"
-                description="Faster or prioritized member support."
+                label={t('superadmin.membership.form.prioritySupport')}
+                description={t('superadmin.membership.form.prioritySupportDesc')}
                 checked={prioritySupport}
                 onChange={(v) => {
                   setPrioritySupport(v);
@@ -334,7 +338,7 @@ export default function MembershipTierForm({
           </fieldset>
 
           <div>
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">Benefits</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">{t('superadmin.membership.form.benefits')}</span>
             <div className="mt-2 flex gap-2">
               <input
                 type="text"
@@ -346,17 +350,17 @@ export default function MembershipTierForm({
                     addBenefit();
                   }
                 }}
-                placeholder="Enter Benefit"
+                placeholder={t('superadmin.membership.form.benefitPlaceholder')}
                 className="min-w-0 flex-1 rounded-xl border border-white/[0.1] bg-black/35 px-4 py-3 text-sm text-brand-heading outline-none ring-brand-accent/20 placeholder:text-brand-subtle/60 focus:border-brand-accent/40 focus:ring-2"
               />
               <button
                 type="button"
                 onClick={addBenefit}
                 className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-brand-accent/40 bg-[var(--brand-accent-soft)]/25 px-4 py-3 text-sm font-semibold text-brand-accent transition hover:bg-[var(--brand-accent-soft)]/40"
-                aria-label="Add benefit"
+                aria-label={t('superadmin.membership.form.addBenefit')}
               >
                 <Plus className="h-4 w-4" strokeWidth={2} aria-hidden />
-                Add
+                {t('superadmin.membership.form.add')}
               </button>
             </div>
 
@@ -372,7 +376,7 @@ export default function MembershipTierForm({
                       type="button"
                       onClick={() => removeBenefit(i)}
                       className="shrink-0 rounded-lg p-1 text-brand-muted transition hover:bg-white/[0.06] hover:text-rose-300"
-                      aria-label="Remove benefit"
+                      aria-label={t('superadmin.membership.form.removeBenefit')}
                     >
                       <X className="h-4 w-4" strokeWidth={2} />
                     </button>
@@ -391,13 +395,13 @@ export default function MembershipTierForm({
                 (saving || !ready) && 'pointer-events-none opacity-60'
               )}
             >
-              {saving ? 'Saving…' : submitLabel}
+              {saving ? t('superadmin.common.saving') : submitLabel}
             </button>
             <Link
               href={backHref}
               className="inline-flex items-center justify-center rounded-xl border border-white/[0.12] bg-black/25 px-6 py-2.5 text-sm font-semibold text-brand-heading transition hover:bg-white/[0.04]"
             >
-              Cancel
+              {t('superadmin.common.cancel')}
             </Link>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import {
   PAYPAL_SANDBOX_TEST_CARD,
   formatPayPalTestCardDisplay,
@@ -103,6 +104,7 @@ function PayPalCardFieldsInner({
   onRetry,
   toast,
 }) {
+  const { t } = useWebsiteT();
   const { error: fieldsError } = usePayPalCardFields();
   const { submit, submitResponse, error: submitError } =
     usePayPalCardFieldsOneTimePaymentSession();
@@ -110,23 +112,21 @@ function PayPalCardFieldsInner({
   useEffect(() => {
     if (fieldsError) {
       const msg =
-        fieldsError?.message ||
-        'PayPal card form failed to load. Enable Advanced Card Payments on your PayPal app.';
+        fieldsError?.message || t('dashboard.paypal.cardFormFailed');
       setPaypalInlineError(msg);
-      toast.error(msg, { title: 'PayPal Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
     }
-  }, [fieldsError, setPaypalInlineError, toast]);
+  }, [fieldsError, setPaypalInlineError, toast, t]);
 
   useEffect(() => {
     if (submitError) {
       setProcessingPayment(false);
       const msg =
-        submitError?.message ||
-        'Card payment could not be submitted. Check sandbox test card or PayPal app settings.';
+        submitError?.message || t('dashboard.paypal.cardSubmitSandbox');
       setPaypalInlineError(msg);
-      toast.error(msg, { title: 'PayPal Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
     }
-  }, [submitError, setPaypalInlineError, setProcessingPayment, toast]);
+  }, [submitError, setPaypalInlineError, setProcessingPayment, toast, t]);
 
   useEffect(() => {
     if (!submitResponse) return;
@@ -137,9 +137,9 @@ function PayPalCardFieldsInner({
 
       if (state === 'canceled') {
         setProcessingPayment(false);
-        const msg = '3D Secure verification was cancelled.';
+        const msg = t('dashboard.paypal.cancelled3dsShort');
         setPaypalInlineError(msg);
-        toast.info(msg, { title: 'Payment Cancelled' });
+        toast.info(msg, { title: t('dashboard.paypal.cancelled') });
         return;
       }
 
@@ -147,15 +147,19 @@ function PayPalCardFieldsInner({
         setProcessingPayment(false);
         const msg =
           data?.message ||
-          `Card payment failed. Sandbox: Visa ${PAYPAL_SANDBOX_TEST_CARD.visa}, exp ${PAYPAL_SANDBOX_TEST_CARD.expiry}, CVV ${PAYPAL_SANDBOX_TEST_CARD.cvv}.`;
+          t('dashboard.paypal.cardFailedSandbox', {
+            card: PAYPAL_SANDBOX_TEST_CARD.visa,
+            expiry: PAYPAL_SANDBOX_TEST_CARD.expiry,
+            cvc: PAYPAL_SANDBOX_TEST_CARD.cvv,
+          });
         setPaypalInlineError(msg);
-        toast.error(msg, { title: 'PayPal Error' });
+        toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
         return;
       }
 
       if (state !== 'succeeded') return;
 
-      setPaypalStatusNote('Payment authorized. Securing funds to your wallet...');
+      setPaypalStatusNote(t('dashboard.paypal.securingWallet'));
       try {
         await new Promise((r) => setTimeout(r, 1200));
         const json = await captureWithRetries({
@@ -169,9 +173,9 @@ function PayPalCardFieldsInner({
         onPaymentComplete(json);
       } catch (err) {
         setProcessingPayment(false);
-        const msg = err.message || 'Capture failed.';
+        const msg = err.message || t('dashboard.paypal.error');
         setPaypalInlineError(msg);
-        toast.error(msg, { title: 'PayPal Error' });
+        toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
       }
     };
 
@@ -186,27 +190,28 @@ function PayPalCardFieldsInner({
     setPaypalStatusNote,
     setProcessingPayment,
     toast,
+    t,
   ]);
 
   const handlePay = async () => {
     if (!orderId) {
-      const msg = 'PayPal order is not ready. Please try again.';
+      const msg = t('dashboard.paypal.orderNotReady');
       setPaypalInlineError(msg);
-      toast.error(msg, { title: 'PayPal Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
       return;
     }
     setProcessingPayment(true);
     setPaypalInlineError('');
-    setPaypalStatusNote('Authenticating card (3D Secure when required)...');
+    setPaypalStatusNote(t('dashboard.paypal.authCard3ds'));
     try {
       await submit(orderId, {
         billingAddress: PAYPAL_BILLING_ADDRESS,
       });
     } catch (err) {
       setProcessingPayment(false);
-      const msg = err?.message || 'Could not submit card payment.';
+      const msg = err?.message || t('dashboard.paypal.couldNotSubmitCard');
       setPaypalInlineError(msg);
-      toast.error(msg, { title: 'PayPal Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
     }
   };
 
@@ -214,10 +219,10 @@ function PayPalCardFieldsInner({
     <>
       <div className="paypal-deposit-card-fields mt-5 space-y-1 rounded-xl border border-blue-400/20 bg-black/20 p-4">
         <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-blue-200/80">
-          Card number
+          {t('dashboard.paypal.cardNumber')}
         </label>
         <PayPalCardNumberField
-          placeholder="Card number"
+          placeholder={t('dashboard.paypal.cardNumber')}
           containerStyles={fieldContainerStyle}
           containerClassName="paypal-card-field-host"
           style={paypalCardFieldStyle}
@@ -225,10 +230,10 @@ function PayPalCardFieldsInner({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-blue-200/80">
-              Expiry
+              {t('dashboard.paypal.expiry')}
             </label>
             <PayPalCardExpiryField
-              placeholder="MM / YY"
+              placeholder={t('dashboard.paypal.expiryPlaceholder')}
               containerStyles={fieldContainerStyle}
               containerClassName="paypal-card-field-host"
               style={paypalCardFieldStyle}
@@ -236,10 +241,10 @@ function PayPalCardFieldsInner({
           </div>
           <div>
             <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-blue-200/80">
-              CVV
+              {t('dashboard.paypal.cvc')}
             </label>
             <PayPalCardCvvField
-              placeholder="CVV"
+              placeholder={t('dashboard.paypal.cvc')}
               containerStyles={fieldContainerStyle}
               containerClassName="paypal-card-field-host"
               style={paypalCardFieldStyle}
@@ -247,14 +252,11 @@ function PayPalCardFieldsInner({
           </div>
         </div>
         <p className="text-xs text-blue-200/70">
-          Sandbox test card (copy exactly):{' '}
-          <span className="font-mono text-blue-100">
-            {formatPayPalTestCardDisplay(PAYPAL_SANDBOX_TEST_CARD.visa)}
-          </span>
-          {' · '}
-          Exp <span className="font-mono">{PAYPAL_SANDBOX_TEST_CARD.expiry}</span>
-          {' · '}
-          CVV <span className="font-mono">{PAYPAL_SANDBOX_TEST_CARD.cvv}</span>
+          {t('dashboard.paypal.sandboxTestCard', {
+            card: formatPayPalTestCardDisplay(PAYPAL_SANDBOX_TEST_CARD.visa),
+            expiry: PAYPAL_SANDBOX_TEST_CARD.expiry,
+            cvc: PAYPAL_SANDBOX_TEST_CARD.cvv,
+          })}
         </p>
         {paypalInlineError ? (
           <div className="space-y-2">
@@ -269,7 +271,7 @@ function PayPalCardFieldsInner({
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-200 hover:text-white"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                Start new payment attempt
+                {t('dashboard.paypal.newAttempt')}
               </button>
             ) : null}
           </div>
@@ -285,10 +287,10 @@ function PayPalCardFieldsInner({
         {processingPayment ? (
           <span className="inline-flex items-center justify-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Processing secure payment...
+            {t('dashboard.paypal.processing')}
           </span>
         ) : (
-          `Pay $${amountUsd} with card`
+          t('dashboard.paypal.payWithCardAmount', { amount: `$${amountUsd}` })
         )}
       </button>
     </>
@@ -296,13 +298,14 @@ function PayPalCardFieldsInner({
 }
 
 export default function PayPalCardPaymentForm(props) {
+  const { t } = useWebsiteT();
   const clientId = PAYPAL_CLIENT_ID;
   const environment = PAYPAL_ENV;
 
   if (!clientId) {
     return (
       <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-        PayPal is not configured. Set NEXT_PUBLIC_PAYPAL_CLIENT_ID on the server.
+        {t('dashboard.paypal.notConfiguredServer')}
       </p>
     );
   }

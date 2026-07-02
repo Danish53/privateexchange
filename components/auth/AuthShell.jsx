@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 export default function AuthShell({
   title,
@@ -9,13 +11,17 @@ export default function AuthShell({
   children,
   footer,
   backHref = '/',
-  backLabel = 'Back to home',
+  backLabel,
   badge,
   /** Outer column max width for all auth pages (matches register). */
   contentMaxWidth = 'max-w-xl sm:max-w-2xl',
   /** Subtitle line length under the title (matches register). */
   subtitleMaxWidthClass = 'max-w-md sm:max-w-xl',
+  showLanguageSwitcher = true,
 }) {
+  const { t } = useWebsiteT();
+  const resolvedBackLabel = backLabel ?? t('auth.backHome');
+
   return (
     <div className="relative min-h-screen bg-brand-page font-sans text-brand-foreground">
       <div
@@ -44,6 +50,12 @@ export default function AuthShell({
         aria-hidden
       />
 
+      {showLanguageSwitcher ? (
+        <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+          <LanguageSwitcher />
+        </div>
+      ) : null}
+
       <div
         className={`relative z-10 mx-auto flex min-h-screen w-full flex-col justify-center px-4 py-12 sm:px-6 ${contentMaxWidth}`}
       >
@@ -52,7 +64,7 @@ export default function AuthShell({
           className="auth-link group mb-8 inline-flex flex-shrink-0 items-center gap-2 text-sm"
         >
           <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
-          {backLabel}
+          {resolvedBackLabel}
         </Link>
 
         <div className="auth-card">

@@ -2,22 +2,16 @@
 
 import {
   Coins,
-  Info,
-  Layers,
-  Scale,
   Shield,
   Zap,
-  ArrowRightLeft,
-  Wallet,
   Settings2,
-  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import CreateTokenModal from '../tokenmodal/CreateTokenModal';
 import { AdminStatsRowSkeleton } from '@/components/ui/content-skeletons';
 import { formatNumberSmart } from '@/lib/numberFormat';
-
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 function StatChip({ icon: Icon, label, value }) {
   return (
@@ -36,33 +30,24 @@ function StatChip({ icon: Icon, label, value }) {
 function TokenCardSkeleton() {
   return (
     <div className="animate-pulse rounded-2xl border border-white/[0.08] bg-black/[0.35] p-5">
-
-      {/* HEADER */}
       <div className="flex items-start gap-3">
         <div className="h-12 w-12 rounded-xl bg-white/10" />
-
         <div className="flex-1 space-y-2">
           <div className="h-4 w-32 rounded bg-white/10" />
           <div className="h-3 w-20 rounded bg-white/10" />
         </div>
       </div>
-
-      {/* GRID */}
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div className="h-14 rounded-xl bg-white/10" />
         <div className="h-14 rounded-xl bg-white/10" />
         <div className="h-14 rounded-xl bg-white/10" />
         <div className="h-14 rounded-xl bg-white/10" />
       </div>
-
-      {/* TAGS */}
       <div className="mt-4 flex gap-2">
         <div className="h-6 w-16 rounded bg-white/10" />
         <div className="h-6 w-16 rounded bg-white/10" />
         <div className="h-6 w-16 rounded bg-white/10" />
       </div>
-
-      {/* BUTTONS */}
       <div className="mt-5 flex gap-2">
         <div className="h-8 w-24 rounded-xl bg-white/10" />
         <div className="h-8 w-24 rounded-xl bg-white/10" />
@@ -72,6 +57,7 @@ function TokenCardSkeleton() {
 }
 
 export default function SuperAdminTokensPage() {
+  const { t } = useWebsiteT();
   const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editToken, setEditToken] = useState(null);
@@ -81,6 +67,7 @@ export default function SuperAdminTokensPage() {
   });
 
   const [deleteLoading, setDeleteLoading] = useState(false);
+
   useEffect(() => {
     const fetchTokens = async () => {
       try {
@@ -100,11 +87,13 @@ export default function SuperAdminTokensPage() {
     fetchTokens();
   }, []);
 
+  const statusLabel = (isActive) =>
+    isActive ? t('superadmin.tokens.active') : t('superadmin.tokens.inactive');
+
   if (loading) {
     return (
       <div className="space-y-8">
         <AdminStatsRowSkeleton cards={4} />
-
         <div className="grid gap-4 lg:grid-cols-2">
           {[...Array(4)].map((_, i) => (
             <TokenCardSkeleton key={i} />
@@ -144,35 +133,14 @@ export default function SuperAdminTokensPage() {
     setEditToken(null);
   };
 
-
   return (
     <div className="space-y-8">
       <div className="border-b border-white/[0.06] pb-6">
-        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Tokens Management</h1>
-        <p className="mt-1 max-w-3xl text-sm text-brand-muted">
-          Manage the tokens available on the platform.
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
+          {t('superadmin.tokens.title')}
+        </h1>
+        <p className="mt-1 max-w-3xl text-sm text-brand-muted">{t('superadmin.tokens.subtitle')}</p>
       </div>
-
-      {/* <div className="relative overflow-hidden rounded-2xl border border-brand-accent/15 bg-gradient-to-br from-[var(--brand-accent-soft)]/22 via-black/20 to-[#060708] p-5 sm:p-6">
-        <div className="flex gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-accent/25 bg-black/30 text-brand-accent">
-            <Info className="h-5 w-5" strokeWidth={2} aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-brand-heading">Design scope (requirements)</p>
-            <p className="mt-1 text-sm leading-relaxed text-brand-muted">
-              <strong className="font-medium text-brand-subtle">Token engine</strong> will support multi-token
-              balances, internal value mapping, and rule-based usage. This screen is the control surface for{' '}
-              <strong className="font-medium text-brand-subtle">create / edit</strong> token metadata, optional
-              reference values, and per-token policies—without implying equity or profit distribution.
-            </p>
-          </div>
-        </div>
-      </div> */}
-
-
-      {/* create token? */}
 
       <CreateTokenModal
         editToken={editToken}
@@ -182,8 +150,8 @@ export default function SuperAdminTokensPage() {
         }}
         onUpdated={(updatedToken) => {
           setTokens((prev) =>
-            prev.map((t) =>
-              t._id === updatedToken._id ? updatedToken : t
+            prev.map((tok) =>
+              tok._id === updatedToken._id ? updatedToken : tok
             )
           );
           setEditToken(null);
@@ -191,137 +159,126 @@ export default function SuperAdminTokensPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatChip icon={Coins} label="Ecosystem tokens" value="5 configured" />
-        <StatChip icon={Shield} label="Compliance" value="Utility framing" />
-        <StatChip icon={Zap} label="Transfer engine" value="Fee + VIP hooks" />
-        <StatChip icon={Settings2} label="Admin edits" value="Audit-friendly" />
+        <StatChip icon={Coins} label={t('superadmin.tokens.stats.ecosystemTokens')} value={t('superadmin.tokens.stats.ecosystemConfigured')} />
+        <StatChip icon={Shield} label={t('superadmin.tokens.stats.compliance')} value={t('superadmin.tokens.stats.complianceValue')} />
+        <StatChip icon={Zap} label={t('superadmin.tokens.stats.transferEngine')} value={t('superadmin.tokens.stats.transferEngineValue')} />
+        <StatChip icon={Settings2} label={t('superadmin.tokens.stats.adminEdits')} value={t('superadmin.tokens.stats.adminEditsValue')} />
       </div>
 
       <div>
-
         <div className="grid gap-4 lg:grid-cols-2">
-          {tokens.filter((t) => t.slug !== "usd").map((t, index) => (
+          {tokens.filter((tok) => tok.slug !== "usd").map((tok) => (
             <div
-              key={t._id || t.slug}
+              key={tok._id || tok.slug}
               className={cn(
                 'relative overflow-hidden rounded-2xl border bg-gradient-to-b from-black/[0.45] to-[#07080c] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]'
               )}
             >
-              {/* Background gradient (dynamic optional) */}
               <div
                 className="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-90"
                 aria-hidden
               />
 
-              {/* Header */}
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
-
-                  {/* SYMBOL BOX */}
                   <span
                     className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/40 font-bold tabular-nums text-brand-heading shadow-inner"
                   >
-                    {t.symbol}
+                    {tok.symbol}
                   </span>
 
-                  {/* NAME + SLUG */}
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-semibold tracking-tight text-brand-heading">
-                        {t.name}
+                        {tok.name}
                       </h3>
 
                       <span className="rounded-md border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-brand-subtle bg-white/5 border-white/10">
-                        {t.slug}
+                        {tok.slug}
                       </span>
                     </div>
 
                     <p className="mt-1 text-sm text-brand-muted">
-                      Ecosystem Token
+                      {t('superadmin.tokens.ecosystemToken')}
                     </p>
                   </div>
                 </div>
 
-                {/* STATUS DOT (active/inactive) */}
                 <span
                   className={cn(
                     'inline-flex h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/10 sm:mt-2',
-                    t.isActive ? 'bg-emerald-500' : 'bg-red-500'
+                    tok.isActive ? 'bg-emerald-500' : 'bg-red-500'
                   )}
-                  title={t.isActive ? "Active" : "Inactive"}
+                  title={statusLabel(tok.isActive)}
                 />
               </div>
 
-              {/* DETAILS GRID */}
               <dl className="relative mt-5 grid gap-3 sm:grid-cols-2">
-
                 <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
                   <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    USD Per Token
+                    {t('superadmin.tokens.usdPerToken')}
                   </dt>
                   <dd className="mt-1 font-mono text-sm tabular-nums text-brand-heading">
-                    ${formatNumberSmart(parseFloat(t.usdPerUnit || 0), { maxFractionDigits: 2 })}
+                    ${formatNumberSmart(parseFloat(tok.usdPerUnit || 0), { maxFractionDigits: 2 })}
                   </dd>
                 </div>
 
                 <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
                   <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Total Tokens
+                    {t('superadmin.tokens.totalTokens')}
                   </dt>
                   <dd className="mt-1 font-mono text-sm tabular-nums text-brand-heading">
-                    {t.usdPerUnit && t.usdPerUnit > 0 ? Math.round(1 / t.usdPerUnit) : 0}
+                    {tok.usdPerUnit && tok.usdPerUnit > 0 ? Math.round(1 / tok.usdPerUnit) : 0}
                   </dd>
                 </div>
 
                 <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
                   <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Sort Order
+                    {t('superadmin.tokens.sortOrder')}
                   </dt>
                   <dd className="mt-1 text-sm text-brand-muted">
-                    {t.sortOrder ?? 0}
+                    {tok.sortOrder ?? 0}
                   </dd>
                 </div>
 
                 <div className="rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2.5">
                   <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Status
+                    {t('superadmin.tokens.status')}
                   </dt>
                   <dd className="mt-1 text-sm text-brand-muted">
-                    {t.isActive ? "Active" : "Inactive"}
+                    {statusLabel(tok.isActive)}
                   </dd>
                 </div>
               </dl>
 
-              {/* TAGS */}
               <div className="relative mt-4 flex flex-wrap gap-2">
                 <span className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-medium text-brand-subtle">
-                  Symbol: {t.symbol}
+                  {t('superadmin.tokens.symbolTag', { symbol: tok.symbol })}
                 </span>
 
                 <span className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-medium text-brand-subtle">
-                  Slug: {t.slug}
+                  {t('superadmin.tokens.slugTag', { slug: tok.slug })}
                 </span>
 
                 <span className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-medium text-brand-subtle">
-                  Status: {t.isActive ? "Active" : "Inactive"}
+                  {t('superadmin.tokens.statusTag', { status: statusLabel(tok.isActive) })}
                 </span>
               </div>
 
-              {/* ACTIONS */}
               <div className="relative mt-5 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
                 <button
-                  onClick={() => setEditToken(t)}
+                  onClick={() => setEditToken(tok)}
                   className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-brand-heading hover:bg-white/10"
                 >
-                  Edit token
+                  {t('superadmin.tokens.editToken')}
                 </button>
 
                 <button
                   type="button"
                   className="rounded-xl border border-white/10 bg-red-500 px-4 py-2 text-xs font-semibold text-brand-heading hover:bg-red-600"
-                  onClick={() => setDeleteModal({ open: true, tokenId: t._id })}
+                  onClick={() => setDeleteModal({ open: true, tokenId: tok._id })}
                 >
-                  Delete token
+                  {t('superadmin.tokens.deleteToken')}
                 </button>
               </div>
             </div>
@@ -329,50 +286,24 @@ export default function SuperAdminTokensPage() {
         </div>
       </div>
 
-      {/* <div className="rounded-2xl border border-white/[0.08] bg-black/[0.22] p-5 sm:p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-          Rule categories (per proposal)
-        </h2>
-        <p className="mt-1 text-xs text-brand-muted">
-          These rows map to backend modules later; visual structure only for now.
-        </p>
-        <ul className="mt-5 divide-y divide-white/[0.06] border border-white/[0.06] rounded-xl overflow-hidden">
-          {RULE_ROWS.map((row) => (
-            <li key={row.label} className="flex gap-4 bg-black/[0.2] px-4 py-4 sm:px-5">
-              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] text-brand-accent">
-                <row.icon className="h-4 w-4" strokeWidth={2} aria-hidden />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-brand-heading">{row.label}</p>
-                <p className="mt-1 text-sm leading-relaxed text-brand-muted">{row.detail}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div> */}
       {deleteModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0c10] p-6 shadow-xl">
-
-            {/* HEADER */}
             <h2 className="text-lg font-semibold text-white">
-              Confirm Delete
+              {t('superadmin.tokens.confirmDeleteTitle')}
             </h2>
 
             <p className="mt-2 text-sm text-white/60">
-              Are you sure you want to delete this token? This action cannot be undone.
+              {t('superadmin.tokens.confirmDeleteBody')}
             </p>
 
-            {/* ACTIONS */}
             <div className="mt-6 flex justify-end gap-3">
-
               <button
                 disabled={deleteLoading}
                 onClick={() => setDeleteModal({ open: false, tokenId: null })}
                 className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/5"
               >
-                Cancel
+                {t('superadmin.common.cancel')}
               </button>
 
               <button
@@ -383,9 +314,8 @@ export default function SuperAdminTokensPage() {
                 {deleteLoading && (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 )}
-                {deleteLoading ? "Deleting..." : "Delete"}
+                {deleteLoading ? t('superadmin.tokens.deleting') : t('superadmin.common.delete')}
               </button>
-
             </div>
           </div>
         </div>

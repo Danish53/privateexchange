@@ -2,6 +2,7 @@
 
 import { ArrowRightLeft, Check, Gift, Headphones, Sparkles } from 'lucide-react';
 import { getMembershipTierFeatures } from '@/lib/membershipTierFeatures';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { cn } from '@/lib/utils';
 
 const FEATURE_ICONS = {
@@ -16,11 +17,19 @@ const FEATURE_ICONS = {
  */
 export default function MembershipTierFeatures({
   tier,
-  title = 'Included with this tier',
+  title,
   muted = false,
   className,
 }) {
-  const features = getMembershipTierFeatures(tier);
+  const { t } = useWebsiteT();
+  const resolvedTitle = title ?? t('membershipFeatures.includedDefault');
+  const rawFeatures = getMembershipTierFeatures(tier);
+  const features = rawFeatures.map((f) => ({
+    ...f,
+    label: t(`membershipFeatures.${f.key}.label`),
+    description: t(`membershipFeatures.${f.key}.description`),
+  }));
+
   if (!features.length) return null;
 
   return (
@@ -59,7 +68,7 @@ export default function MembershipTierFeatures({
                 muted ? 'text-brand-subtle' : 'text-brand-accent'
               )}
             >
-              {title}
+              {resolvedTitle}
             </p>
           </div>
           <span
@@ -70,7 +79,7 @@ export default function MembershipTierFeatures({
                 : 'border-brand-accent/30 bg-black/40 text-brand-accent'
             )}
           >
-            {features.length} active
+            {t('membershipFeatures.activeCount', { count: features.length })}
           </span>
         </div>
       </div>

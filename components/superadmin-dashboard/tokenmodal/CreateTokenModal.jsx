@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { formatNumberSmart } from "@/lib/numberFormat";
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCreateClick }) {
+  const { t } = useWebsiteT();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -34,7 +36,6 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
   const handleChange = (e) => {
     const newForm = { ...form, [e.target.name]: e.target.value };
     
-    // Calculate usdPerUnit when totalTokens changes (1 USD / totalTokens)
     if (e.target.name === 'totalTokens') {
       const totalTokens = parseFloat(newForm.totalTokens);
       
@@ -48,6 +49,8 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
     setForm(newForm);
   };
 
+  const priceFormatted = formatNumberSmart(parseFloat(form.usdPerUnit || 0), { maxFractionDigits: 2 });
+
   const handleSubmit = async () => {
     setLoading(true);
 
@@ -58,7 +61,6 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
 
       const method = editToken ? "PUT" : "POST";
 
-      // Prepare data to send - include totalUsd and totalTokens for calculation
       const dataToSend = {
         name: form.name,
         symbol: form.symbol,
@@ -95,10 +97,10 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
           sortOrder: "",
         });
       } else {
-        alert(data.message);
+        alert(data.message || t('superadmin.tokens.modal.saveFailed'));
       }
     } catch (err) {
-      alert("Something went wrong");
+      alert(t('superadmin.tokens.modal.somethingWrong'));
     } finally {
       setLoading(false);
     }
@@ -119,7 +121,6 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
 
   return (
     <>
-      {/* BUTTON */}
       <button
         onClick={() => {
           onCreateClick?.();
@@ -128,18 +129,15 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
         className="bg-brand-accent inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white hover:bg-transparent hover:bg-brand-accent/80 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:ring-offset-2 hover:border-brand-accent border border-transparent"
       >
         <Plus className="h-4 w-4" />
-        Create Token
+        {t('superadmin.tokens.createToken')}
       </button>
 
-      {/* MODAL */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0b0c10] p-6 shadow-xl">
-
-            {/* HEADER */}
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">
-                {editToken ? "Edit Token" : "Create New Token"}
+                {editToken ? t('superadmin.tokens.modal.editTitle') : t('superadmin.tokens.modal.createTitle')}
               </h2>
 
               <button
@@ -150,13 +148,10 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
               </button>
             </div>
 
-            {/* FORM */}
             <div className="mt-5 space-y-4">
-
-              {/* NAME */}
               <div>
                 <label className="text-xs font-medium text-white/70">
-                  Token Name
+                  {t('superadmin.tokens.modal.tokenName')}
                 </label>
                 <input
                   name="name"
@@ -166,10 +161,9 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
                 />
               </div>
 
-              {/* SYMBOL */}
               <div>
                 <label className="text-xs font-medium text-white/70">
-                  Symbol
+                  {t('superadmin.tokens.modal.symbol')}
                 </label>
                 <input
                   name="symbol"
@@ -179,10 +173,9 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
                 />
               </div>
 
-              {/* SLUG */}
               <div>
                 <label className="text-xs font-medium text-white/70">
-                  Slug
+                  {t('superadmin.tokens.modal.slug')}
                 </label>
                 <input
                   name="slug"
@@ -192,10 +185,9 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
                 />
               </div>
 
-              {/* TOTAL TOKENS */}
               <div>
                 <label className="text-xs font-medium text-white/70">
-                  Total Tokens
+                  {t('superadmin.tokens.modal.totalTokens')}
                 </label>
                 <input
                   name="totalTokens"
@@ -203,42 +195,36 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
                   step="1"
                   value={form.totalTokens}
                   onChange={handleChange}
-                  placeholder="Enter total token"
+                  placeholder={t('superadmin.tokens.modal.totalTokensPlaceholder')}
                   className="mt-1 w-full rounded-lg border border-white/10 bg-black/40 px-4 py-2 text-white outline-none focus:border-brand-accent"
                 />
-                {/* <div className="mt-1 text-xs text-white/50">
-                  Enter how many tokens you want to create
-                </div> */}
               </div>
 
-              {/* CALCULATED PRICE PER TOKEN */}
               {form.totalTokens && (
                 <div className="rounded-lg border border-brand-accent/30 bg-brand-accent/10 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-white/80">
-                      Calculated Price:
+                      {t('superadmin.tokens.modal.calculatedPrice')}
                     </span>
                     <span className="text-sm font-bold text-brand-accent">
-                      1 token = ${formatNumberSmart(parseFloat(form.usdPerUnit || 0), { maxFractionDigits: 2 })} USD
+                      {t('superadmin.tokens.modal.oneTokenEquals', { price: priceFormatted })}
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-white/60">
-                    ${formatNumberSmart(parseFloat(form.usdPerUnit || 0), { maxFractionDigits: 2 })} per token
+                    {t('superadmin.tokens.modal.perToken', { price: priceFormatted })}
                   </div>
                 </div>
               )}
 
-              {/* HIDDEN USD PER UNIT FIELD (for API) */}
               <input
                 type="hidden"
                 name="usdPerUnit"
                 value={form.usdPerUnit}
               />
 
-              {/* SORT ORDER */}
               <div>
                 <label className="text-xs font-medium text-white/70">
-                  Sort Order
+                  {t('superadmin.tokens.modal.sortOrder')}
                 </label>
                 <input
                   name="sortOrder"
@@ -248,16 +234,14 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
                   className="mt-1 w-full rounded-lg border border-white/10 bg-black/40 px-4 py-2 text-white outline-none focus:border-brand-accent"
                 />
               </div>
-
             </div>
 
-            {/* ACTIONS */}
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={handleClose}
                 className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/5"
               >
-                Cancel
+                {t('superadmin.common.cancel')}
               </button>
 
               <button
@@ -268,16 +252,15 @@ export default function CreateTokenModal({ onCreated, editToken, onUpdated, onCr
                 {loading ? (
                   <>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    {editToken ? "Updating..." : "Creating..."}
+                    {editToken ? t('superadmin.tokens.modal.updating') : t('superadmin.tokens.modal.creating')}
                   </>
                 ) : editToken ? (
-                  "Update"
+                  t('superadmin.tokens.modal.update')
                 ) : (
-                  "Create"
+                  t('superadmin.tokens.modal.create')
                 )}
               </button>
             </div>
-
           </div>
         </div>
       )}

@@ -1,0 +1,281 @@
+{
+  "brand": {
+    "name": "Private Exchange",
+    "tagline": "Ecosistema 759"
+  },
+  "nav": {
+    "overview": "Resumen",
+    "tokens": "Tokens",
+    "features": "Funciones",
+    "winners": "Ganadores",
+    "payments": "Pagos",
+    "dashboard": "Panel",
+    "signOut": "Cerrar sesión",
+    "signIn": "Iniciar sesión",
+    "register": "Registrarse",
+    "createAccount": "Crear cuenta",
+    "navigate": "Navegar",
+    "account": "Cuenta",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
+  },
+  "hero": {
+    "eyebrow": "Billetera multi-token · Fiat y cripto",
+    "title": "Saldos, transferencias y sorteos—un espacio de intercambio privado.",
+    "subtitle": "Creado para el ecosistema 759: cinco tokens, niveles de membresía, movimientos respaldados por libro mayor y controles administrativos rastreables de principio a fin.",
+    "openDashboard": "Abrir panel",
+    "exploreCapabilities": "Explorar capacidades",
+    "snapshotLabel": "Resumen operativo",
+    "snapshotText": "Volumen, transferencias y reglas de nivel en un solo lugar"
+  },
+  "stats": {
+    "tokensLive": "Tokens activos",
+    "uptime": "Objetivo de disponibilidad",
+    "transferFee": "Comisión de transferencia (estándar)",
+    "vipFee": "Comisión VIP",
+    "yes": "Sí"
+  },
+  "winners": {
+    "eyebrow": "Sorteos",
+    "title": "Ganadores recientes de sorteos",
+    "subtitle": "Los sorteos completados más recientes y los miembros que los ganaron. Únete al espacio de trabajo para participar en pools abiertos y ver el historial completo en tu panel.",
+    "viewDrawings": "Ver sorteos",
+    "createAccount": "Crear cuenta",
+    "empty": "Los ganadores aparecerán aquí cuando se completen los sorteos y se publiquen los resultados. Inicia sesión para unirte a pools activos desde tu panel de miembro.",
+    "signIn": "Iniciar sesión",
+    "win": "Ganó",
+    "won": "Ganó",
+    "drawing": "Sorteo",
+    "prize": "Premio",
+    "drawDate": "Fecha del sorteo",
+    "viewDrawing": "Ver sorteo",
+    "signInToExplore": "Inicia sesión para explorar",
+    "member": "Miembro",
+    "eventAccess": "Acceso al evento",
+    "physicalPrize": "Premio físico",
+    "prizeFallback": "Premio"
+  },
+  "why": {
+    "ledgerLabel": "Libro mayor y controles",
+    "ledgerText": "Cada movimiento rastreable en el espacio de trabajo",
+    "eyebrow": "Por qué existe",
+    "title": "Creado para miembros que buscan claridad—no ruido",
+    "subtitle": "Private Exchange une saldos, transferencias, sorteos y niveles en un flujo auditado. Ves comisiones, estado e historial en lenguaje claro—sin jerga ni mecánicas ocultas.",
+    "bullet1": "Paneles basados en roles para usuarios y administradores",
+    "bullet2": "Reglas de comisiones transparentes y beneficios VIP",
+    "bullet3": "Vías de financiación implementadas por fases con verificación"
+  },
+  "tokensSection": {
+    "title": "Tokens compatibles",
+    "subtitle": "Cinco activos del ecosistema en el libro mayor—cada uno con sus propias reglas y metadatos a medida que la plataforma crece.",
+    "caption": "Activos del ecosistema · ilustrativo",
+    "primary": "Principal",
+    "premium": "Premium",
+    "reserve": "Reserva",
+    "entries": "Entradas",
+    "community": "Comunidad"
+  },
+  "features": {
+    "title": "Módulos de la plataforma",
+    "subtitle": "Libro mayor de billetera, motor de transacciones, pagos, sorteos y membresía—conectados para operaciones y supervisión administrativa.",
+    "bannerEyebrow": "Un espacio de trabajo",
+    "bannerTitle": "Desde depósitos hasta sorteos—los módulos permanecen conectados al mismo libro mayor",
+    "walletTitle": "Billetera Multi-Token",
+    "walletDesc": "Una billetera respaldada por libro mayor para cada token compatible, con un historial claro de movimientos.",
+    "secureTitle": "Plataforma Segura",
+    "secureDesc": "Acceso basado en roles, ajustes auditados y validación de transacciones integrada en el núcleo.",
+    "transferTitle": "Transferencias Instantáneas",
+    "transferDesc": "Envíos de tokens entre pares con comisiones transparentes y beneficios VIP cuando corresponda.",
+    "tiersTitle": "Niveles de Comunidad",
+    "tiersDesc": "Niveles de miembro y VIP con reglas de comisiones y privilegios visibles desde el inicio.",
+    "drawingTitle": "Sistema de Sorteos",
+    "drawingDesc": "Participa en sorteos con tokens, rastrea tu participación y revisa resultados anteriores.",
+    "adminTitle": "Paneles de administración",
+    "adminDesc": "Vistas operativas de volumen, participación y salud de la plataforma—restringidas por rol."
+  },
+  "payments": {
+    "imageEyebrow": "En persona y en línea",
+    "imageText": "Tarjeta, billetera y vías on-chain se implementan por fases—con verificación antes de mover fondos.",
+    "title": "Vías de financiación",
+    "subtitle": "Las rutas de depósito son graduales: activas donde estén disponibles, con verificaciones administrativas en segundo plano. Los estados se muestran claramente.",
+    "available": "Disponible",
+    "roadmap": "En desarrollo"
+  },
+  "cta": {
+    "title": "Inicia sesión en el espacio de trabajo",
+    "subtitle": "Usa credenciales de demostración en la pantalla de inicio de sesión para previsualizar los paneles de usuario y administrador mientras los servicios estén conectados.",
+    "button": "Continuar al inicio de sesión"
+  },
+  "footer": {
+    "blurb": "Un espacio de trabajo para saldos, transferencias, sorteos y niveles—creado para claridad y auditabilidad.",
+    "sessionProtected": "Acceso protegido por sesión",
+    "onThisPage": "En esta página",
+    "workspace": "Espacio de trabajo",
+    "legal": "Legal",
+    "privacy": "Política de Privacidad",
+    "terms": "Términos de Servicio",
+    "copyright": "© {year} 759 Private Exchange. Todos los derechos reservados.",
+    "disclaimer": "Plataforma de utilidad · No es asesoramiento de inversión · Solo para miembros elegibles"
+  },
+  "overlay": {
+    "translating": "Traduciendo página…",
+    "switchingTo": "Cambiando a {language}"
+  },
+  "language": {
+    "label": "Idioma"
+  },
+  "auth": {
+    "backHome": "Volver al inicio",
+    "returnMarketing": "← Volver al sitio principal",
+    "login": {
+      "badge": "Iniciar sesión",
+      "title": "Bienvenido de nuevo",
+      "subtitle": "Inicia sesión en el espacio de trabajo de 759 Private Exchange.",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "signIn": "Iniciar sesión",
+      "signingIn": "Iniciando sesión…",
+      "noAccount": "¿No tienes cuenta?",
+      "createOne": "Crear una",
+      "bannerReset": "Contraseña actualizada. Inicia sesión con tu nueva contraseña.",
+      "bannerVerified": "Correo verificado. Inicia sesión en tu espacio de trabajo.",
+      "errorSignInFailed": "Error al iniciar sesión.",
+      "errorGeneric": "Algo salió mal. Inténtalo de nuevo.",
+      "emailPlaceholder": "tu@ejemplo.com"
+    },
+    "register": {
+      "badge": "Registrarse",
+      "title": "Crea tu cuenta",
+      "subtitle": "Regístrate para acceder al espacio de trabajo. Verificarás tu correo con un código de un solo uso.",
+      "fullName": "Nombre completo",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "confirmPassword": "Confirmar contraseña",
+      "passwordHint": "Al menos 8 caracteres.",
+      "signUpNotePrefix": "El registro público crea una cuenta de",
+      "signUpNoteRole": "usuario",
+      "signUpNoteSuffix": "solamente. Las cuentas de administrador las crea el superadministrador de la plataforma.",
+      "continue": "Continuar a la verificación",
+      "sendingCode": "Enviando código…",
+      "alreadyRegistered": "¿Ya estás registrado?",
+      "signIn": "Iniciar sesión",
+      "errorPasswordMismatch": "Las contraseñas no coinciden.",
+      "errorPasswordLength": "Usa al menos 8 caracteres para tu contraseña.",
+      "errorRegistrationFailed": "Error en el registro.",
+      "errorGeneric": "Algo salió mal. Inténtalo de nuevo.",
+      "namePlaceholder": "Jane Doe",
+      "emailPlaceholder": "tu@ejemplo.com"
+    },
+    "forgot": {
+      "badge": "Recuperación",
+      "badgeSent": "Olvidé mi contraseña",
+      "title": "Olvidé mi contraseña",
+      "titleSent": "Revise su bandeja de entrada",
+      "subtitle": "Introduzca el correo de su cuenta. Le enviaremos un código de restablecimiento.",
+      "subtitleSent": "Si existe una cuenta con ese correo, enviamos un código de 6 dígitos para restablecer su contraseña.",
+      "backToSignIn": "Volver a iniciar sesión",
+      "remembered": "¿La recordó?",
+      "signIn": "Iniciar sesión",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu@ejemplo.com",
+      "sendCode": "Enviar código de restablecimiento",
+      "sending": "Enviando…",
+      "sentHint": "Introduzca el código en la siguiente pantalla con su nueva contraseña. Si SMTP no está configurado, revise la consola del servidor para el código.",
+      "enterCode": "Introducir código y nueva contraseña",
+      "returnToSignIn": "Volver a iniciar sesión",
+      "requestFailed": "La solicitud falló.",
+      "errorGeneric": "Algo salió mal. Inténtelo de nuevo."
+    },
+    "reset": {
+      "badge": "Restablecer contraseña",
+      "title": "Establecer nueva contraseña",
+      "subtitle": "Introduzca el código de su correo y elija una contraseña segura.",
+      "back": "Volver",
+      "needHelp": "¿Necesita ayuda?",
+      "contactViaSite": "Contactar por el sitio",
+      "formHint": "Use el código de 6 dígitos que enviamos y elija una nueva contraseña.",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu@ejemplo.com",
+      "resetCode": "Código de restablecimiento",
+      "codePlaceholder": "Código de 6 dígitos",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Confirmar nueva contraseña",
+      "passwordHint": "Al menos 8 caracteres.",
+      "updatePassword": "Actualizar contraseña",
+      "updating": "Actualizando…",
+      "backToSignIn": "Volver a iniciar sesión",
+      "passwordMismatch": "Las contraseñas no coinciden.",
+      "passwordLength": "Use al menos 8 caracteres.",
+      "codeRequired": "Introduzca el código de 6 dígitos de su correo.",
+      "emailRequired": "El correo electrónico es obligatorio.",
+      "resetFailed": "Error al restablecer.",
+      "errorGeneric": "Algo salió mal. Inténtelo de nuevo."
+    },
+    "verify": {
+      "badge": "Verificación",
+      "title": "Verifique su correo",
+      "subtitle": "Enviamos un código de 6 dígitos a {email}. Introdúzcalo para activar su cuenta.",
+      "backToRegister": "Volver al registro",
+      "wrongEmail": "¿Correo incorrecto?",
+      "startOver": "Empezar de nuevo",
+      "preparing": "Preparando verificación…",
+      "oneTimeCode": "Código de un solo uso",
+      "digitAria": "Dígito {n}",
+      "inboxHint": "Revise su bandeja de entrada (o los registros del servidor si el correo no está configurado).",
+      "verifyContinue": "Verificar y continuar",
+      "verifying": "Verificando…",
+      "resendCode": "Reenviar código",
+      "resending": "Enviando…",
+      "codeIncomplete": "Introduzca el código completo de 6 dígitos.",
+      "verificationFailed": "La verificación falló.",
+      "couldNotResend": "No se pudo reenviar.",
+      "resendFailed": "No se pudo reenviar. Inténtelo de nuevo.",
+      "errorGeneric": "Algo salió mal. Inténtelo de nuevo."
+    },
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "passwordPlaceholder": "••••••••"
+  },
+  "legal": {
+    "backHome": "Volver al inicio",
+    "signIn": "Iniciar sesión",
+    "badge": "Legal",
+    "home": "Inicio",
+    "privacy": "Privacidad",
+    "terms": "Términos",
+    "footerNote": "759 Private Exchange · Texto legal de demostración — reemplazar con texto aprobado por asesoría legal antes de producción.",
+    "privacyTitle": "Política de Privacidad",
+    "privacyUpdated": "Última actualización: 7 de abril de 2026",
+    "termsTitle": "Términos de Servicio",
+    "termsUpdated": "Última actualización: 7 de abril de 2026"
+  },
+  "images": {
+    "hero": "Panel de análisis en un monitor en una oficina con poca luz",
+    "operations": "Espacio de trabajo seguro con portátil y documentos",
+    "tokens": "Monedas de metal precioso apiladas con luz suave",
+    "payments": "Pago sin contacto en un terminal comercial",
+    "modules": "Colegas revisando documentos en una mesa de reunión",
+    "cta": "Escritorio con cuaderno, bolígrafo y café con luz cálida"
+  },
+  "membershipFeatures": {
+    "includedDefault": "Incluido en este nivel",
+    "activeCount": "{count} activos",
+    "transfer_fee": {
+      "label": "Comisiones de transferencia exentas",
+      "description": "Sin comisiones de transferencia en este nivel de membresía."
+    },
+    "vip_drawings": {
+      "label": "Sorteos VIP",
+      "description": "Acceso a sorteos y campañas exclusivas para VIP."
+    },
+    "executive_events": {
+      "label": "Eventos ejecutivos",
+      "description": "Invitaciones a eventos de nivel ejecutivo."
+    },
+    "priority_support": {
+      "label": "Soporte prioritario",
+      "description": "Soporte a miembros más rápido y con prioridad."
+    }
+  }
+}

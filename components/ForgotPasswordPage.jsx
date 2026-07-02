@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AuthShell from '@/components/auth/AuthShell';
 import Spinner from '@/components/ui/Spinner';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 export default function ForgotPasswordPage() {
+  const { t } = useWebsiteT();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
@@ -25,7 +27,7 @@ export default function ForgotPasswordPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'Request failed.');
+        setError(data.error || t('auth.forgot.requestFailed'));
         return;
       }
       if (data.devOtp && typeof window !== 'undefined') {
@@ -33,7 +35,7 @@ export default function ForgotPasswordPage() {
       }
       setSent(true);
     } catch {
-      setError('Something went wrong. Try again.');
+      setError(t('auth.forgot.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -47,22 +49,22 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <AuthShell
-        title="Check your inbox"
-        subtitle="If an account exists for that email, we sent a 6-digit code to reset your password."
-        badge="Forgot password"
+        title={t('auth.forgot.titleSent')}
+        subtitle={t('auth.forgot.subtitleSent')}
+        badge={t('auth.forgot.badgeSent')}
         backHref="/login"
-        backLabel="Back to sign in"
+        backLabel={t('auth.forgot.backToSignIn')}
       >
         <div className="space-y-6 text-center">
           <div className="rounded-lg border border-brand-accent/25 bg-brand-accent/10 px-4 py-4 text-sm text-brand-muted">
-            Enter the code on the next screen with your new password. If SMTP is not configured, check the server console for the code.
+            {t('auth.forgot.sentHint')}
           </div>
           <button type="button" onClick={goToReset} className="btn-primary w-full justify-center">
-            Enter code & new password
+            {t('auth.forgot.enterCode')}
           </button>
           <p className="text-sm text-brand-subtle">
             <Link href="/login" className="auth-link">
-              Return to sign in
+              {t('auth.forgot.returnToSignIn')}
             </Link>
           </p>
         </div>
@@ -72,16 +74,16 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthShell
-      title="Forgot password"
-      subtitle="Enter the email for your account. We will send a reset code."
-      badge="Recovery"
+      title={t('auth.forgot.title')}
+      subtitle={t('auth.forgot.subtitle')}
+      badge={t('auth.forgot.badge')}
       backHref="/login"
-      backLabel="Back to sign in"
+      backLabel={t('auth.forgot.backToSignIn')}
       footer={
         <span className="text-brand-muted">
-          Remembered?{' '}
+          {t('auth.forgot.remembered')}{' '}
           <Link href="/login" className="auth-link text-brand-heading">
-            Sign in
+            {t('auth.forgot.signIn')}
           </Link>
         </span>
       }
@@ -98,14 +100,14 @@ export default function ForgotPasswordPage() {
 
         <div>
           <label htmlFor="forgot-email" className="auth-label">
-            Email
+            {t('auth.forgot.email')}
           </label>
           <input
             id="forgot-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t('auth.forgot.emailPlaceholder')}
             autoComplete="email"
             required
             className="auth-input"
@@ -119,7 +121,7 @@ export default function ForgotPasswordPage() {
           className="btn-primary w-full justify-center gap-2 disabled:opacity-60"
         >
           {loading ? <Spinner size="sm" variant="onAccent" /> : null}
-          <span>{loading ? 'Sending…' : 'Send reset code'}</span>
+          <span>{loading ? t('auth.forgot.sending') : t('auth.forgot.sendCode')}</span>
         </button>
       </form>
     </AuthShell>

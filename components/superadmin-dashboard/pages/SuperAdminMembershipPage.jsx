@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Crown, Pencil, Plus, Shield, Sparkles, Trash2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { formatCurrencySmart } from '@/lib/numberFormat';
 import { cn } from '@/lib/utils';
 import MembershipTierFeatures from '@/components/membership/MembershipTierFeatures';
@@ -51,6 +52,7 @@ function TierCardSkeleton() {
 }
 
 export default function SuperAdminMembershipPage() {
+  const { t } = useWebsiteT();
   const { token, ready } = useAuth();
   const [tiers, setTiers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,18 +71,18 @@ export default function SuperAdminMembershipPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        setError(data.error || 'Could not load membership tiers.');
+        setError(data.error || t('superadmin.membership.errors.couldNotLoad'));
         setTiers([]);
         return;
       }
       setTiers(Array.isArray(data.tiers) ? data.tiers : []);
     } catch {
-      setError('Could not load membership tiers.');
+      setError(t('superadmin.membership.errors.couldNotLoad'));
       setTiers([]);
     } finally {
       setLoading(false);
     }
-  }, [ready, token]);
+  }, [ready, token, t]);
 
   useEffect(() => {
     loadTiers();
@@ -97,13 +99,13 @@ export default function SuperAdminMembershipPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        setError(data.error || 'Could not delete this tier.');
+        setError(data.error || t('superadmin.membership.errors.couldNotDelete'));
         return;
       }
       setDeleteTarget(null);
       await loadTiers();
     } catch {
-      setError('Could not delete this tier.');
+      setError(t('superadmin.membership.errors.couldNotDelete'));
     } finally {
       setDeleteBusy(false);
     }
@@ -114,10 +116,9 @@ export default function SuperAdminMembershipPage() {
       <div className="border-b border-white/[0.06] pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">Membership</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">{t('superadmin.membership.title')}</h1>
             <p className="mt-1 max-w-2xl text-sm text-brand-muted">
-              Define named tiers with a minimum balance in USD and the benefits users see. Tiers are ordered from
-              lowest minimum upward.
+              {t('superadmin.membership.subtitle')}
             </p>
           </div>
           <Link
@@ -125,24 +126,23 @@ export default function SuperAdminMembershipPage() {
             className="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
           >
             <Plus className="h-4 w-4" strokeWidth={2} aria-hidden />
-            Create membership
+            {t('superadmin.membership.createMembership')}
           </Link>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-        <StatChip icon={Shield} label="Configured tiers" value={String(tiers.length)} hint="Published in this list" />
-        {/* <StatChip
-          icon={Crown}
-          label="Benefit lines"
-          value={String(benefitCount)}
-          hint="Across all tiers"
-        /> */}
+        <StatChip
+          icon={Shield}
+          label={t('superadmin.membership.stats.configuredTiers')}
+          value={String(tiers.length)}
+          hint={t('superadmin.membership.stats.configuredTiersHint')}
+        />
         <StatChip
           icon={CheckCircle2}
-          label="Currency"
+          label={t('superadmin.membership.stats.currency')}
           value="USD"
-          hint="Minimum value per tier"
+          hint={t('superadmin.membership.stats.currencyHint')}
         />
       </div>
 
@@ -152,11 +152,10 @@ export default function SuperAdminMembershipPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-tier-title">
           <div className="w-full max-w-md rounded-2xl border border-white/[0.1] bg-[#0b0c10] p-6 shadow-2xl">
             <h2 id="delete-tier-title" className="text-lg font-semibold text-brand-heading">
-              Delete membership tier?
+              {t('superadmin.membership.delete.title')}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-brand-muted">
-              <span className="font-semibold text-brand-heading">{deleteTarget.name}</span> will be removed permanently.
-              This cannot be undone.
+              {t('superadmin.membership.delete.body', { name: deleteTarget.name })}
             </p>
             <div className="mt-6 flex flex-wrap justify-end gap-2">
               <button
@@ -165,7 +164,7 @@ export default function SuperAdminMembershipPage() {
                 onClick={() => setDeleteTarget(null)}
                 className="rounded-xl border border-white/[0.12] bg-black/30 px-4 py-2.5 text-sm font-semibold text-brand-heading transition hover:bg-white/[0.05] disabled:opacity-50"
               >
-                Cancel
+                {t('superadmin.common.cancel')}
               </button>
               <button
                 type="button"
@@ -173,7 +172,7 @@ export default function SuperAdminMembershipPage() {
                 onClick={() => void confirmDelete()}
                 className="rounded-xl border border-rose-500/40 bg-rose-500/15 px-4 py-2.5 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/25 disabled:opacity-50"
               >
-                {deleteBusy ? 'Deleting…' : 'Delete'}
+                {deleteBusy ? t('superadmin.membership.delete.deleting') : t('superadmin.common.delete')}
               </button>
             </div>
           </div>
@@ -196,16 +195,16 @@ export default function SuperAdminMembershipPage() {
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-brand-accent/25 bg-black/40 text-brand-accent">
               <Crown className="h-7 w-7" strokeWidth={1.5} aria-hidden />
             </span>
-            <h2 className="mt-5 text-lg font-semibold text-brand-heading">No membership tiers yet</h2>
+            <h2 className="mt-5 text-lg font-semibold text-brand-heading">{t('superadmin.membership.empty.title')}</h2>
             <p className="mt-2 text-sm leading-relaxed text-brand-muted">
-              Create your first tier with a name, minimum USD threshold, and a list of benefits users should expect.
+              {t('superadmin.membership.empty.description')}
             </p>
             <Link
               href="/dashboard/superadmin/membership/new"
               className="btn-primary mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold"
             >
               <Plus className="h-4 w-4" strokeWidth={2} aria-hidden />
-              Create membership
+              {t('superadmin.membership.createMembership')}
             </Link>
           </div>
         </div>
@@ -244,7 +243,7 @@ export default function SuperAdminMembershipPage() {
                       {index === 0 ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-brand-accent/35 bg-black/40 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-accent">
                           <Sparkles className="h-3 w-3" strokeWidth={2.5} aria-hidden />
-                          Entry
+                          {t('superadmin.membership.tier.entry')}
                         </span>
                       ) : null}
                     </div>
@@ -257,7 +256,7 @@ export default function SuperAdminMembershipPage() {
                     className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/[0.12] bg-black/35 px-3 py-2.5 text-sm font-semibold text-brand-heading transition hover:border-brand-accent/35 hover:bg-white/[0.04] sm:flex-none sm:px-4"
                   >
                     <Pencil className="h-4 w-4 shrink-0 text-brand-accent" strokeWidth={2} aria-hidden />
-                    Edit
+                    {t('superadmin.common.edit')}
                   </Link>
                   <button
                     type="button"
@@ -265,7 +264,7 @@ export default function SuperAdminMembershipPage() {
                     className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-500/25 bg-rose-500/[0.08] px-3 py-2.5 text-sm font-semibold text-rose-100/95 transition hover:border-rose-500/40 hover:bg-rose-500/[0.14] sm:flex-none sm:px-4"
                   >
                     <Trash2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                    Delete
+                    {t('superadmin.common.delete')}
                   </button>
                 </div>
 
@@ -275,7 +274,7 @@ export default function SuperAdminMembershipPage() {
                   )}
                 >
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-subtle">
-                    Minimum balance
+                    {t('superadmin.membership.tier.minimumBalance')}
                   </p>
                   <p
                     className={cn(
@@ -286,12 +285,14 @@ export default function SuperAdminMembershipPage() {
                   </p>
                 </div>
 
-                <MembershipTierFeatures tier={tier} title="Tier features" className="!mt-4" />
+                <MembershipTierFeatures tier={tier} title={t('superadmin.membership.tier.tierFeatures')} className="!mt-4" />
 
                 <div className="relative mt-4 flex flex-wrap gap-2">
                   <span className="inline-flex items-center rounded-full border border-white/[0.1] bg-black/40 px-3 py-1 text-[0.65rem] font-semibold text-brand-muted">
                     {Array.isArray(tier.benefits) ? tier.benefits.length : 0}{' '}
-                    {(tier.benefits || []).length === 1 ? 'benefit' : 'benefits'}
+                    {(tier.benefits || []).length === 1
+                      ? t('superadmin.membership.tier.benefit')
+                      : t('superadmin.membership.tier.benefits')}
                   </span>
                 </div>
 

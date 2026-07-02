@@ -13,10 +13,11 @@ import {
 import Panel from '@/components/user-dashboard/Panel';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 import { useAuth } from '@/components/auth-context';
-import { SUPPORT_STATUS_LABELS } from '@/lib/supportTickets';
+import { getSupportStatusLabel } from '@/lib/i18n/dashboard-helpers';
 import { cn } from '@/lib/utils';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
-function StatusPill({ status }) {
+function StatusPill({ status, t }) {
   const map = {
     pending: 'border-amber-500/35 bg-amber-500/10 text-amber-100',
     in_progress: 'border-sky-500/35 bg-sky-500/10 text-sky-100',
@@ -30,21 +31,22 @@ function StatusPill({ status }) {
         map[status] || map.pending
       )}
     >
-      {SUPPORT_STATUS_LABELS[status] || status}
+      {getSupportStatusLabel(status, t)}
     </span>
   );
 }
 
-function formatWhen(iso) {
+function formatWhen(iso, locale) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return new Date(iso).toLocaleString(locale === 'es' ? 'es' : 'en', { dateStyle: 'medium', timeStyle: 'short' });
   } catch {
     return '—';
   }
 }
 
 export default function SupportPage() {
+  const { t, locale } = useWebsiteT();
   const { token, ready, user } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [selectedId, setSelectedId] = useState('');
@@ -71,7 +73,7 @@ export default function SupportPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setError(json.error || 'Could not load support tickets.');
+        setError(json.error || t('dashboard.support.couldNotLoad'));
         return;
       }
       const list = Array.isArray(json.tickets) ? json.tickets : [];
@@ -82,7 +84,7 @@ export default function SupportPage() {
         return list[0]?.id || '';
       });
     } catch {
-      setError('Network error while loading tickets.');
+      setError(t('dashboard.support.networkError'));
     } finally {
       setLoading(false);
     }
@@ -111,16 +113,16 @@ export default function SupportPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setError(json.error || 'Could not submit ticket.');
+        setError(json.error || t('dashboard.support.couldNotSubmit'));
         return;
       }
       setSubject('');
       setDetail('');
-      setSubmitSuccess('Your ticket was submitted. Our team will respond here.');
+      setSubmitSuccess(t('dashboard.support.submitSuccess'));
       if (json.ticket?.id) setSelectedId(json.ticket.id);
       await load();
     } catch {
-      setError('Network error while submitting.');
+      setError(t('dashboard.support.networkSubmitError'));
     } finally {
       setSubmitting(false);
     }
@@ -131,18 +133,18 @@ export default function SupportPage() {
       <header className="mb-8 sm:mb-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">Help</p>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">{t('dashboard.support.eyebrow')}</p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem]">
-              Support
+              {t('dashboard.support.title')}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Submit a request with a subject and details. Track status and read replies from the platform team.
+              {t('dashboard.support.subtitle')}
             </p>
           </div>
           {canSubmit ? (
             <span className="inline-flex items-center gap-2 rounded-full border border-brand-accent/30 bg-brand-accent/[0.1] px-3 py-1.5 text-xs font-semibold text-[color:var(--brand-accent-hover)]">
               <Headphones className="h-3.5 w-3.5" aria-hidden />
-              Priority support active
+              {t('dashboard.support.priorityActive')}
             </span>
           ) : null}
         </div>
@@ -156,20 +158,19 @@ export default function SupportPage() {
       ) : null}
 
       {!canSubmit && !loading ? (
-        <Panel title="Priority support required" subtitle="Upgrade your membership to open tickets">
+        <Panel title={t('dashboard.support.priorityRequired')} subtitle={t('dashboard.support.priorityRequiredSub')}>
           <div className="flex flex-col items-center rounded-2xl border border-white/[0.08] bg-black/20 px-6 py-10 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-500/25 bg-amber-500/10 text-amber-300">
               <ShieldAlert className="h-7 w-7" strokeWidth={1.5} aria-hidden />
             </span>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-brand-muted">
-              Your plan must include <span className="font-semibold text-brand-heading">Priority support</span> and
-              VIP status before you can send tickets. View membership tiers to see what is included.
+              {t('dashboard.support.priorityRequiredBody')}
             </p>
             <Link
               href="/dashboard/user/membership"
               className="btn-primary mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold"
             >
-              View membership
+              {t('dashboard.support.viewMembership')}
               <ChevronRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>
@@ -178,21 +179,21 @@ export default function SupportPage() {
 
       {canSubmit ? (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-          <Panel title="New ticket" subtitle="Subject and details are sent to the admin team">
+          <Panel title={t('dashboard.support.newTicket')} subtitle={t('dashboard.support.newTicketSub')}>
             <form className="space-y-4" onSubmit={onSubmit}>
               <label className="block space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Subject *</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('dashboard.support.subject')} *</span>
                 <input
                   required
                   maxLength={200}
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   className="auth-input w-full"
-                  placeholder="Brief summary of your issue"
+                  placeholder={t('dashboard.support.subjectPlaceholder')}
                 />
               </label>
               <label className="block space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Details *</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('dashboard.support.details')} *</span>
                 <textarea
                   required
                   rows={5}
@@ -200,7 +201,7 @@ export default function SupportPage() {
                   value={detail}
                   onChange={(e) => setDetail(e.target.value)}
                   className="auth-input w-full resize-y"
-                  placeholder="Describe your question or issue in detail…"
+                  placeholder={t('dashboard.support.detailsPlaceholder')}
                 />
               </label>
               <button
@@ -213,45 +214,48 @@ export default function SupportPage() {
                 ) : (
                   <Send className="h-4 w-4" aria-hidden />
                 )}
-                {submitting ? 'Sending…' : 'Submit ticket'}
+                {submitting ? t('dashboard.support.submitting') : t('dashboard.support.submitTicket')}
               </button>
             </form>
           </Panel>
 
           <div className="space-y-4">
-            <Panel title="Your tickets" subtitle={loading ? 'Loading…' : `${tickets.length} total`}>
+            <Panel
+              title={t('dashboard.support.yourTickets')}
+              subtitle={loading ? t('dashboard.common.loading') : t('dashboard.support.yourTicketsSub')}
+            >
               {loading ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-brand-accent" aria-hidden />
                 </div>
               ) : tickets.length === 0 ? (
                 <p className="py-8 text-center text-sm text-brand-muted">
-                  No tickets yet. Submit your first request on the left.
+                  {t('dashboard.support.noTicketsSub')}
                 </p>
               ) : (
                 <ul className="divide-y divide-white/[0.06]">
-                  {tickets.map((t) => (
-                    <li key={t.id}>
+                  {tickets.map((ticket) => (
+                    <li key={ticket.id}>
                       <button
                         type="button"
-                        onClick={() => setSelectedId(t.id)}
+                        onClick={() => setSelectedId(ticket.id)}
                         className={cn(
                           'flex w-full items-start gap-3 px-1 py-3.5 text-left transition',
-                          selectedId === t.id ? 'bg-brand-accent/[0.06]' : 'hover:bg-white/[0.03]'
+                          selectedId === ticket.id ? 'bg-brand-accent/[0.06]' : 'hover:bg-white/[0.03]'
                         )}
                       >
                         <MessageSquare
                           className={cn(
                             'mt-0.5 h-4 w-4 shrink-0',
-                            selectedId === t.id ? 'text-brand-accent' : 'text-brand-subtle'
+                            selectedId === ticket.id ? 'text-brand-accent' : 'text-brand-subtle'
                           )}
                           aria-hidden
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-brand-heading">{t.subject}</p>
-                          <p className="mt-1 text-xs text-brand-muted">{formatWhen(t.createdAt)}</p>
+                          <p className="truncate text-sm font-semibold text-brand-heading">{ticket.subject}</p>
+                          <p className="mt-1 text-xs text-brand-muted">{formatWhen(ticket.createdAt, locale)}</p>
                         </div>
-                        <StatusPill status={t.status} />
+                        <StatusPill status={ticket.status} t={t} />
                       </button>
                     </li>
                   ))}
@@ -260,37 +264,43 @@ export default function SupportPage() {
             </Panel>
 
             {selected ? (
-              <Panel title="Ticket detail">
+              <Panel title={t('dashboard.support.ticketDetail')}>
                 <div className="space-y-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-lg font-semibold text-brand-heading">{selected.subject}</h3>
-                    <StatusPill status={selected.status} />
+                    <StatusPill status={selected.status} t={t} />
                   </div>
                   <div className="rounded-xl border border-white/[0.08] bg-black/25 p-4">
                     <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                      Your message
+                      {t('dashboard.support.yourMessage')}
                     </p>
                     <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-brand-muted">
                       {selected.detail}
                     </p>
-                    <p className="mt-3 text-xs text-brand-subtle">Submitted {formatWhen(selected.createdAt)}</p>
+                    <p className="mt-3 text-xs text-brand-subtle">
+                      {t('dashboard.common.date')} {formatWhen(selected.createdAt, locale)}
+                    </p>
                   </div>
                   {selected.adminReply ? (
                     <div className="rounded-xl border border-brand-accent/25 bg-[var(--brand-accent-soft)]/10 p-4">
                       <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-brand-accent">
-                        Team response
+                        {t('dashboard.support.teamResponse')}
                       </p>
                       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-brand-heading">
                         {selected.adminReply}
                       </p>
                       {selected.repliedAt ? (
-                        <p className="mt-3 text-xs text-brand-muted">Replied {formatWhen(selected.repliedAt)}</p>
+                        <p className="mt-3 text-xs text-brand-muted">
+                          {t('dashboard.support.adminReply')} {formatWhen(selected.repliedAt, locale)}
+                        </p>
                       ) : null}
                     </div>
                   ) : (
                     <p className="text-sm text-brand-muted">
-                      Status is <span className="font-medium text-brand-heading">{SUPPORT_STATUS_LABELS[selected.status]}</span>.
-                      {' '}You will see the admin reply here when available.
+                      {t('dashboard.support.statusIs', {
+                        status: getSupportStatusLabel(selected.status, t),
+                      })}{' '}
+                      {t('dashboard.support.awaitingReplyDetail')}
                     </p>
                   )}
                 </div>

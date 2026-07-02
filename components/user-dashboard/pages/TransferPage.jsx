@@ -9,8 +9,10 @@ import { useUserWallet } from '@/components/user-dashboard/useUserWallet';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/toast-context';
 import { formatNumberSmart } from '@/lib/numberFormat';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 export default function TransferPage() {
+  const { t } = useWebsiteT();
   const { token, user } = useAuth();
   const toast = useToast();
   const { tokens: walletTokens, loading: walletLoading } = useUserWallet();
@@ -107,7 +109,11 @@ export default function TransferPage() {
   const hasEnoughBalance = selectedTokenBalance >= totalDebit;
   const amountError =
     normalizedAmount > 0 && !walletLoading && !hasEnoughBalance
-      ? `Insufficient ${selectedToken} balance. Available ${formatNumberSmart(selectedTokenBalance, { maxFractionDigits: 2 })}, required ${formatNumberSmart(totalDebit, { maxFractionDigits: 2 })}.`
+      ? t('dashboard.transfer.insufficientBalance', {
+          token: selectedToken,
+          available: formatNumberSmart(selectedTokenBalance, { maxFractionDigits: 2 }),
+          required: formatNumberSmart(totalDebit, { maxFractionDigits: 2 }),
+        })
       : '';
   const canSubmit = !!recipient && !!selectedToken && normalizedAmount > 0 && hasEnoughBalance && !submitting;
 
@@ -119,9 +125,9 @@ export default function TransferPage() {
     setSubmitSuccess('');
     if (!email) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      const msg = 'Please enter a valid email address.';
+      const msg = t('dashboard.transfer.invalidEmail');
       setRecipientError(msg);
-      toast.error(msg, { title: 'Recipient Error' });
+      toast.error(msg, { title: t('dashboard.transfer.recipientErrorTitle') });
       return;
     }
     if (!token) return;
@@ -132,15 +138,15 @@ export default function TransferPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        const msg = json.error || 'Recipient not found.';
+        const msg = json.error || t('dashboard.transfer.recipientNotFound');
         setRecipientError(msg);
-        toast.error(msg, { title: 'Recipient Error' });
+        toast.error(msg, { title: t('dashboard.transfer.recipientErrorTitle') });
         return;
       }
       setRecipient(json.recipient);
     } catch {
-      setRecipientError('Could not verify recipient right now.');
-      toast.error('Could not verify recipient right now.', { title: 'Recipient Error' });
+      setRecipientError(t('dashboard.transfer.couldNotVerifyRecipient'));
+      toast.error(t('dashboard.transfer.couldNotVerifyRecipient'), { title: t('dashboard.transfer.recipientErrorTitle') });
     } finally {
       setCheckingRecipient(false);
     }
@@ -151,9 +157,9 @@ export default function TransferPage() {
     setSubmitError('');
     setSubmitSuccess('');
     if (!canSubmit || !token) {
-      const msg = 'Please complete recipient, token, and amount.';
+      const msg = t('dashboard.transfer.completeForm');
       setSubmitError(msg);
-      toast.error(msg, { title: 'Transfer Failed' });
+      toast.error(msg, { title: t('dashboard.transfer.transferFailedTitle') });
       return;
     }
     try {
@@ -172,19 +178,19 @@ export default function TransferPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        const msg = json.error || 'Transfer failed.';
+        const msg = json.error || t('dashboard.transfer.transferFailed');
         setSubmitError(msg);
-        toast.error(msg, { title: 'Transfer Failed' });
+        toast.error(msg, { title: t('dashboard.transfer.transferFailedTitle') });
         return;
       }
-      const successMsg = json.message || 'Transfer completed.';
+      const successMsg = json.message || t('dashboard.transfer.transferComplete');
       setSubmitSuccess(successMsg);
-      toast.success(successMsg, { title: 'Transfer Complete' });
+      toast.success(successMsg, { title: t('dashboard.transfer.transferCompleteTitle') });
       setAmount('');
     } catch {
-      const msg = 'Network error while transferring.';
+      const msg = t('dashboard.transfer.networkErrorTransfer');
       setSubmitError(msg);
-      toast.error(msg, { title: 'Transfer Failed' });
+      toast.error(msg, { title: t('dashboard.transfer.transferFailedTitle') });
     } finally {
       setSubmitting(false);
     }
@@ -196,18 +202,17 @@ export default function TransferPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
-              Move funds
+              {t('dashboard.transfer.eyebrow')}
             </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem]">
-              Transfer
+              {t('dashboard.transfer.title')}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Send tokens to another user by email. Fees follow the schedule below; members on a plan with waived
-              transfer fees pay no platform transfer fee.
+              {t('dashboard.transfer.subtitle')}
             </p>
           </div>
           <p className="shrink-0 text-xs font-medium tabular-nums text-brand-subtle">
-            In-app transfer (not on-chain)
+            {t('dashboard.transfer.inAppNote')}
           </p>
         </div>
       </header>
@@ -224,14 +229,14 @@ export default function TransferPage() {
                 <ArrowRightLeft className="h-6 w-6" strokeWidth={1.75} aria-hidden />
               </span>
               <div>
-                <p className="text-sm font-medium text-brand-muted">Standard transfer fee</p>
+                <p className="text-sm font-medium text-brand-muted">{t('dashboard.transfer.standardFee')}</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-brand-heading">
                   {loadingFee ? <Skeleton className="h-8 w-24" /> : `${feeDisplay}`}
                 </p>
                 <p className="mt-2 text-xs font-medium text-brand-muted">
                   {transferFeeWaived
-                    ? 'Your membership plan includes waived transfer fees.'
-                    : 'Transfer fee applies as configured by platform settings.'}
+                    ? t('dashboard.transfer.feeWaived')
+                    : t('dashboard.transfer.feeApplies')}
                 </p>
               </div>
             </div>
@@ -241,24 +246,24 @@ export default function TransferPage() {
                 className="btn-secondary inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
               >
                 <Wallet className="h-4 w-4" strokeWidth={2} aria-hidden />
-                Wallet balances
+                {t('dashboard.transfer.walletBalances')}
               </Link>
             </div>
           </div>
         </section>
 
-        <Panel title="Send tokens" subtitle="Choose recipient, asset, and amount — review before confirming.">
+        <Panel title={t('dashboard.transfer.sendTokens')} subtitle={t('dashboard.transfer.sendTokensSub')}>
           <form className="mx-auto max-w-xl space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="auth-label" htmlFor="rcp">
-                Recipient
+                {t('dashboard.transfer.recipient')}
               </label>
-              <p className="mb-2 text-xs text-brand-subtle">Email only</p>
+              <p className="mb-2 text-xs text-brand-subtle">{t('dashboard.transfer.recipientEmailOnly')}</p>
               <input
                 id="rcp"
                 type="email"
                 className="auth-input"
-                placeholder="user@example.com"
+                placeholder={t('dashboard.transfer.recipientPlaceholder')}
                 value={recipientEmail}
                 onChange={(e) => {
                   setRecipientEmail(e.target.value);
@@ -271,13 +276,13 @@ export default function TransferPage() {
               {checkingRecipient ? (
                 <p className="mt-2 inline-flex items-center gap-2 text-xs text-brand-muted">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Verifying recipient...
+                  {t('dashboard.transfer.verifyingRecipient')}
                 </p>
               ) : null}
               {recipient ? (
                 <p className="mt-2 inline-flex items-center gap-2 text-xs text-emerald-300/95">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Recipient: {recipient.name}
+                  {t('dashboard.transfer.recipientVerified', { name: recipient.name })}
                 </p>
               ) : null}
               {recipientError ? (
@@ -290,17 +295,17 @@ export default function TransferPage() {
 
             <div>
               <label className="auth-label" htmlFor="tok">
-                Token
+                {t('dashboard.transfer.token')}
               </label>
               <div className="relative">
                 {loadingTokens ? (
                   <div
                     className="auth-input flex items-center pr-10"
                     role="status"
-                    aria-label="Loading tokens"
+                    aria-label={t('dashboard.transfer.loadingTokens')}
                   >
                     <Skeleton className="h-4 w-48 max-w-[75%] rounded-md" aria-hidden />
-                    <span className="sr-only">Loading token list</span>
+                    <span className="sr-only">{t('dashboard.transfer.loadingTokens')}</span>
                   </div>
                 ) : (
                   <>
@@ -330,14 +335,17 @@ export default function TransferPage() {
               </div>
               <p className="mt-2 text-xs text-brand-muted">
                 {walletLoading
-                  ? 'Loading balance...'
-                  : `Available ${selectedToken || 'token'} balance: ${formatNumberSmart(selectedTokenBalance, { maxFractionDigits: 2 })}`}
+                  ? t('dashboard.transfer.loadingBalance')
+                  : t('dashboard.transfer.availableBalance', {
+                      token: selectedToken || t('dashboard.common.token'),
+                      amount: formatNumberSmart(selectedTokenBalance, { maxFractionDigits: 2 }),
+                    })}
               </p>
             </div>
 
             <div>
               <label className="auth-label" htmlFor="amt">
-                Amount
+                {t('dashboard.transfer.amount')}
               </label>
               <input
                 id="amt"
@@ -348,7 +356,7 @@ export default function TransferPage() {
                 className="auth-input tabular-nums"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
+                placeholder={t('dashboard.transfer.amountPlaceholder')}
               />
               {amountError ? (
                 <p className="mt-2 inline-flex items-center gap-2 text-xs text-rose-300">
@@ -363,15 +371,14 @@ export default function TransferPage() {
                 <div className="flex items-start gap-2">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" strokeWidth={2} aria-hidden />
                   <p className="text-xs leading-relaxed text-brand-muted">
-                    Transfers are irreversible once submitted. Double-check the recipient and token before
-                    confirming.
+                    {t('dashboard.transfer.irreversibleWarning')}
                   </p>
                 </div>
               </div>
               <div className="space-y-3 px-4 py-4 sm:px-5">
                 {
                   amount ? <div className="flex items-center justify-between text-sm">
-                    <span className="text-brand-muted">Network / transfer fee</span>
+                    <span className="text-brand-muted">{t('dashboard.transfer.networkTransferFee')}</span>
                     <span className="font-semibold tabular-nums text-brand-heading">
                       {loadingFee
                         ? <Skeleton className="h-5 w-20" />
@@ -380,15 +387,15 @@ export default function TransferPage() {
                   </div> : ""
                 }
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-brand-muted">Fee waiver</span>
+                  <span className="text-brand-muted">{t('dashboard.transfer.feeWaiver')}</span>
                   <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300/95">
                     <ShieldCheck className="h-4 w-4" strokeWidth={2} aria-hidden />
-                    {transferFeeWaived ? 'Eligible' : 'Not eligible'}
+                    {transferFeeWaived ? t('dashboard.transfer.eligible') : t('dashboard.transfer.notEligible')}
                   </span>
                 </div>
                 <div className="border-t border-dashed border-white/[0.08] pt-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-brand-heading">Estimated total</span>
+                    <span className="text-sm font-medium text-brand-heading">{t('dashboard.transfer.estimatedTotal')}</span>
                     {
                       amount ? <span className="text-lg font-semibold tabular-nums text-brand-accent">
                         {loadingFee
@@ -399,8 +406,8 @@ export default function TransferPage() {
                   </div>
                   <p className="mt-1 text-xs text-brand-subtle">
                     {transferFeeWaived
-                      ? 'Transfer fee waived by your membership plan.'
-                      : `Includes ${transferFee.type} transfer fee (${feeDisplay}).`}
+                      ? t('dashboard.transfer.feeWaivedNote')
+                      : t('dashboard.transfer.feeIncludesNote', { type: transferFee.type, fee: feeDisplay })}
                   </p>
                 </div>
               </div>
@@ -413,7 +420,7 @@ export default function TransferPage() {
               disabled={!canSubmit}
               className="btn-primary w-full justify-center rounded-xl py-3.5 text-sm font-semibold disabled:opacity-60"
             >
-              {submitting ? 'Sending...' : 'Review & send'}
+              {submitting ? t('dashboard.transfer.sending') : t('dashboard.transfer.reviewAndSend')}
             </button>
           </form>
         </Panel>

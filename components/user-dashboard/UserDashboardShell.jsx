@@ -4,15 +4,19 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, User, Menu, X, ChevronDown, Plus, Megaphone, Sparkles } from 'lucide-react';
-import { USER_NAV } from '@/components/user-dashboard/nav-config';
+import { getUserNav } from '@/lib/i18n/user-nav';
+import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { emailInitials, isUserNavActive } from '@/components/user-dashboard/utils';
 import { avatarSrc } from '@/lib/avatarUrl';
 import { useAuth } from '@/components/auth-context';
 
 export default function UserDashboardShell({ user, onLogout, children }) {
+  const { t } = useWebsiteT();
   const { token, ready } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const userNav = getUserNav(t);
   const [mobileNav, setMobileNav] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
@@ -60,8 +64,8 @@ export default function UserDashboardShell({ user, onLogout, children }) {
   };
 
   const profileHref = '/dashboard/user/profile';
-  const navMain = USER_NAV.filter((item) => item.href !== profileHref);
-  const navFooter = USER_NAV.find((item) => item.href === profileHref);
+  const navMain = userNav.filter((item) => item.href !== profileHref);
+  const navFooter = userNav.find((item) => item.href === profileHref);
   const unreadBadgeText = unreadAnnouncements > 99 ? '99+' : String(unreadAnnouncements);
 
   const openAnnouncements = () => {
@@ -126,17 +130,17 @@ export default function UserDashboardShell({ user, onLogout, children }) {
             onClick={() => onNavigate?.()}
             className="btn-primary flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-semibold tracking-tight text-brand-on-accent"
           >
-            <span>New transfer</span>
+            <span>{t('dashboard.shell.newTransfer')}</span>
             <Plus className="h-4 w-4 shrink-0 opacity-95" strokeWidth={2.5} aria-hidden />
           </Link>
         </div>
 
         <nav
           className="sidebar-nav-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2.5 pb-2"
-          aria-label="Workspace navigation"
+          aria-label={t('dashboard.shell.workspaceNav')}
         >
           <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-brand-subtle">
-            Menu
+            {t('dashboard.shell.menu')}
           </p>
           <div className="flex flex-col gap-0.5">
             {navMain.map((item) => (
@@ -148,7 +152,7 @@ export default function UserDashboardShell({ user, onLogout, children }) {
         {navFooter ? (
           <div className="shrink-0 border-t border-white/[0.06] bg-black/[0.12] px-2.5 pb-5 pt-4">
             <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-brand-subtle">
-              Account
+              {t('dashboard.shell.account')}
             </p>
             <NavRow item={navFooter} onNavigate={onNavigate} />
           </div>
@@ -176,7 +180,7 @@ export default function UserDashboardShell({ user, onLogout, children }) {
               type="button"
               onClick={() => setMobileNav(true)}
               className="btn-icon-header lg:hidden"
-              aria-label="Open menu"
+              aria-label={t('dashboard.shell.openMenu')}
             >
               <Menu className="h-5 w-5" strokeWidth={1.5} />
             </button>
@@ -189,23 +193,24 @@ export default function UserDashboardShell({ user, onLogout, children }) {
               </span>
               <span className="hidden min-w-0 sm:block">
                 <span className="block truncate text-sm font-semibold tracking-tight text-brand-heading">
-                  Private Exchange
+                  {t('dashboard.shell.brandName')}
                 </span>
                 <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-brand-subtle">
-                  User account
+                  {t('dashboard.shell.brandSubtitle')}
                 </span>
               </span>
             </Link>
           </div>
 
-          <div className="relative flex flex-shrink-0 items-center gap-2 sm:gap-3" ref={userMenuRef}>
+          <div className="relative flex flex-shrink-0 items-center gap-1.5 sm:gap-2" ref={userMenuRef}>
+            <LanguageSwitcher compact />
             {user?.isVip ? (
               <span
                 className="inline-flex items-center gap-1 rounded-full border border-brand-accent/45 bg-[var(--brand-accent-soft)]/12 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-brand-accent shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] sm:px-3"
-                title="VIP member"
+                title={t('dashboard.shell.vipMember')}
               >
                 <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} aria-hidden />
-                VIP
+                {t('dashboard.shell.vip')}
               </span>
             ) : null}
             <div className="hidden text-right md:block">
@@ -214,9 +219,9 @@ export default function UserDashboardShell({ user, onLogout, children }) {
               </p>
               <p className="text-[0.625rem] font-medium uppercase tracking-[0.14em] text-brand-subtle">
                 {user?.isVip ? (
-                  <span className="text-brand-accent/95">VIP member</span>
+                  <span className="text-brand-accent/95">{t('dashboard.shell.vipMember')}</span>
                 ) : (
-                  'User'
+                  t('dashboard.shell.user')
                 )}
               </p>
             </div>
@@ -225,13 +230,13 @@ export default function UserDashboardShell({ user, onLogout, children }) {
               <button
                 type="button"
                 onClick={openProfile}
-                title="Open profile"
+                title={t('dashboard.shell.openProfile')}
                 className={`group/avatar relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2a2418] to-[#0f0e0c] text-xs font-bold tracking-tight text-brand-accent ring-2 transition-all duration-200 sm:h-10 sm:w-10 sm:text-sm ${
                   profileActive
                     ? 'ring-brand-accent/70 shadow-[0_0_20px_-4px_rgba(201,162,39,0.45)]'
                     : 'ring-white/12 hover:scale-[1.03] hover:ring-brand-accent/45'
                 }`}
-                aria-label="Open profile"
+                aria-label={t('dashboard.shell.openProfile')}
               >
                 <span
                   className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-accent/30 to-transparent opacity-90 transition-opacity group-hover/avatar:opacity-100"
@@ -266,7 +271,7 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                 }`}
                 aria-expanded={userMenuOpen}
                 aria-haspopup="menu"
-                aria-label="Account actions"
+                aria-label={t('dashboard.shell.accountActions')}
               >
                 <ChevronDown
                   className={`h-4 w-4 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
@@ -299,15 +304,17 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                   </span>
                   <span className="min-w-0">
                     <span className="flex items-center gap-1.5 font-medium">
-                      Community announcements
+                      {t('dashboard.shell.communityAnnouncements')}
                       {unreadAnnouncements > 0 ? (
                         <span className="rounded-full border border-brand-accent bg-brand-accent px-1.5 py-0 text-[0.58rem] font-bold text-black">
-                          New
+                          {t('dashboard.shell.new')}
                         </span>
                       ) : null}
                     </span>
                     <span className="text-xs text-brand-subtle">
-                      {unreadAnnouncements > 0 ? `${unreadBadgeText} unread update(s)` : 'Latest platform updates'}
+                      {unreadAnnouncements > 0
+                        ? t('dashboard.shell.unreadUpdates', { count: unreadBadgeText })
+                        : t('dashboard.shell.latestUpdates')}
                     </span>
                   </span>
                 </button>
@@ -324,8 +331,8 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                     <User className="h-4 w-4" strokeWidth={1.5} />
                   </span>
                   <span>
-                    <span className="block font-medium">Profile</span>
-                    <span className="text-xs text-brand-subtle">Settings & verification</span>
+                    <span className="block font-medium">{t('dashboard.shell.profile')}</span>
+                    <span className="text-xs text-brand-subtle">{t('dashboard.shell.profileSettings')}</span>
                   </span>
                 </button>
                 <div className="my-1 h-px bg-brand-border-muted" role="separator" />
@@ -342,8 +349,8 @@ export default function UserDashboardShell({ user, onLogout, children }) {
                     <LogOut className="h-4 w-4" strokeWidth={1.5} />
                   </span>
                   <span>
-                    <span className="block font-medium text-red-200/95">Sign out</span>
-                    <span className="text-xs text-brand-subtle">Closes this session</span>
+                    <span className="block font-medium text-red-200/95">{t('dashboard.shell.signOut')}</span>
+                    <span className="text-xs text-brand-subtle">{t('dashboard.shell.signOutHint')}</span>
                   </span>
                 </button>
               </div>
@@ -368,17 +375,17 @@ export default function UserDashboardShell({ user, onLogout, children }) {
             <button
               type="button"
               className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
-              aria-label="Close menu"
+              aria-label={t('dashboard.shell.closeMenu')}
               onClick={() => setMobileNav(false)}
             />
             <div className="fixed inset-y-0 left-0 z-50 flex min-h-0 w-[min(100%,21rem)] flex-col overflow-hidden border-r border-brand-border-muted bg-gradient-to-b from-brand-page to-[#050508] shadow-2xl lg:hidden">
               <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-4 py-3">
-                <span className="text-sm font-semibold text-brand-heading">Menu</span>
+                <span className="text-sm font-semibold text-brand-heading">{t('dashboard.shell.menu')}</span>
                 <button
                   type="button"
                   onClick={() => setMobileNav(false)}
                   className="rounded-lg p-2 text-brand-muted hover:bg-[var(--brand-surface-hover)] hover:text-brand-heading"
-                  aria-label="Close"
+                  aria-label={t('dashboard.shell.closeSidebar')}
                 >
                   <X className="h-5 w-5" />
                 </button>

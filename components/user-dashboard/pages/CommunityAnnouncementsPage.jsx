@@ -4,34 +4,30 @@ import { useEffect, useState } from 'react';
 import { CalendarClock, Megaphone, Tag, Users } from 'lucide-react';
 import Panel from '@/components/user-dashboard/Panel';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 const TYPE_LABELS = {
-  // drawing_launch: 'Drawing launch',
-  // drawing_result: 'Drawing results',
-  // maintenance: 'Maintenance',
-  // wallet_token: 'Wallet & tokens',
-  // membership: 'Membership',
-  // security: 'Security',
-  // policy: 'Policy',
-  promotion: 'Campaigns / Events',
-  // general: 'General',
+  promotion: 'dashboard.announcements.promotion',
 };
 
 const AUDIENCE_LABELS = {
-  all_users: 'All users',
-  vip_only: 'VIP users only',
-  non_vip_only: 'Non-VIP users only',
+  all_users: 'dashboard.announcements.allUsers',
+  vip_only: 'dashboard.announcements.vipOnly',
+  non_vip_only: 'dashboard.announcements.nonVipOnly',
 };
 
-function typeLabel(type) {
-  return TYPE_LABELS[type] || TYPE_LABELS.general;
+function typeLabel(type, t) {
+  const key = TYPE_LABELS[type];
+  return key ? t(key) : t('dashboard.announcements.promotion');
 }
 
-function audienceLabel(audience) {
-  return AUDIENCE_LABELS[audience] || audience || 'All users';
+function audienceLabel(audience, t) {
+  const key = AUDIENCE_LABELS[audience];
+  return key ? t(key) : audience || t('dashboard.announcements.allUsers');
 }
 
 export default function CommunityAnnouncementsPage() {
+  const { t, locale, translateRowFields } = useWebsiteT();
   const { token, ready, user } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,18 +45,19 @@ export default function CommunityAnnouncementsPage() {
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || !json.ok) {
-          setError(json.error || 'Could not load announcements.');
+          setError(json.error || t('dashboard.announcements.couldNotLoad'));
           return;
         }
-        setRows(Array.isArray(json.announcements) ? json.announcements : []);
+        const announcements = Array.isArray(json.announcements) ? json.announcements : [];
+        setRows(await translateRowFields(announcements, ['title', 'details', 'body', 'message']));
       } catch {
-        setError('Network error while loading announcements.');
+        setError(t('dashboard.announcements.networkError'));
       } finally {
         setLoading(false);
       }
     };
     void load();
-  }, [ready, token]);
+  }, [ready, token, translateRowFields, t, locale]);
 
   useEffect(() => {
     const markAllAsRead = async () => {
@@ -82,27 +79,27 @@ export default function CommunityAnnouncementsPage() {
       <header className="mb-8 sm:mb-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">Community</p>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">{t('dashboard.announcements.eyebrow')}</p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem]">
-              Announcements
+              {t('dashboard.announcements.title')}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Official notices: title, type, audience, event date, and message — as published by admins.
+              {t('dashboard.announcements.subtitle')}
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand-accent/30 bg-brand-accent/[0.1] px-3 py-1.5 text-xs font-semibold text-[color:var(--brand-accent-hover)]">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-accent shadow-[0_0_8px_var(--brand-accent-glow)]" />
               {user?.isVip && user?.membershipEntitlements?.executive_events
-                ? 'Executive events audience'
-                : 'Member audience'}
+                ? t('dashboard.announcements.executiveAudience')
+                : t('dashboard.announcements.memberAudience')}
             </span>
           </div>
         </div>
       </header>
 
       {loading ? (
-        <Panel title="Latest updates" subtitle="Loading…">
+        <Panel title={t('dashboard.announcements.latestUpdates')} subtitle={t('dashboard.announcements.loading')}>
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
               <div
@@ -117,12 +114,12 @@ export default function CommunityAnnouncementsPage() {
           </div>
         </Panel>
       ) : error ? (
-        <Panel title="Latest updates" subtitle="Unable to fetch">
+        <Panel title={t('dashboard.announcements.latestUpdates')} subtitle={t('dashboard.announcements.unableToFetch')}>
           <p className="text-sm leading-relaxed text-rose-200/90">{error}</p>
         </Panel>
       ) : (
         <Panel
-          title="Latest updates"
+          title={t('dashboard.announcements.latestUpdates')}
           // subtitle="Newest first. Title, type, audience, event date, and message."
         >
           {rows.length === 0 ? (
@@ -131,14 +128,14 @@ export default function CommunityAnnouncementsPage() {
                 <Megaphone className="h-6 w-6" strokeWidth={1.5} aria-hidden />
               </span>
               <p className="mt-4 max-w-md text-sm leading-relaxed text-brand-muted">
-                No announcements for your audience right now.
+                {t('dashboard.announcements.noAnnouncementsSub')}
               </p>
             </div>
           ) : (
             <div className="space-y-4">
               {rows.map((row) => {
                 const when = row.startsAt
-                  ? new Date(row.startsAt).toLocaleString(undefined, {
+                  ? new Date(row.startsAt).toLocaleString(locale === 'es' ? 'es' : 'en', {
                       dateStyle: 'medium',
                       timeStyle: 'short',
                     })
@@ -155,13 +152,13 @@ export default function CommunityAnnouncementsPage() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <h2 className="text-lg font-semibold tracking-tight text-brand-heading sm:text-xl">
-                          {row.title || 'Update'}
+                          {row.title || t('dashboard.announcements.latestUpdates')}
                         </h2>
                         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-brand-muted">
                           <span className="inline-flex items-center gap-1">
                             <Tag className="h-3.5 w-3.5 shrink-0 text-brand-accent" aria-hidden />
-                            <span className="text-brand-subtle">Type</span>{' '}
-                            <span className="font-medium text-brand-heading">{typeLabel(row.type)}</span>
+                            <span className="text-brand-subtle">{t('dashboard.history.filters')}</span>{' '}
+                            <span className="font-medium text-brand-heading">{typeLabel(row.type, t)}</span>
                           </span>
                           {/* <span className="inline-flex items-center gap-1">
                             <Users className="h-3.5 w-3.5 shrink-0 text-brand-accent" aria-hidden />
@@ -171,7 +168,7 @@ export default function CommunityAnnouncementsPage() {
                         </div>
                         <p className="mt-2 inline-flex flex-wrap items-center gap-1.5 text-xs text-brand-muted">
                           <CalendarClock className="h-3.5 w-3.5 shrink-0 text-brand-accent" aria-hidden />
-                          <span className="text-brand-subtle">Event date</span>
+                          <span className="text-brand-subtle">{t('dashboard.announcements.eventDate')}</span>
                           <span className="font-medium text-brand-heading">{when}</span>
                         </p>
                       </div>
@@ -179,10 +176,10 @@ export default function CommunityAnnouncementsPage() {
 
                     <div className="mt-4 rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3 sm:px-4 sm:py-4">
                       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-brand-subtle">
-                        Message
+                        {t('dashboard.announcements.message')}
                       </p>
                       <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-brand-muted">
-                        {row.details || '—'}
+                        {row.details || row.body || row.message || '—'}
                       </div>
                     </div>
                   </article>

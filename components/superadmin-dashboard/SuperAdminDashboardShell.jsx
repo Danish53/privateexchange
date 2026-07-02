@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, X, ChevronDown, LayoutDashboard, User } from 'lucide-react';
 import { getSuperadminNavSections } from '@/components/superadmin-dashboard/nav-config';
+import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { emailInitials } from '@/components/user-dashboard/utils';
 import { avatarSrc } from '@/lib/avatarUrl';
 import { isSuperAdminNavActive } from '@/components/superadmin-dashboard/utils';
@@ -12,9 +14,10 @@ import { isSuperAdminNavActive } from '@/components/superadmin-dashboard/utils';
 const PROFILE_HREF = '/dashboard/superadmin/profile';
 
 export default function SuperAdminDashboardShell({ user, onLogout, children }) {
+  const { t } = useWebsiteT();
   const pathname = usePathname();
   const router = useRouter();
-  const { main: navMain, account: navAccount } = getSuperadminNavSections(user);
+  const { main: navMain, account: navAccount } = getSuperadminNavSections(user, t);
   const [mobileNav, setMobileNav] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
@@ -85,7 +88,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
         <span
           className={rowClass}
           aria-disabled="true"
-          title="Your administrator has not granted access to this section."
+          title={t('superadmin.shell.noAccessTitle')}
         >
           {inner}
         </span>
@@ -113,17 +116,17 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
             onClick={() => onNavigate?.()}
             className="btn-primary flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-semibold tracking-tight text-brand-on-accent"
           >
-            <span>Operations overview</span>
+            <span>{t('superadmin.shell.operationsOverview')}</span>
             <LayoutDashboard className="h-4 w-4 shrink-0 opacity-95" strokeWidth={2.5} aria-hidden />
           </Link>
         </div>
 
         <nav
           className="sidebar-nav-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2.5 pb-2"
-          aria-label="Platform navigation"
+          aria-label={t('superadmin.shell.platformNav')}
         >
           <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-brand-subtle">
-            Platform
+            {t('superadmin.shell.platform')}
           </p>
           <div className="flex flex-col gap-0.5">
             {navMain.map((item) => (
@@ -134,7 +137,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
 
         <div className="shrink-0 border-t border-white/[0.06] bg-black/[0.12] px-2.5 pb-4 pt-4">
           <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-brand-subtle">
-            Account
+            {t('superadmin.shell.account')}
           </p>
           <div className="flex flex-col gap-0.5">
             {navAccount.map((item) => (
@@ -189,7 +192,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
               type="button"
               onClick={() => setMobileNav(true)}
               className="btn-icon-header lg:hidden"
-              aria-label="Open menu"
+              aria-label={t('superadmin.shell.openMenu')}
             >
               <Menu className="h-5 w-5" strokeWidth={1.5} />
             </button>
@@ -203,26 +206,27 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
               <span className="hidden min-w-0 sm:block">
                 <span className="flex items-center gap-2">
                   <span className="block truncate text-sm font-semibold tracking-tight text-brand-heading">
-                    Private Exchange
+                    {t('superadmin.shell.brandName')}
                   </span>
                   {/* <span className="hidden shrink-0 rounded-md border border-brand-accent/20 bg-brand-accent/10 px-1.5 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.12em] text-brand-accent md:inline">
                     Operations
                   </span> */}
                 </span>
                 <span className="mt-0.5 block text-[0.625rem] font-medium uppercase tracking-[0.14em] text-brand-subtle">
-                  Control center
+                  {t('superadmin.shell.controlCenter')}
                 </span>
               </span>
             </Link>
           </div>
 
           <div className="relative flex flex-shrink-0 items-center gap-2 sm:gap-3" ref={userMenuRef}>
+            <LanguageSwitcher compact className="hidden sm:block" />
             <div className="hidden text-right md:block">
               <p className="max-w-[220px] truncate text-xs font-medium text-brand-heading lg:max-w-[280px]">
                 {user.email}
               </p>
               <p className="text-[0.625rem] font-medium uppercase tracking-[0.14em] text-brand-subtle">
-                {user?.role === 'superadmin' ? 'Platform operations' : 'Delegated access'}
+                {user?.role === 'superadmin' ? t('superadmin.shell.platformOperations') : t('superadmin.shell.delegatedAccess')}
               </p>
             </div>
 
@@ -230,13 +234,13 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
               <button
                 type="button"
                 onClick={openProfile}
-                title="Open profile"
+                title={t('superadmin.shell.openProfile')}
                 className={`group/avatar relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2a2418] to-[#0f0e0c] text-xs font-bold tracking-tight text-brand-accent ring-2 transition-all duration-200 sm:h-10 sm:w-10 sm:text-sm ${
                   profileActive
                     ? 'ring-brand-accent/70 shadow-[0_0_20px_-4px_rgba(201,162,39,0.45)]'
                     : 'ring-white/12 hover:scale-[1.03] hover:ring-brand-accent/45'
                 }`}
-                aria-label="Open profile"
+                aria-label={t('superadmin.shell.openProfile')}
               >
                 <span
                   className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-accent/30 to-transparent opacity-90 transition-opacity group-hover/avatar:opacity-100"
@@ -266,7 +270,7 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
                 }`}
                 aria-expanded={userMenuOpen}
                 aria-haspopup="menu"
-                aria-label="Account actions"
+                aria-label={t('superadmin.shell.accountActions')}
               >
                 <ChevronDown
                   className={`h-4 w-4 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
@@ -293,8 +297,8 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
                     <User className="h-4 w-4" strokeWidth={1.5} />
                   </span>
                   <span>
-                    <span className="block font-medium">Profile</span>
-                    <span className="text-xs text-brand-subtle">Account & security</span>
+                    <span className="block font-medium">{t('superadmin.shell.profile')}</span>
+                    <span className="text-xs text-brand-subtle">{t('superadmin.shell.profileSettings')}</span>
                   </span>
                 </button>
                 <div className="my-1 h-px bg-brand-border-muted" role="separator" />
@@ -311,8 +315,8 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
                     <LogOut className="h-4 w-4" strokeWidth={1.5} />
                   </span>
                   <span>
-                    <span className="block font-medium text-red-200/95">Sign out</span>
-                    <span className="text-xs text-brand-subtle">End session securely</span>
+                    <span className="block font-medium text-red-200/95">{t('superadmin.shell.signOut')}</span>
+                    <span className="text-xs text-brand-subtle">{t('superadmin.shell.signOutHint')}</span>
                   </span>
                 </button>
               </div>
@@ -337,25 +341,28 @@ export default function SuperAdminDashboardShell({ user, onLogout, children }) {
             <button
               type="button"
               className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
-              aria-label="Close menu"
+              aria-label={t('superadmin.shell.closeMenu')}
               onClick={() => setMobileNav(false)}
             />
             <div className="fixed inset-y-0 left-0 z-50 flex min-h-0 w-[min(100%,21rem)] flex-col overflow-hidden border-r border-brand-border-muted bg-gradient-to-b from-brand-page to-[#050508] shadow-2xl lg:hidden">
               <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-4 py-3">
                 <div>
-                  <span className="block text-sm font-semibold text-brand-heading">Operations</span>
+                  <span className="block text-sm font-semibold text-brand-heading">{t('superadmin.shell.operations')}</span>
                   <span className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-brand-subtle">
-                    Private Exchange
+                    {t('superadmin.shell.brandName')}
                   </span>
                 </div>
-                <button
+                <div className="flex items-center gap-2">
+                  <LanguageSwitcher compact />
+                  <button
                   type="button"
                   onClick={() => setMobileNav(false)}
                   className="rounded-lg p-2 text-brand-muted hover:bg-[var(--brand-surface-hover)] hover:text-brand-heading"
-                  aria-label="Close"
+                  aria-label={t('superadmin.shell.close')}
                 >
                   <X className="h-5 w-5" />
                 </button>
+                </div>
               </div>
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                 <SidebarContent onNavigate={() => setMobileNav(false)} />

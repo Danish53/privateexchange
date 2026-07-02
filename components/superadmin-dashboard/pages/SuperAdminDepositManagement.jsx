@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Check, X, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { cn } from '@/lib/utils';
 import { DepositRequestsTableSkeleton } from '@/components/ui/content-skeletons';
 import { formatNumberSmart } from '@/lib/numberFormat';
@@ -11,10 +12,10 @@ import DepositRejectModal from '@/components/superadmin-dashboard/DepositRejectM
 import { getCryptoDepositTokenLabel } from '@/lib/cryptoDepositConfig';
 
 
-function formatDateTime(iso) {
+function formatDateTime(iso, locale) {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale === 'es' ? 'es' : 'en', {
       dateStyle: 'short',
       timeStyle: 'short',
     }).format(new Date(iso));
@@ -28,11 +29,11 @@ function formatAmount(n) {
   return formatNumberSmart(n, { maxFractionDigits: 8 });
 }
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, t }) {
   const map = {
-    pending: { label: 'Pending', className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
-    completed: { label: 'Completed', className: 'border-emerald-500/35 bg-emerald-500/[0.1] text-emerald-100' },
-    cancelled: { label: 'Cancelled', className: 'border-rose-500/35 bg-rose-500/[0.1] text-rose-100' },
+    pending: { label: t('superadmin.payments.status.pending'), className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
+    completed: { label: t('superadmin.payments.status.completed'), className: 'border-emerald-500/35 bg-emerald-500/[0.1] text-emerald-100' },
+    cancelled: { label: t('superadmin.payments.status.cancelled'), className: 'border-rose-500/35 bg-rose-500/[0.1] text-rose-100' },
   };
   const m = map[status] || { label: status, className: 'border-white/10 bg-white/5 text-brand-muted' };
   return (
@@ -47,10 +48,11 @@ function StatusBadge({ status }) {
   );
 }
 
-function PaymentMethodBadge({ method }) {
+function PaymentMethodBadge({ method, t }) {
   const map = {
-    paypal: { label: 'PayPal', className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
-    crypto: { label: 'Crypto', className: 'border-amber-500/35 bg-amber-500/[0.1] text-amber-100' },
+    paypal: { label: t('superadmin.payments.method.paypal'), className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
+    crypto: { label: t('superadmin.payments.method.crypto'), className: 'border-amber-500/35 bg-amber-500/[0.1] text-amber-100' },
+    stripe: { label: t('superadmin.payments.method.stripe'), className: 'border-violet-500/35 bg-violet-500/[0.1] text-violet-100' },
   };
   const m = map[method] || { label: method, className: 'border-white/10 bg-white/5 text-brand-muted' };
   return (
@@ -73,6 +75,7 @@ function getAdminDepositTokenLabel(deposit) {
 }
 
 export default function SuperAdminDepositManagement() {
+  const { t, locale } = useWebsiteT();
   const { token, ready } = useAuth();
   const [deposits, setDeposits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -105,18 +108,18 @@ export default function SuperAdminDepositManagement() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error || 'Could not load deposits.');
+        setError(json.error || t('superadmin.payments.couldNotLoad'));
         setDeposits([]);
         return;
       }
       setDeposits(json.deposits || []);
     } catch {
-      setError('Network error.');
+      setError(t('superadmin.common.networkError'));
       setDeposits([]);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   const loadTokens = useCallback(async () => {
     setLoadingTokens(true);
@@ -144,7 +147,7 @@ export default function SuperAdminDepositManagement() {
   const openApproveModal = (deposit) => {
     setApproveTarget(deposit);
     setModalError('');
-    const usd = activeTokens.find((t) => String(t.symbol).toUpperCase() === 'USD');
+    const usd = activeTokens.find((tok) => String(tok.symbol).toUpperCase() === 'USD');
     const defaultSym = usd
       ? 'USD'
       : String(deposit.token || activeTokens[0]?.symbol || 'USD').toUpperCase();
@@ -181,7 +184,7 @@ export default function SuperAdminDepositManagement() {
     if (!token || !rejectTarget) return;
     const reason = rejectionReason.trim();
     if (!reason) {
-      setRejectModalError('Please enter a rejection reason.');
+      setRejectModalError(t('superadmin.payments.rejectReasonRequired'));
       return;
     }
 
@@ -201,7 +204,7 @@ export default function SuperAdminDepositManagement() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(json.error || 'Failed to reject deposit');
+        throw new Error(json.error || t('superadmin.payments.failedToReject'));
       }
       setDeposits((prev) => prev.filter((d) => d.id !== depositId));
       closeRejectModal();
@@ -217,11 +220,11 @@ export default function SuperAdminDepositManagement() {
     if (!token || !approveTarget) return;
     const amt = Number(String(creditAmount).replace(/,/g, ''));
     if (!creditToken) {
-      setModalError('Select a token to credit.');
+      setModalError(t('superadmin.payments.selectTokenToCredit'));
       return;
     }
     if (!Number.isFinite(amt) || amt <= 0) {
-      setModalError('Enter a valid positive amount.');
+      setModalError(t('superadmin.payments.enterValidAmount'));
       return;
     }
 
@@ -244,7 +247,7 @@ export default function SuperAdminDepositManagement() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(json.error || 'Failed to approve deposit');
+        throw new Error(json.error || t('superadmin.payments.failedToApprove'));
       }
       setDeposits((prev) => prev.filter((d) => d.id !== depositId));
       closeApproveModal();
@@ -268,9 +271,9 @@ export default function SuperAdminDepositManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-brand-heading">Pending Deposits</h2>
+          <h2 className="text-lg font-semibold text-brand-heading">{t('superadmin.payments.title')}</h2>
           <p className="mt-1 text-sm text-brand-muted">
-            Review manual crypto deposit requests from users (PayPal and Stripe credit automatically).
+            {t('superadmin.payments.subtitle')}
           </p>
         </div>
         <button
@@ -279,7 +282,7 @@ export default function SuperAdminDepositManagement() {
           className="inline-flex items-center gap-2 rounded-lg border border-brand-border-muted bg-[var(--brand-surface)] px-3 py-2 text-sm font-medium text-brand-heading transition hover:border-brand-accent/30 hover:bg-[var(--brand-surface)]/80 disabled:opacity-50"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          {t('superadmin.common.refresh')}
         </button>
       </div>
 
@@ -288,7 +291,7 @@ export default function SuperAdminDepositManagement() {
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-rose-300" />
             <div>
-              <p className="font-medium text-rose-100">Error</p>
+              <p className="font-medium text-rose-100">{t('superadmin.payments.errorTitle')}</p>
               <p className="mt-1 text-sm text-rose-200/80">{error}</p>
             </div>
           </div>
@@ -303,9 +306,9 @@ export default function SuperAdminDepositManagement() {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-brand-border-muted bg-black/30">
               <Check className="h-6 w-6 text-brand-muted" />
             </div>
-            <h3 className="mt-4 text-sm font-semibold text-brand-heading">No pending deposits</h3>
+            <h3 className="mt-4 text-sm font-semibold text-brand-heading">{t('superadmin.payments.emptyTitle')}</h3>
             <p className="mt-2 text-sm text-brand-muted">
-              All deposit requests have been processed. New requests will appear here.
+              {t('superadmin.payments.emptyDescription')}
             </p>
           </div>
         </div>
@@ -316,28 +319,28 @@ export default function SuperAdminDepositManagement() {
               <thead>
                 <tr className="border-b border-brand-border-muted bg-black/20">
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    User
+                    {t('superadmin.payments.columns.user')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Amount
+                    {t('superadmin.payments.columns.amount')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Token
+                    {t('superadmin.payments.columns.token')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Method
+                    {t('superadmin.payments.columns.method')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Proof
+                    {t('superadmin.payments.columns.proof')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Created
+                    {t('superadmin.payments.columns.created')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Status
+                    {t('superadmin.payments.columns.status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle">
-                    Actions
+                    {t('superadmin.payments.columns.actions')}
                   </th>
                 </tr>
               </thead>
@@ -347,7 +350,7 @@ export default function SuperAdminDepositManagement() {
                     <td className="px-6 py-4">
                       <div className="min-w-0 max-w-[200px]">
                         <p className="truncate text-sm font-medium text-brand-heading">
-                          {deposit.user?.email || 'Unknown'}
+                          {deposit.user?.email || t('superadmin.payments.unknownUser')}
                         </p>
                         {deposit.user?.firstName || deposit.user?.lastName ? (
                           <p className="truncate text-xs text-brand-muted">
@@ -367,13 +370,13 @@ export default function SuperAdminDepositManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <PaymentMethodBadge method={deposit.paymentMethod} />
+                      <PaymentMethodBadge method={deposit.paymentMethod} t={t} />
                     </td>
                     <td className="px-6 py-4">
                       <div className="max-w-[220px] space-y-1 text-xs">
                         {deposit.transactionHash ? (
                           <p className="truncate font-mono text-brand-muted" title={deposit.transactionHash}>
-                            TX: {deposit.transactionHash}
+                            {t('superadmin.payments.txPrefix')} {deposit.transactionHash}
                           </p>
                         ) : null}
                         {deposit.proofImageUrl ? (
@@ -383,7 +386,7 @@ export default function SuperAdminDepositManagement() {
                             rel="noopener noreferrer"
                             className="text-brand-accent hover:underline"
                           >
-                            View screenshot
+                            {t('superadmin.payments.viewScreenshot')}
                           </a>
                         ) : (
                           !deposit.transactionHash && (
@@ -394,11 +397,11 @@ export default function SuperAdminDepositManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="whitespace-nowrap text-xs text-brand-muted">
-                        {formatDateTime(deposit.createdAt)}
+                        {formatDateTime(deposit.createdAt, locale)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <StatusBadge status={deposit.status} />
+                      <StatusBadge status={deposit.status} t={t} />
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -408,7 +411,7 @@ export default function SuperAdminDepositManagement() {
                           className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.12] px-3 py-1.5 text-xs font-semibold text-emerald-100 transition hover:border-emerald-500/50 hover:bg-emerald-500/[0.18] disabled:opacity-50"
                         >
                           <Check className="h-3 w-3" />
-                          Approve
+                          {t('superadmin.payments.approve')}
                         </button>
                         <button
                           onClick={() => openRejectModal(deposit)}
@@ -420,7 +423,7 @@ export default function SuperAdminDepositManagement() {
                           ) : (
                             <X className="h-3 w-3" />
                           )}
-                          Reject
+                          {t('superadmin.payments.reject')}
                         </button>
                       </div>
                     </td>

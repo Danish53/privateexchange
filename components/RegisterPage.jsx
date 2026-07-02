@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AuthShell from '@/components/auth/AuthShell';
 import PasswordField from '@/components/auth/PasswordField';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import Spinner from '@/components/ui/Spinner';
 import { setPendingRegister } from '@/lib/auth-flow';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useWebsiteT();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,11 +23,11 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError(t('auth.register.errorPasswordMismatch'));
       return;
     }
     if (password.length < 8) {
-      setError('Use at least 8 characters for your password.');
+      setError(t('auth.register.errorPasswordLength'));
       return;
     }
     setLoading(true);
@@ -37,13 +39,13 @@ export default function RegisterPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'Registration failed.');
+        setError(data.error || t('auth.register.errorRegistrationFailed'));
         return;
       }
       setPendingRegister({ email, name, role: 'user' });
       router.push('/verify-otp');
     } catch {
-      setError('Something went wrong. Try again.');
+      setError(t('auth.register.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -51,16 +53,16 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
-      title="Create your account"
-      subtitle="Register to access the workspace. You will verify your email with a one-time code."
-      badge="Register"
+      title={t('auth.register.title')}
+      subtitle={t('auth.register.subtitle')}
+      badge={t('auth.register.badge')}
       contentMaxWidth="max-w-xl sm:max-w-2xl"
       subtitleMaxWidthClass="max-w-md sm:max-w-xl"
       footer={
         <span className="text-brand-muted">
-          Already registered?{' '}
+          {t('auth.register.alreadyRegistered')}{' '}
           <Link href="/login" className="auth-link text-brand-heading">
-            Sign in
+            {t('auth.register.signIn')}
           </Link>
         </span>
       }
@@ -77,14 +79,14 @@ export default function RegisterPage() {
 
         <div>
           <label htmlFor="reg-name" className="auth-label">
-            Full name
+            {t('auth.register.fullName')}
           </label>
           <input
             id="reg-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Jane Doe"
+            placeholder={t('auth.register.namePlaceholder')}
             autoComplete="name"
             required
             className="auth-input"
@@ -93,14 +95,14 @@ export default function RegisterPage() {
 
         <div>
           <label htmlFor="reg-email" className="auth-label">
-            Email
+            {t('auth.register.email')}
           </label>
           <input
             id="reg-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t('auth.register.emailPlaceholder')}
             autoComplete="email"
             required
             className="auth-input"
@@ -108,23 +110,24 @@ export default function RegisterPage() {
         </div>
 
         <PasswordField
-          label="Password"
+          label={t('auth.register.password')}
           value={password}
           onChange={setPassword}
           autoComplete="new-password"
         />
-        <p className="auth-hint -mt-3">At least 8 characters.</p>
+        <p className="auth-hint -mt-3">{t('auth.register.passwordHint')}</p>
 
         <PasswordField
-          label="Confirm password"
+          label={t('auth.register.confirmPassword')}
           value={confirm}
           onChange={setConfirm}
           autoComplete="new-password"
         />
 
         <p className="auth-hint text-center text-xs text-brand-muted">
-          Public sign-up creates a <span className="font-medium text-brand-subtle">user</span> account only.
-          Admin accounts are created by your platform super admin.
+          {t('auth.register.signUpNotePrefix')}{' '}
+          <span className="font-medium text-brand-subtle">{t('auth.register.signUpNoteRole')}</span>{' '}
+          {t('auth.register.signUpNoteSuffix')}
         </p>
 
         <button
@@ -134,7 +137,7 @@ export default function RegisterPage() {
           className="btn-primary w-full justify-center gap-2 disabled:opacity-60"
         >
           {loading ? <Spinner size="sm" variant="onAccent" /> : null}
-          <span>{loading ? 'Sending code…' : 'Continue to verification'}</span>
+          <span>{loading ? t('auth.register.sendingCode') : t('auth.register.continue')}</span>
         </button>
       </form>
     </AuthShell>

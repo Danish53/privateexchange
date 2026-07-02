@@ -6,10 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import AuthShell from '@/components/auth/AuthShell';
 import PasswordField from '@/components/auth/PasswordField';
 import Spinner from '@/components/ui/Spinner';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 
 const OTP_LEN = 6;
 
 function ResetForm() {
+  const { t } = useWebsiteT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const emailParam = searchParams.get('email') || '';
@@ -25,20 +27,20 @@ function ResetForm() {
     e.preventDefault();
     setError('');
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError(t('auth.reset.passwordMismatch'));
       return;
     }
     if (password.length < 8) {
-      setError('Use at least 8 characters.');
+      setError(t('auth.reset.passwordLength'));
       return;
     }
     const code = otp.replace(/\D/g, '');
     if (code.length !== OTP_LEN) {
-      setError('Enter the 6-digit code from your email.');
+      setError(t('auth.reset.codeRequired'));
       return;
     }
     if (!email.trim()) {
-      setError('Email is required.');
+      setError(t('auth.reset.emailRequired'));
       return;
     }
     setLoading(true);
@@ -54,12 +56,12 @@ function ResetForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'Reset failed.');
+        setError(data.error || t('auth.reset.resetFailed'));
         return;
       }
       router.push('/login?reset=1');
     } catch {
-      setError('Something went wrong. Try again.');
+      setError(t('auth.reset.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +70,7 @@ function ResetForm() {
   return (
     <>
       <p className="mb-6 text-center text-sm leading-relaxed text-brand-muted">
-        Use the 6-digit code we sent and choose a new password.
+        {t('auth.reset.formHint')}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -83,14 +85,14 @@ function ResetForm() {
 
         <div>
           <label htmlFor="reset-email" className="auth-label">
-            Email
+            {t('auth.reset.email')}
           </label>
           <input
             id="reset-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t('auth.reset.emailPlaceholder')}
             autoComplete="email"
             required
             className="auth-input"
@@ -99,7 +101,7 @@ function ResetForm() {
 
         <div>
           <label htmlFor="reset-otp" className="auth-label">
-            Reset code
+            {t('auth.reset.resetCode')}
           </label>
           <input
             id="reset-otp"
@@ -109,21 +111,21 @@ function ResetForm() {
             maxLength={8}
             value={otp}
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, OTP_LEN))}
-            placeholder="6-digit code"
+            placeholder={t('auth.reset.codePlaceholder')}
             className="auth-input tracking-widest"
           />
         </div>
 
         <PasswordField
-          label="New password"
+          label={t('auth.reset.newPassword')}
           value={password}
           onChange={setPassword}
           autoComplete="new-password"
         />
-        <p className="auth-hint -mt-3">At least 8 characters.</p>
+        <p className="auth-hint -mt-3">{t('auth.reset.passwordHint')}</p>
 
         <PasswordField
-          label="Confirm new password"
+          label={t('auth.reset.confirmPassword')}
           value={confirm}
           onChange={setConfirm}
           autoComplete="new-password"
@@ -136,13 +138,13 @@ function ResetForm() {
           className="btn-primary w-full justify-center gap-2 disabled:opacity-60"
         >
           {loading ? <Spinner size="sm" variant="onAccent" /> : null}
-          <span>{loading ? 'Updating…' : 'Update password'}</span>
+          <span>{loading ? t('auth.reset.updating') : t('auth.reset.updatePassword')}</span>
         </button>
       </form>
 
       <div className="mt-8 border-t border-brand-border-muted pt-6 text-center text-sm text-brand-muted">
         <Link href="/login" className="auth-link text-brand-heading">
-          Back to sign in
+          {t('auth.reset.backToSignIn')}
         </Link>
       </div>
     </>
@@ -150,18 +152,20 @@ function ResetForm() {
 }
 
 export default function ResetPasswordPage() {
+  const { t } = useWebsiteT();
+
   return (
     <AuthShell
-      title="Set a new password"
-      subtitle="Enter the code from your email and choose a strong new password."
-      badge="Reset password"
+      title={t('auth.reset.title')}
+      subtitle={t('auth.reset.subtitle')}
+      badge={t('auth.reset.badge')}
       backHref="/forgot-password"
-      backLabel="Back"
+      backLabel={t('auth.reset.back')}
       footer={
         <span className="text-brand-muted">
-          Need help?{' '}
+          {t('auth.reset.needHelp')}{' '}
           <Link href="/" className="auth-link text-brand-heading">
-            Contact via site
+            {t('auth.reset.contactViaSite')}
           </Link>
         </span>
       }

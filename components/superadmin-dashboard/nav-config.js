@@ -3,12 +3,10 @@ import {
   Users,
   Wallet,
   Activity,
-  Coins,
   Gift,
   Megaphone,
   Shield,
   CreditCard,
-  TrendingUp,
   Settings,
   UserCircle,
   Headphones,
@@ -28,74 +26,52 @@ import {
 export const SUPERADMIN_NAV_MAIN = [
   {
     href: '/dashboard/superadmin',
-    label: 'Overview',
-    description: 'Summary & platform health',
+    key: 'overview',
     icon: Home,
   },
   {
     href: '/dashboard/superadmin/users',
-    label: 'Users',
-    description: 'Accounts, roles & access',
+    key: 'users',
     icon: Users,
   },
   {
     href: '/dashboard/superadmin/wallets',
-    label: 'Wallets',
-    description: 'Balances & token wallets',
+    key: 'wallets',
     icon: Wallet,
   },
   {
     href: '/dashboard/superadmin/payments',
-    label: 'Payments',
-    description: 'Rails & settlements',
+    key: 'payments',
     icon: CreditCard,
   },
   {
     href: '/dashboard/superadmin/transactions',
-    label: 'Transactions',
-    description: 'Ledger & movements',
+    key: 'transactions',
     icon: Activity,
   },
-  // {
-  //   href: '/dashboard/superadmin/tokens',
-  //   label: 'Tokens',
-  //   description: 'Supported assets & rules',
-  //   icon: Coins,
-  // },
   {
     href: '/dashboard/superadmin/drawings',
-    label: 'Drawings',
-    description: 'Campaigns & outcomes',
+    key: 'drawings',
     icon: Gift,
   },
   {
     href: '/dashboard/superadmin/membership',
-    label: 'Membership',
-    description: 'Tiers & fee rules',
+    key: 'membership',
     icon: Shield,
   },
   {
     href: '/dashboard/superadmin/community-announcements',
-    label: 'Community announcements',
-    description: 'Broadcast user updates',
+    key: 'announcements',
     icon: Megaphone,
   },
   {
     href: '/dashboard/superadmin/support-tickets',
-    label: 'Support tickets',
-    description: 'Member help requests',
+    key: 'support',
     icon: Headphones,
   },
-  // {
-  //   href: '/dashboard/superadmin/kpi',
-  //   label: 'KPI tracker',
-  //   description: 'Targets & performance',
-  //   icon: TrendingUp,
-  // },
   {
     href: '/dashboard/superadmin/settings',
-    label: 'Settings',
-    description: 'Platform configuration',
+    key: 'settings',
     icon: Settings,
   },
 ];
@@ -103,34 +79,42 @@ export const SUPERADMIN_NAV_MAIN = [
 export const SUPERADMIN_NAV_ACCOUNT = [
   {
     href: '/dashboard/superadmin/profile',
-    label: 'Profile',
-    description: 'Account, security & verification',
+    key: 'profile',
     icon: UserCircle,
   },
 ];
 
 /**
- * @typedef {typeof SUPERADMIN_NAV_MAIN[number] & { disabled?: boolean }} SuperadminNavItem
+ * @typedef {typeof SUPERADMIN_NAV_MAIN[number] & { disabled?: boolean; label: string; description: string }} SuperadminNavItem
  */
 
-function withDisabled(items, disabled) {
-  return items.map((item) => ({ ...item, disabled }));
+function withLabels(item, t) {
+  return {
+    ...item,
+    label: t(`superadmin.nav.${item.key}.label`),
+    description: t(`superadmin.nav.${item.key}.description`),
+  };
+}
+
+function withDisabled(items, disabled, t) {
+  return items.map((item) => ({ ...withLabels(item, t), disabled }));
 }
 
 /**
- * Superadmin: full nav, all enabled. Admin: same items; disabled where no permission (Users uses adminPermissions; other modules until flags exist).
+ * Superadmin: full nav, all enabled. Admin: same items; disabled where no permission.
  * @param {{ role?: string; adminPermissions?: Record<string, boolean> } | null | undefined} user
+ * @param {(key: string, vars?: Record<string, unknown>) => string} t
  * @returns {{ main: SuperadminNavItem[]; account: SuperadminNavItem[] }}
  */
-export function getSuperadminNavSections(user) {
+export function getSuperadminNavSections(user, t) {
   if (!user || user.role === 'superadmin') {
     return {
-      main: withDisabled(SUPERADMIN_NAV_MAIN, false),
-      account: withDisabled(SUPERADMIN_NAV_ACCOUNT, false),
+      main: withDisabled(SUPERADMIN_NAV_MAIN, false, t),
+      account: withDisabled(SUPERADMIN_NAV_ACCOUNT, false, t),
     };
   }
   if (user.role !== 'admin') {
-    return { main: [], account: withDisabled(SUPERADMIN_NAV_ACCOUNT, false) };
+    return { main: [], account: withDisabled(SUPERADMIN_NAV_ACCOUNT, false, t) };
   }
   const usersNavEnabled = hasAnyUsersModulePermission(user);
   const walletsNavEnabled = hasAnyWalletsPermission(user);
@@ -142,38 +126,21 @@ export function getSuperadminNavSections(user) {
   const settingsNavEnabled = hasAnySettingsPermission(user);
 
   const main = SUPERADMIN_NAV_MAIN.map((item) => {
-    if (item.href === '/dashboard/superadmin') {
-      return { ...item, disabled: false };
-    }
-    if (item.href === '/dashboard/superadmin/users') {
-      return { ...item, disabled: !usersNavEnabled };
-    }
-    if (item.href === '/dashboard/superadmin/wallets') {
-      return { ...item, disabled: !walletsNavEnabled };
-    }
-    if (item.href === '/dashboard/superadmin/transactions') {
-      return { ...item, disabled: !transactionsNavEnabled };
-    }
-    if (item.href === '/dashboard/superadmin/drawings') {
-      return { ...item, disabled: !drawingsNavEnabled };
-    }
-    if (item.href === '/dashboard/superadmin/membership') {
-      return { ...item, disabled: !membershipNavEnabled };
-    }
-    if (item.href === '/dashboard/superadmin/community-announcements') {
-      return { ...item, disabled: !announcementsNavEnabled };
-    }
-    if (item.href === '/dashboard/superadmin/support-tickets') {
-      return { ...item, disabled: !supportNavEnabled };
-    }
-    if (item.href === '/dashboard/superadmin/settings') {
-      return { ...item, disabled: !settingsNavEnabled };
-    }
-    return { ...item, disabled: true };
+    let disabled = true;
+    if (item.href === '/dashboard/superadmin') disabled = false;
+    else if (item.href === '/dashboard/superadmin/users') disabled = !usersNavEnabled;
+    else if (item.href === '/dashboard/superadmin/wallets') disabled = !walletsNavEnabled;
+    else if (item.href === '/dashboard/superadmin/transactions') disabled = !transactionsNavEnabled;
+    else if (item.href === '/dashboard/superadmin/drawings') disabled = !drawingsNavEnabled;
+    else if (item.href === '/dashboard/superadmin/membership') disabled = !membershipNavEnabled;
+    else if (item.href === '/dashboard/superadmin/community-announcements') disabled = !announcementsNavEnabled;
+    else if (item.href === '/dashboard/superadmin/support-tickets') disabled = !supportNavEnabled;
+    else if (item.href === '/dashboard/superadmin/settings') disabled = !settingsNavEnabled;
+    return { ...withLabels(item, t), disabled };
   });
 
   return {
     main,
-    account: withDisabled(SUPERADMIN_NAV_ACCOUNT, false),
+    account: withDisabled(SUPERADMIN_NAV_ACCOUNT, false, t),
   };
 }

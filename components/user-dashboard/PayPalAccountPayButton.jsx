@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import {
   PayPalProvider,
   PayPalOneTimePaymentButton,
@@ -55,6 +56,7 @@ async function captureDepositWithRetries({
 }
 
 function PayPalSdkGate({ children }) {
+  const { t } = useWebsiteT();
   const { loadingStatus, error, isHydrated } = usePayPal();
 
   if (!isHydrated || loadingStatus === INSTANCE_LOADING_STATE.PENDING) {
@@ -68,7 +70,7 @@ function PayPalSdkGate({ children }) {
   if (loadingStatus === INSTANCE_LOADING_STATE.REJECTED || error) {
     return (
       <p className="text-center text-xs text-rose-300">
-        {error?.message || 'PayPal button could not load.'}
+        {error?.message || t('dashboard.paypal.buttonLoadFailed')}
       </p>
     );
   }
@@ -88,15 +90,16 @@ function PayPalLoginSection({
   onPaymentComplete,
   toast,
 }) {
+  const { t } = useWebsiteT();
   const handleApprove = useCallback(
     async (data) => {
       const approvedOrderId = String(data?.orderId || orderId || '');
       if (!approvedOrderId) {
-        setPaypalInlineError('PayPal did not return an order id.');
+        setPaypalInlineError(t('dashboard.paypal.orderIdMissing'));
         return;
       }
       setProcessingPayment(true);
-      setPaypalStatusNote('Confirming payment and crediting USD to your wallet...');
+      setPaypalStatusNote(t('dashboard.paypal.confirmingPayment'));
       setPaypalInlineError('');
       try {
         const json = await captureDepositWithRetries({
@@ -107,9 +110,9 @@ function PayPalLoginSection({
         setPaypalStatusNote('');
         onPaymentComplete(json);
       } catch (err) {
-        const msg = err?.message || 'PayPal capture failed.';
+        const msg = err?.message || t('dashboard.paypal.error');
         setPaypalInlineError(msg);
-        toast.error(msg, { title: 'PayPal Error' });
+        toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
       } finally {
         setProcessingPayment(false);
       }
@@ -123,6 +126,7 @@ function PayPalLoginSection({
       setPaypalStatusNote,
       onPaymentComplete,
       toast,
+      t,
     ]
   );
 
@@ -134,7 +138,7 @@ function PayPalLoginSection({
         (Developer Dashboard → Sandbox accounts).
       </p> */}
       <p className="mt-1 text-xs text-blue-200/60">
-        Amount: ${Number(amountUsd).toFixed(2)} USD
+        {t('dashboard.paypal.amountUsd', { amount: Number(amountUsd).toFixed(2) })}
       </p>
       <div className=" mt-4 max-w-md">
         <PayPalOneTimePaymentButton
@@ -143,12 +147,12 @@ function PayPalLoginSection({
           disabled={processingPayment}
           onApprove={handleApprove}
           onError={(err) => {
-            const msg = err?.message || 'PayPal payment failed.';
+            const msg = err?.message || t('dashboard.paypal.error');
             setPaypalInlineError(msg);
-            toast.error(msg, { title: 'PayPal Error' });
+            toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
           }}
           onCancel={() => {
-            setPaypalInlineError('PayPal login cancelled. You can try again.');
+            setPaypalInlineError(t('dashboard.paypal.loginCancelled'));
           }}
         />
       </div>

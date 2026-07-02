@@ -1,40 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, Megaphone, Pencil, Send, Trash2 } from 'lucide-react';
 import FeedbackMessage from '@/components/ui/FeedbackMessage';
 import { useAuth } from '@/components/auth-context';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
 import { openDateInputPicker } from '@/lib/openDateInputPicker';
-
-const TYPE_LABELS_ALL = {
-  // drawing_launch: 'Drawing launch',
-  // drawing_result: 'Drawing result / winner',
-  // maintenance: 'Maintenance / downtime',
-  // wallet_token: 'Wallet / token update',
-  // membership: 'Membership / VIP update',
-  // security: 'Security notice',
-  // policy: 'Policy / terms update',
-  promotion: 'Campaigns / Events',
-  // general: 'General platform notice',
-};
-
-const ANNOUNCEMENT_TYPES = [
-  // { value: 'drawing_launch', label: TYPE_LABELS_ALL.drawing_launch },
-  // { value: 'drawing_result', label: TYPE_LABELS_ALL.drawing_result },
-  // { value: 'maintenance', label: TYPE_LABELS_ALL.maintenance },
-  // { value: 'wallet_token', label: TYPE_LABELS_ALL.wallet_token },
-  // { value: 'membership', label: TYPE_LABELS_ALL.membership },
-  // { value: 'security', label: TYPE_LABELS_ALL.security },
-  // { value: 'policy', label: TYPE_LABELS_ALL.policy },
-  { value: 'promotion', label: TYPE_LABELS_ALL.promotion },
-  // { value: 'general', label: TYPE_LABELS_ALL.general },
-];
-
-const AUDIENCE_OPTIONS = [
-  { value: 'all_users', label: 'All users' },
-  { value: 'vip_only', label: 'VIP users only' },
-  { value: 'non_vip_only', label: 'Non-VIP users only' },
-];
 
 const DEFAULT_CHANNELS = {
   dashboardBanner: true,
@@ -51,13 +22,27 @@ const INITIAL_FORM = {
   startsAt: '',
 };
 
-function audienceDisplay(value) {
-  const opt = AUDIENCE_OPTIONS.find((o) => o.value === value);
-  return opt ? opt.label : value || 'All users';
+function getAnnouncementTypes(t) {
+  return [{ value: 'promotion', label: t('superadmin.announcements.types.promotion') }];
 }
 
-function typeDisplay(value) {
-  return TYPE_LABELS_ALL[value] || value || '—';
+function getAudienceOptions(t) {
+  return [
+    { value: 'all_users', label: t('superadmin.announcements.audiences.all_users') },
+    { value: 'vip_only', label: t('superadmin.announcements.audiences.vip_only') },
+    { value: 'non_vip_only', label: t('superadmin.announcements.audiences.non_vip_only') },
+  ];
+}
+
+function audienceDisplay(value, t, audienceOptions) {
+  const opt = audienceOptions.find((o) => o.value === value);
+  return opt ? opt.label : value || t('superadmin.announcements.audiences.all_users');
+}
+
+function typeDisplay(value, t) {
+  const key = `superadmin.announcements.types.${value}`;
+  const label = t(key);
+  return label !== key ? label : value || '—';
 }
 
 function rowToForm(row) {
@@ -79,7 +64,10 @@ function rowToForm(row) {
 }
 
 export default function SuperAdminCommunityAnnouncementsPage() {
+  const { t, locale } = useWebsiteT();
   const { token, ready } = useAuth();
+  const announcementTypes = useMemo(() => getAnnouncementTypes(t), [t]);
+  const audienceOptions = useMemo(() => getAudienceOptions(t), [t]);
   const [form, setForm] = useState(INITIAL_FORM);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -101,18 +89,18 @@ export default function SuperAdminCommunityAnnouncementsPage() {
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || !json.ok) {
-          setError(json.error || 'Could not load announcements.');
+          setError(json.error || t('superadmin.announcements.errors.couldNotLoad'));
           return;
         }
         setRows(Array.isArray(json.announcements) ? json.announcements : []);
       } catch {
-        setError('Network error while loading announcements.');
+        setError(t('superadmin.announcements.errors.networkLoad'));
       } finally {
         setIsLoading(false);
       }
     };
     void loadAnnouncements();
-  }, [ready, token]);
+  }, [ready, token, t]);
 
   const onField = (event) => {
     const { name, value } = event.target;
@@ -127,12 +115,12 @@ export default function SuperAdminCommunityAnnouncementsPage() {
     setSuccess('');
 
     if (!form.title.trim() || !form.details.trim() || !form.startsAt) {
-      setError('Title, details, and event date are required.');
+      setError(t('superadmin.announcements.errors.requiredFields'));
       return;
     }
 
     if (!token) {
-      setError('Unauthorized. Please login again.');
+      setError(t('superadmin.announcements.errors.unauthorized'));
       return;
     }
 
@@ -167,7 +155,12 @@ export default function SuperAdminCommunityAnnouncementsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setError(json.error || (editingId ? 'Could not update announcement.' : 'Could not create announcement.'));
+        setError(
+          json.error ||
+            (editingId
+              ? t('superadmin.announcements.errors.couldNotUpdate')
+              : t('superadmin.announcements.errors.couldNotCreate'))
+        );
         return;
       }
       const saved = json.announcement || null;
@@ -178,12 +171,21 @@ export default function SuperAdminCommunityAnnouncementsPage() {
           setRows((prev) => [saved, ...prev]);
         }
       }
-      setSuccess(json.message || (editingId ? 'Announcement updated successfully.' : 'Announcement created successfully.'));
+      setSuccess(
+        json.message ||
+          (editingId
+            ? t('superadmin.announcements.successMessages.updated')
+            : t('superadmin.announcements.successMessages.created'))
+      );
       setForm(INITIAL_FORM);
       setEditingId(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
-      setError(editingId ? 'Network error while updating announcement.' : 'Network error while creating announcement.');
+      setError(
+        editingId
+          ? t('superadmin.announcements.errors.networkUpdate')
+          : t('superadmin.announcements.errors.networkCreate')
+      );
     } finally {
       setIsSaving(false);
     }
@@ -206,11 +208,11 @@ export default function SuperAdminCommunityAnnouncementsPage() {
 
   const onDelete = async (row) => {
     if (!token) {
-      setError('Unauthorized. Please login again.');
+      setError(t('superadmin.announcements.errors.unauthorized'));
       return;
     }
-    const title = String(row.title || 'Untitled').trim();
-    if (!window.confirm(`Delete announcement "${title}"? This cannot be undone.`)) return;
+    const title = String(row.title || t('superadmin.announcements.untitled')).trim();
+    if (!window.confirm(t('superadmin.announcements.deleteConfirm', { title }))) return;
     setError('');
     setSuccess('');
     setDeletingId(row.id);
@@ -221,17 +223,17 @@ export default function SuperAdminCommunityAnnouncementsPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
-        setError(json.error || 'Could not delete announcement.');
+        setError(json.error || t('superadmin.announcements.errors.couldNotDelete'));
         return;
       }
       setRows((prev) => prev.filter((r) => r.id !== row.id));
       if (editingId === row.id) {
         cancelEdit();
       }
-      setSuccess(json.message || 'Announcement deleted successfully.');
+      setSuccess(json.message || t('superadmin.announcements.successMessages.deleted'));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
-      setError('Network error while deleting announcement.');
+      setError(t('superadmin.announcements.errors.networkDelete'));
     } finally {
       setDeletingId(null);
     }
@@ -241,18 +243,16 @@ export default function SuperAdminCommunityAnnouncementsPage() {
     <div className="space-y-6">
       <div className="border-b border-white/[0.06] pb-6">
         <h1 className="text-xl font-semibold tracking-tight text-brand-heading sm:text-2xl">
-          Community announcements
+          {t('superadmin.announcements.title')}
         </h1>
-        <p className="mt-1 max-w-3xl text-sm text-brand-muted">
-          Create and manage notices: title, type, audience, message, and event date (when the campaign or event is).
-        </p>
+        <p className="mt-1 max-w-3xl text-sm text-brand-muted">{t('superadmin.announcements.subtitle')}</p>
       </div>
 
       <div className="space-y-3" aria-live="polite" aria-relevant="additions text">
         {error ? (
           <FeedbackMessage
             tone="error"
-            title="Error"
+            title={t('superadmin.announcements.errorTitle')}
             message={error}
             className="border-2 border-rose-400/40 shadow-lg shadow-black/20"
           />
@@ -260,7 +260,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
         {success ? (
           <FeedbackMessage
             tone="success"
-            title="Success"
+            title={t('superadmin.announcements.successTitle')}
             message={success}
             className="border-2 border-emerald-400/40 shadow-lg shadow-black/20"
           />
@@ -273,7 +273,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
                 onClick={() => setError('')}
                 className="rounded-lg border border-white/15 px-2 py-1 font-semibold text-brand-muted hover:text-brand-heading"
               >
-                Dismiss error
+                {t('superadmin.announcements.dismissError')}
               </button>
             ) : null}
             {success ? (
@@ -282,7 +282,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
                 onClick={() => setSuccess('')}
                 className="rounded-lg border border-white/15 px-2 py-1 font-semibold text-brand-muted hover:text-brand-heading"
               >
-                Dismiss message
+                {t('superadmin.announcements.dismissMessage')}
               </button>
             ) : null}
           </div>
@@ -300,10 +300,10 @@ export default function SuperAdminCommunityAnnouncementsPage() {
             </span>
             <div>
               <h2 className="text-base font-semibold text-brand-heading">
-                {editingId ? 'Edit announcement' : 'New announcement'}
+                {editingId ? t('superadmin.announcements.editTitle') : t('superadmin.announcements.newTitle')}
               </h2>
               <p className="mt-0.5 text-xs text-brand-muted">
-                {editingId ? 'Update the fields below, then save.' : 'Fill every field, then publish.'}
+                {editingId ? t('superadmin.announcements.editHint') : t('superadmin.announcements.newHint')}
               </p>
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
                 disabled={isSaving}
                 className="rounded-xl border border-white/[0.12] bg-black/30 px-4 py-2 text-sm font-semibold text-brand-muted transition hover:border-white/[0.18] hover:text-brand-heading disabled:opacity-50"
               >
-                Cancel
+                {t('superadmin.common.cancel')}
               </button>
             ) : null}
             <button
@@ -324,32 +324,42 @@ export default function SuperAdminCommunityAnnouncementsPage() {
               className="btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
             >
               <Send className="h-4 w-4" strokeWidth={2} aria-hidden />
-              {isSaving ? (editingId ? 'Saving…' : 'Publishing…') : editingId ? 'Save changes' : 'Publish'}
+              {isSaving
+                ? editingId
+                  ? t('superadmin.common.saving')
+                  : t('superadmin.announcements.publishing')
+                : editingId
+                  ? t('superadmin.announcements.saveChanges')
+                  : t('superadmin.announcements.publish')}
             </button>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1.5 sm:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Title *</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">
+              {t('superadmin.announcements.titleLabel')}
+            </span>
             <input
               name="title"
               value={form.title}
               onChange={onField}
-              placeholder="Announcement title"
+              placeholder={t('superadmin.announcements.titlePlaceholder')}
               className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
             />
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Type *</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">
+              {t('superadmin.announcements.typeLabel')}
+            </span>
             <select
               name="type"
               value={form.type}
               onChange={onField}
               className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
             >
-              {ANNOUNCEMENT_TYPES.map((opt) => (
+              {announcementTypes.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -358,14 +368,16 @@ export default function SuperAdminCommunityAnnouncementsPage() {
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Audience *</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">
+              {t('superadmin.announcements.audienceLabel')}
+            </span>
             <select
               name="audience"
               value={form.audience}
               onChange={onField}
               className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
             >
-              {AUDIENCE_OPTIONS.map((opt) => (
+              {audienceOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -374,13 +386,15 @@ export default function SuperAdminCommunityAnnouncementsPage() {
           </label>
 
           <label className="space-y-1.5 sm:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">Details *</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">
+              {t('superadmin.announcements.detailsLabel')}
+            </span>
             <textarea
               rows={6}
               name="details"
               value={form.details}
               onChange={onField}
-              placeholder="Full message members will read…"
+              placeholder={t('superadmin.announcements.detailsPlaceholder')}
               className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60"
             />
           </label>
@@ -391,7 +405,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
           >
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">
               <CalendarClock className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-              Event date *
+              {t('superadmin.announcements.eventDateLabel')}
             </span>
             <input
               ref={eventDateInputRef}
@@ -408,14 +422,16 @@ export default function SuperAdminCommunityAnnouncementsPage() {
       </form>
 
       <div className="rounded-2xl border border-white/[0.08] bg-black/[0.22] p-5 sm:p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-brand-subtle">All announcements</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-brand-subtle">
+          {t('superadmin.announcements.allAnnouncements')}
+        </h3>
         {isLoading ? (
           <div className="mt-3 space-y-2 animate-pulse">
             <div className="h-14 rounded-xl border border-white/[0.08] bg-white/[0.03]" />
             <div className="h-14 rounded-xl border border-white/[0.08] bg-white/[0.03]" />
           </div>
         ) : rows.length === 0 ? (
-          <p className="mt-3 text-sm text-brand-muted">No announcements yet.</p>
+          <p className="mt-3 text-sm text-brand-muted">{t('superadmin.announcements.noAnnouncements')}</p>
         ) : (
           <div className="mt-3 space-y-4">
             {rows.map((row) => (
@@ -427,16 +443,16 @@ export default function SuperAdminCommunityAnnouncementsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-semibold text-brand-heading">{row.title || '—'}</p>
                     <p className="mt-2 text-xs text-brand-muted">
-                      <span className="text-brand-subtle">Type</span>{' '}
-                      <span className="text-brand-heading">{typeDisplay(row.type)}</span>
+                      <span className="text-brand-subtle">{t('superadmin.announcements.type')}</span>{' '}
+                      <span className="text-brand-heading">{typeDisplay(row.type, t)}</span>
                       <span className="mx-2 text-brand-border-muted">·</span>
-                      <span className="text-brand-subtle">Audience</span>{' '}
-                      <span className="text-brand-heading">{audienceDisplay(row.audience)}</span>
+                      <span className="text-brand-subtle">{t('superadmin.announcements.audience')}</span>{' '}
+                      <span className="text-brand-heading">{audienceDisplay(row.audience, t, audienceOptions)}</span>
                     </p>
                     <p className="mt-2 text-xs text-brand-muted">
-                      <span className="text-brand-subtle">Event date</span>{' '}
+                      <span className="text-brand-subtle">{t('superadmin.announcements.eventDate')}</span>{' '}
                       <span className="font-medium text-brand-heading">
-                        {row.startsAt ? new Date(row.startsAt).toLocaleString() : '—'}
+                        {row.startsAt ? new Date(row.startsAt).toLocaleString(locale === 'es' ? 'es' : 'en') : '—'}
                       </span>
                     </p>
                   </div>
@@ -448,7 +464,7 @@ export default function SuperAdminCommunityAnnouncementsPage() {
                       className="inline-flex items-center gap-1 rounded-lg border border-white/[0.12] bg-black/40 px-3 py-1.5 text-xs font-semibold text-brand-heading transition hover:border-brand-accent/40 hover:text-brand-accent disabled:opacity-50"
                     >
                       <Pencil className="h-3.5 w-3.5" aria-hidden />
-                      Edit
+                      {t('superadmin.common.edit')}
                     </button>
                     <button
                       type="button"
@@ -457,12 +473,14 @@ export default function SuperAdminCommunityAnnouncementsPage() {
                       className="inline-flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/[0.1] px-3 py-1.5 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/[0.18] disabled:opacity-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                      {deletingId === row.id ? '…' : 'Delete'}
+                      {deletingId === row.id ? '…' : t('superadmin.common.delete')}
                     </button>
                   </div>
                 </div>
                 <div className="mt-3 rounded-lg border border-white/[0.06] bg-black/25 px-3 py-3">
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-brand-subtle">Message</p>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-brand-subtle">
+                    {t('superadmin.announcements.message')}
+                  </p>
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-brand-muted">{row.details || '—'}</p>
                 </div>
               </div>

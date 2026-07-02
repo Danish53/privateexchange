@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
@@ -45,67 +45,85 @@ import { useToast } from '@/components/ui/toast-context';
 import { cn } from '@/lib/utils';
 import { getCryptoDepositTokenLabel } from '@/lib/cryptoDepositConfig';
 import dynamic from 'next/dynamic';
+import { useWebsiteT } from '@/components/i18n/WebsiteLocaleProvider';
+
+function PayPalDepositLoading() {
+  const { t } = useWebsiteT();
+  return (
+    <div className="mt-4 flex items-center gap-3 rounded-xl border border-blue-500/25 bg-blue-950/30 px-4 py-5 text-sm text-blue-100">
+      <Loader2 className="h-5 w-5 animate-spin" />
+      {t('dashboard.deposit.loadingPayPal')}
+    </div>
+  );
+}
 
 const PayPalDepositPayment = dynamic(
   () => import('@/components/user-dashboard/PayPalDepositPayment'),
   {
     ssr: false,
-    loading: () => (
-      <div className="mt-4 flex items-center gap-3 rounded-xl border border-blue-500/25 bg-blue-950/30 px-4 py-5 text-sm text-blue-100">
-        <Loader2 className="h-5 w-5 animate-spin" />
-        Loading PayPal...
-      </div>
-    ),
+    loading: () => <PayPalDepositLoading />,
   }
 );
 
-const DEPOSIT_METHODS = [
-  {
-    id: 'paypal',
-    name: 'PayPal',
-    description: 'Secure card on your dashboard',
-    status: 'Available',
-    available: true,
-    icon: Banknote,
-    color: 'from-blue-500 to-blue-600',
-    borderColor: 'border-blue-500',
-    textColor: 'text-blue-400',
-    features: ['Card on platform', '3D Secure', 'Instant USD credit'],
-    minAmount: 10,
-    maxAmount: 10000,
-    fee: null,
-  },
-  {
-    id: 'crypto',
-    name: 'Crypto',
-    description: 'On-chain deposits',
-    status: 'Available',
-    available: true,
-    icon: Coins,
-    color: 'from-amber-500 to-amber-600',
-    borderColor: 'border-amber-500',
-    textColor: 'text-amber-400',
-    features: ['Direct to wallet', 'Lower fees'],
-    minAmount: 1,
-    maxAmount: 50000,
-    fee: 'Network fee only',
-  },
-  {
-    id: 'stripe',
-    name: 'Stripe',
-    description: 'Card and bank checkout',
-    status: 'Available',
-    available: true,
-    icon: CreditCard,
-    color: 'from-violet-500 to-indigo-600',
-    borderColor: 'border-violet-500',
-    textColor: 'text-violet-300',
-    features: ['Cards supported', 'Fast checkout'],
-    minAmount: 10,
-    maxAmount: 25000,
-    fee: 'Platform fee applies',
-  },
-];
+function getDepositMethods(t) {
+  return [
+    {
+      id: 'paypal',
+      name: t('dashboard.deposit.methods.paypal.name'),
+      description: t('dashboard.deposit.methods.paypal.description'),
+      status: t('dashboard.common.available'),
+      available: true,
+      icon: Banknote,
+      color: 'from-blue-500 to-blue-600',
+      borderColor: 'border-blue-500',
+      textColor: 'text-blue-400',
+      features: [
+        t('dashboard.deposit.methods.paypal.feature1'),
+        t('dashboard.deposit.methods.paypal.feature2'),
+        t('dashboard.deposit.methods.paypal.feature3'),
+      ],
+      minAmount: 10,
+      maxAmount: 10000,
+      fee: null,
+    },
+    {
+      id: 'crypto',
+      name: t('dashboard.deposit.methods.crypto.name'),
+      description: t('dashboard.deposit.methods.crypto.description'),
+      status: t('dashboard.common.available'),
+      available: true,
+      icon: Coins,
+      color: 'from-amber-500 to-amber-600',
+      borderColor: 'border-amber-500',
+      textColor: 'text-amber-400',
+      features: [
+        t('dashboard.deposit.methods.crypto.feature1'),
+        t('dashboard.deposit.methods.crypto.feature2'),
+      ],
+      minAmount: 1,
+      maxAmount: 50000,
+      fee: t('dashboard.deposit.methods.crypto.fee'),
+    },
+    {
+      id: 'stripe',
+      name: t('dashboard.deposit.methods.stripe.name'),
+      description: t('dashboard.deposit.methods.stripe.description'),
+      status: t('dashboard.common.available'),
+      available: true,
+      icon: CreditCard,
+      color: 'from-violet-500 to-indigo-600',
+      borderColor: 'border-violet-500',
+      textColor: 'text-violet-300',
+      features: [
+        t('dashboard.deposit.methods.stripe.feature1'),
+        t('dashboard.deposit.methods.stripe.feature2'),
+      ],
+      minAmount: 10,
+      maxAmount: 25000,
+      fee: t('dashboard.deposit.methods.stripe.fee'),
+    },
+  ];
+}
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -135,6 +153,7 @@ function StripeCardPaymentForm({
   processingPayment,
   onWebhookApproved,
   toast,
+  t,
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -142,15 +161,15 @@ function StripeCardPaymentForm({
   const handleStripeConfirm = async () => {
     if (!stripe || !elements) return;
     if (!clientSecret) {
-      const msg = 'Stripe payment session is not ready.';
+      const msg = t('dashboard.common.couldNotLoad');
       setStripeInlineError(msg);
-      toast.error(msg, { title: 'Stripe Error' });
+      toast.error(msg, { title: t('dashboard.transfer.transferFailedTitle') });
       return;
     }
     if (!cardholderName.trim()) {
-      const msg = 'Card holder name is required.';
+      const msg = t('dashboard.deposit.cardHolderPlaceholder');
       setStripeInlineError(msg);
-      toast.error(msg, { title: 'Stripe Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
       return;
     }
 
@@ -161,9 +180,9 @@ function StripeCardPaymentForm({
     const cardNumber = elements.getElement(CardNumberElement);
     if (!cardNumber) {
       setProcessingPayment(false);
-      const msg = 'Card input is not ready.';
+      const msg = t('dashboard.common.couldNotLoad');
       setStripeInlineError(msg);
-      toast.error(msg, { title: 'Stripe Error' });
+      toast.error(msg, { title: t('dashboard.transfer.transferFailedTitle') });
       return;
     }
 
@@ -178,59 +197,67 @@ function StripeCardPaymentForm({
 
     if (error) {
       setProcessingPayment(false);
-      const msg = error.message || 'Card payment failed.';
+      const msg = error.message || t('dashboard.transfer.transferFailed');
       setStripeInlineError(msg);
-      toast.error(msg, { title: 'Stripe Error' });
+      toast.error(msg, { title: t('dashboard.transfer.transferFailedTitle') });
       return;
     }
 
     setProcessingPayment(false);
     if (paymentIntent?.status === 'succeeded' || paymentIntent?.status === 'processing') {
-      setStripeStatusNote('Payment authorized. Waiting for secure approval...');
+      setStripeStatusNote(t('dashboard.common.loading'));
       onWebhookApproved();
       return;
     }
 
-    setStripeInlineError(`Payment status: ${paymentIntent?.status || 'unknown'}.`);
-    toast.info(`Payment status: ${paymentIntent?.status || 'unknown'}.`, { title: 'Stripe Status' });
+    setStripeInlineError(t('dashboard.deposit.paymentStatus', { status: paymentIntent?.status || 'unknown' }));
+    toast.info(t('dashboard.deposit.paymentStatus', { status: paymentIntent?.status || 'unknown' }), {
+      title: t('dashboard.deposit.stripeStatusTitle'),
+    });
   };
 
   return (
     <>
       <div className="mt-5 space-y-3 rounded-xl border border-violet-400/20 bg-black/20 p-4">
         <div>
-          <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-violet-200/80">Card holder name</label>
+          <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-violet-200/80">
+            {t('dashboard.deposit.cardHolderName')}
+          </label>
           <input
             type="text"
             value={cardholderName}
             onChange={(e) => setCardholderName(e.target.value)}
-            placeholder="Full name on card"
+            placeholder={t('dashboard.deposit.cardHolderPlaceholder')}
             className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-violet-400/60"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-violet-200/80">Card number</label>
+          <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-violet-200/80">
+            {t('dashboard.deposit.cardNumber')}
+          </label>
           <div className="rounded-lg border border-white/15 bg-black/30 px-3 py-2">
             <CardNumberElement options={stripeElementOptions} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-violet-200/80">Expiry date</label>
+            <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-violet-200/80">
+              {t('dashboard.deposit.expiryDate')}
+            </label>
             <div className="rounded-lg border border-white/15 bg-black/30 px-3 py-2">
               <CardExpiryElement options={stripeElementOptions} />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-violet-200/80">CVV</label>
+            <label className="mb-1 block text-xs uppercase tracking-[0.08em] text-violet-200/80">
+              {t('dashboard.deposit.cardCvv')}
+            </label>
             <div className="rounded-lg border border-white/15 bg-black/30 px-3 py-2">
               <CardCvcElement options={stripeElementOptions} />
             </div>
           </div>
         </div>
-        <p className="text-xs text-violet-200/70">
-          3D Secure is handled automatically by your bank during payment authentication.
-        </p>
+        <p className="text-xs text-violet-200/70">{t('dashboard.deposit.stripe3dsHint')}</p>
         {stripeInlineError ? (
           <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
             {stripeInlineError}
@@ -244,13 +271,15 @@ function StripeCardPaymentForm({
         disabled={processingPayment || !stripe || !elements}
         className="mt-4 w-full rounded-xl bg-violet-600 py-4 text-lg font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {processingPayment ? 'Processing secure payment...' : 'Pay with Stripe'}
+        {processingPayment ? t('dashboard.buy.processing') : t('dashboard.deposit.completeStripePayment')}
       </button>
     </>
   );
 }
 
 export default function DepositPage() {
+  const { t, locale } = useWebsiteT();
+  const depositMethods = useMemo(() => getDepositMethods(t), [t]);
   const { token } = useAuth();
   const toast = useToast();
   const { loading, error, tokens, totalUsdFormatted, reload: reloadWallet } = useUserWallet();
@@ -303,21 +332,21 @@ export default function DepositPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = json.error || 'Could not load your requests.';
+        const msg = json.error || t('dashboard.common.couldNotLoad');
         setDepositsError(msg);
-        toast.error(msg, { title: 'Could Not Load Requests' });
+        toast.error(msg, { title: t('dashboard.common.couldNotLoad') });
         setMyDeposits([]);
         return;
       }
       setMyDeposits(Array.isArray(json.deposits) ? json.deposits : []);
     } catch {
-      setDepositsError('Network error.');
-      toast.error('Network error while loading requests.', { title: 'Could Not Load Requests' });
+      setDepositsError(t('dashboard.common.networkError'));
+      toast.error(t('dashboard.common.networkError'), { title: t('dashboard.common.couldNotLoad') });
       setMyDeposits([]);
     } finally {
       setDepositsLoading(false);
     }
-  }, [token]);
+  }, [token, t, toast]);
 
   useEffect(() => {
     if (!token) return;
@@ -346,7 +375,7 @@ export default function DepositPage() {
   function formatDateTime(iso) {
     if (!iso) return '—';
     try {
-      return new Intl.DateTimeFormat(undefined, {
+      return new Intl.DateTimeFormat(locale === 'es' ? 'es' : 'en', {
         dateStyle: 'short',
         timeStyle: 'short',
       }).format(new Date(iso));
@@ -384,9 +413,9 @@ export default function DepositPage() {
 
   function DepositStatusBadge({ status }) {
     const map = {
-      pending: { label: 'Pending', className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
-      completed: { label: 'Approved', className: 'border-emerald-500/35 bg-emerald-500/[0.1] text-emerald-100' },
-      cancelled: { label: 'Rejected', className: 'border-rose-500/35 bg-rose-500/[0.1] text-rose-100' },
+      pending: { label: t('dashboard.common.pending'), className: 'border-amber-500/35 bg-amber-500/[0.12] text-amber-100' },
+      completed: { label: t('dashboard.common.approved'), className: 'border-emerald-500/35 bg-emerald-500/[0.1] text-emerald-100' },
+      cancelled: { label: t('dashboard.common.rejected'), className: 'border-rose-500/35 bg-rose-500/[0.1] text-rose-100' },
     };
     const m = map[status] || { label: status, className: 'border-white/10 bg-white/5 text-brand-muted' };
     return (
@@ -403,9 +432,9 @@ export default function DepositPage() {
 
   function PaymentMethodBadge({ method }) {
     const map = {
-      paypal: { label: 'PayPal', className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
-      crypto: { label: 'Crypto', className: 'border-purple-500/35 bg-purple-500/[0.1] text-purple-100' },
-      stripe: { label: 'Stripe', className: 'border-violet-500/35 bg-violet-500/[0.1] text-violet-100' },
+      paypal: { label: t('dashboard.deposit.paypalMethod'), className: 'border-blue-500/35 bg-blue-500/[0.1] text-blue-100' },
+      crypto: { label: t('dashboard.deposit.cryptoMethod'), className: 'border-purple-500/35 bg-purple-500/[0.1] text-purple-100' },
+      stripe: { label: t('dashboard.deposit.stripeMethod'), className: 'border-violet-500/35 bg-violet-500/[0.1] text-violet-100' },
     };
     const m = map[method] || { label: method, className: 'border-white/10 bg-white/5 text-brand-muted' };
     return (
@@ -447,12 +476,12 @@ export default function DepositPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const selectedMethodData = DEPOSIT_METHODS.find(m => m.id === selectedMethod);
+  const selectedMethodData = depositMethods.find(m => m.id === selectedMethod);
   const isCryptoMethod = selectedMethod === 'crypto';
   // Static USD token object (always USD for deposits)
   const usdToken = {
     symbol: 'USD',
-    name: 'US Dollar',
+    name: t('dashboard.deposit.usDollar'),
     usdPerUnit: 1,
     bar: 'bg-amber-500'
   };
@@ -508,24 +537,24 @@ export default function DepositPage() {
           setMyDeposits(rows);
           setStripeStatusNote('');
           setStripeSuccessOpen(true);
-          toast.success('Stripe payment approved. USD credited to your wallet.', {
-            title: 'Payment Successful',
+          toast.success(t('dashboard.deposit.paymentSuccessStripe'), {
+            title: t('dashboard.deposit.paymentSuccessTitle'),
           });
           return;
         }
         if (latest?.status === 'cancelled') {
-          const msg = 'Payment was cancelled or failed. Please try again.';
+          const msg = t('dashboard.deposit.paymentCancelled');
           setStripeInlineError(msg);
-          toast.error(msg, { title: 'Stripe Error' });
+          toast.error(msg, { title: t('dashboard.deposit.stripeErrorTitle') });
           return;
         }
       } catch {
         // ignore transient fetch issues while polling
       }
     }
-    setStripeStatusNote('Payment received. Approval may take a little longer; please refresh history shortly.');
-    toast.info('Payment received. Approval may take a little longer.', { title: 'Stripe Status' });
-  }, [stripeDepositId, token, toast]);
+    setStripeStatusNote(t('dashboard.deposit.paymentReceivedRefresh'));
+    toast.info(t('dashboard.deposit.paymentReceivedNote'), { title: t('dashboard.deposit.stripeStatusTitle') });
+  }, [stripeDepositId, token, toast, t]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -539,15 +568,15 @@ export default function DepositPage() {
     if (step === 'select') {
       if (isCryptoMethod) {
         if (!selectedCryptoId) {
-          toast.error('Please select a cryptocurrency.', { title: 'Crypto Required' });
+          toast.error(t('dashboard.deposit.cryptoRequired'), { title: t('dashboard.deposit.cryptoRequiredTitle') });
           return;
         }
         setStep('confirm');
         return;
       }
       if (!amount || parseFloat(amount) < selectedMethodData?.minAmount) {
-        toast.error(`Please enter amount at least $${selectedMethodData?.minAmount}.`, {
-          title: 'Invalid Amount',
+        toast.error(t('dashboard.deposit.minAmountError', { amount: selectedMethodData?.minAmount }), {
+          title: t('dashboard.deposit.invalidAmountTitle'),
         });
         return;
       }
@@ -563,16 +592,15 @@ export default function DepositPage() {
 
   const handlePayPalPaymentComplete = useCallback(
     (json) => {
-      const credited = json?.deposit?.amount ?? parseFloat(amount);
       const msg =
         json?.message ||
-        `PayPal payment successful. ${toFixed2(Number(credited) || 0)} USD credited to your wallet.`;
-      toast.success(msg, { title: 'Deposit Complete' });
+        t('dashboard.deposit.paymentSuccessStripe');
+      toast.success(msg, { title: t('dashboard.deposit.depositComplete') });
       void reloadWallet();
       loadMyDeposits();
       resetDepositFlow();
     },
-    [amount, loadMyDeposits, reloadWallet, toast]
+    [loadMyDeposits, reloadWallet, t, toast]
   );
 
   const resetDepositFlow = () => {
@@ -601,7 +629,7 @@ export default function DepositPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Screenshot must be 5MB or smaller.', { title: 'File Too Large' });
+      toast.error(t('dashboard.deposit.fileTooLarge'), { title: t('dashboard.deposit.fileTooLargeTitle') });
       return;
     }
     setProofFile(file);
@@ -619,35 +647,35 @@ export default function DepositPage() {
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.ok) {
-      throw new Error(json.error || 'Failed to upload payment screenshot.');
+      throw new Error(json.error || t('dashboard.deposit.uploadFailed'));
     }
     return json.url || '';
   };
 
   const handleCryptoDepositSubmit = async () => {
     if (!selectedCryptoId) {
-      const msg = 'Please select a cryptocurrency.';
+      const msg = t('dashboard.deposit.cryptoRequired');
       setPaymentError(msg);
-      toast.error(msg, { title: 'Payment Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
       return;
     }
     if (!amount || parseFloat(amount) < selectedMethodData?.minAmount) {
-      const msg = `Please enter amount at least $${selectedMethodData?.minAmount}.`;
+      const msg = t('dashboard.deposit.minAmountError', { amount: selectedMethodData?.minAmount });
       setPaymentError(msg);
-      toast.error(msg, { title: 'Invalid Amount' });
+      toast.error(msg, { title: t('dashboard.deposit.invalidAmountTitle') });
       return;
     }
     const tx = transactionRef.trim();
     if (!tx && !proofFile) {
-      const msg = 'Enter transaction ID/hash or upload a payment screenshot.';
+      const msg = t('dashboard.deposit.proofRequired');
       setPaymentError(msg);
-      toast.error(msg, { title: 'Proof Required' });
+      toast.error(msg, { title: t('dashboard.deposit.proofRequiredTitle') });
       return;
     }
     if (!token) {
-      const msg = 'You must be logged in to make a deposit.';
+      const msg = t('dashboard.deposit.notLoggedIn');
       setPaymentError(msg);
-      toast.error(msg, { title: 'Payment Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
       return;
     }
 
@@ -679,20 +707,20 @@ export default function DepositPage() {
 
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        throw new Error(data.error || 'Deposit request failed');
+        throw new Error(data.error || t('dashboard.deposit.depositFailed'));
       }
 
       setDepositResult(data.deposit);
       toast.success(
-        data.message || 'Deposit request submitted. Admin will review shortly.',
-        { title: 'Request Submitted' }
+        data.message || t('dashboard.deposit.requestSubmittedMsg'),
+        { title: t('dashboard.deposit.requestSubmitted') }
       );
       loadMyDeposits();
       resetDepositFlow();
     } catch (err) {
-      const msg = err.message || 'Failed to submit deposit request.';
+      const msg = err.message || t('dashboard.deposit.depositFailed');
       setPaymentError(msg);
-      toast.error(msg, { title: 'Payment Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
     } finally {
       setProcessingPayment(false);
     }
@@ -700,16 +728,16 @@ export default function DepositPage() {
 
   const handlePayment = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      const msg = 'Please enter a valid amount.';
+      const msg = t('dashboard.deposit.validAmount');
       setPaymentError(msg);
-      toast.error(msg, { title: 'Payment Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
       return;
     }
 
     if (!token) {
-      const msg = 'You must be logged in to make a deposit.';
+      const msg = t('dashboard.deposit.notLoggedIn');
       setPaymentError(msg);
-      toast.error(msg, { title: 'Payment Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
       return;
     }
 
@@ -736,17 +764,17 @@ export default function DepositPage() {
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
-        throw new Error(data.error || 'Payment failed');
+        throw new Error(data.error || t('dashboard.deposit.depositFailed'));
       }
 
       setDepositResult(data.deposit);
-      const successMsg = data.message || 'Deposit created successfully.';
+      const successMsg = data.message || t('dashboard.deposit.depositCreated');
       setPaymentSuccess(successMsg);
       loadMyDeposits();
       if (selectedMethod === 'stripe') {
         const secret = data?.deposit?.payment?.clientSecret;
         if (!secret) {
-          throw new Error('Stripe client secret not received.');
+          throw new Error(t('dashboard.common.couldNotLoad'));
         }
         setPaymentError('');
         setPaymentSuccess('');
@@ -761,7 +789,7 @@ export default function DepositPage() {
       if (selectedMethod === 'paypal') {
         const orderId = data?.deposit?.payment?.orderId;
         if (!orderId) {
-          throw new Error('PayPal order id not received.');
+          throw new Error(t('dashboard.common.couldNotLoad'));
         }
         setPaymentError('');
         setPaymentSuccess('');
@@ -772,12 +800,12 @@ export default function DepositPage() {
         setProcessingPayment(false);
         return;
       }
-      toast.success(successMsg, { title: 'Deposit Submitted' });
+      toast.success(successMsg, { title: t('dashboard.deposit.depositSubmitted') });
     } catch (err) {
       console.error('Deposit error:', err);
-      const msg = err.message || 'Failed to process deposit. Please try again.';
+      const msg = err.message || t('dashboard.deposit.depositFailed');
       setPaymentError(msg);
-      toast.error(msg, { title: 'Payment Error' });
+      toast.error(msg, { title: t('dashboard.deposit.paymentErrorTitle') });
     } finally {
       setProcessingPayment(false);
     }
@@ -796,15 +824,15 @@ export default function DepositPage() {
           </div>
         </div>
         <div className="text-sm text-brand-subtle">
-          {step === 'select' ? 'Step 1 of 2' : 'Step 2 of 2'}
+          {step === 'select' ? t('dashboard.deposit.stepOneOfTwo') : t('dashboard.deposit.stepTwoOfTwo')}
         </div>
       </div>
       <div className="mt-4 flex justify-between text-sm">
         <div className={`font-medium ${step === 'select' ? 'text-white' : 'text-brand-subtle'}`}>
-          Select Details
+          {t('dashboard.deposit.selectDetails')}
         </div>
         <div className={`font-medium ${step === 'confirm' ? 'text-white' : 'text-brand-subtle'}`}>
-          Confirm & Pay
+          {t('dashboard.deposit.confirmAndPay')}
         </div>
       </div>
     </div>
@@ -813,9 +841,9 @@ export default function DepositPage() {
   const renderSelectStep = () => (
     <div className="space-y-6">
       {/* Payment Method Selection - Simplified */}
-      <Panel title="Payment Method" subtitle="Choose how you want to deposit">
+      <Panel title={t('dashboard.deposit.paymentMethod')} subtitle={t('dashboard.deposit.paymentMethodSub')}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {DEPOSIT_METHODS.map((method) => (
+          {depositMethods.map((method) => (
             <button
               key={method.id}
               type="button"
@@ -846,7 +874,9 @@ export default function DepositPage() {
                     {method.status}
                   </span>
                   {method.fee ? (
-                    <span className="text-brand-subtle">Fee: {method.fee}</span>
+                    <span className="text-brand-subtle">
+                      {t('dashboard.deposit.feePrefix')} {method.fee}
+                    </span>
                   ) : null}
                 </div>
               </div>
@@ -867,12 +897,12 @@ export default function DepositPage() {
                 <span className="text-lg font-bold text-amber-400">$</span>
               </div>
               <div>
-                <p className="text-sm text-brand-subtle">Token</p>
+                <p className="text-sm text-brand-subtle">{t('dashboard.deposit.tokenLabel')}</p>
                 <p className="font-semibold text-white">US Dollar (USD)</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm text-brand-subtle">Rate</p>
+              <p className="text-sm text-brand-subtle">{t('dashboard.deposit.rate')}</p>
               <p className="font-semibold text-brand-accent">$1 = 1.0000 USD</p>
             </div>
           </div>
@@ -883,10 +913,10 @@ export default function DepositPage() {
       </Panel> */}
 
       {isCryptoMethod && (
-        <Panel title="Select Cryptocurrency" subtitle="Choose the network you will send from">
+        <Panel title={t('dashboard.deposit.selectCrypto')} subtitle={t('dashboard.deposit.selectCryptoSub')}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {cryptoOptions.length === 0 ? (
-              <p className="text-sm text-brand-subtle">Loading crypto options...</p>
+              <p className="text-sm text-brand-subtle">{t('dashboard.deposit.loadingCrypto')}</p>
             ) : (
               cryptoOptions.map((coin) => (
                 <button
@@ -914,13 +944,13 @@ export default function DepositPage() {
             />
           ) : null}
           <p className="mt-4 text-sm text-brand-subtle">
-            After sending crypto, continue to enter amount and payment proof (hash or screenshot).
+            {t('dashboard.deposit.cryptoContinueHint')}
           </p>
         </Panel>
       )}
 
       {!isCryptoMethod ? (
-      <Panel title="Enter Amount" subtitle="How much do you want to deposit?">
+      <Panel title={t('dashboard.deposit.enterAmount')} subtitle={t('dashboard.deposit.enterAmountSub')}>
         <div className="space-y-4">
           <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-4">
             <span className="text-2xl font-semibold text-white">$</span>
@@ -960,14 +990,14 @@ export default function DepositPage() {
                 <div className="flex items-center gap-3">
                   <Calculator className="h-5 w-5 text-brand-accent" />
                   <div>
-                    <p className="text-sm text-brand-subtle">You will receive</p>
+                    <p className="text-sm text-brand-subtle">{t('dashboard.deposit.youWillReceive')}</p>
                     <p className="text-lg font-bold text-white">
                       {toFixed2(tokensToReceive)} <span className="text-[0.70rem] font-semibold uppercase tracking-wide text-brand-subtle ms-1"> USD</span>
                     </p>
                   </div>
                 </div>
                 {/* <div className="text-right">
-                  <p className="text-sm text-brand-subtle">Price per token</p>
+                  <p className="text-sm text-brand-subtle">{t('dashboard.deposit.pricePerToken')}</p>
                   <p className="font-medium text-brand-accent">
                     ${selectedTokenData.usdPerUnit?.toFixed(4)}
                   </p>
@@ -983,16 +1013,16 @@ export default function DepositPage() {
             )}
           >
             <div>
-              <p className="text-brand-subtle">Min</p>
+              <p className="text-brand-subtle">{t('dashboard.deposit.min')}</p>
               <p className="font-medium text-white">${selectedMethodData?.minAmount}</p>
             </div>
             <div>
-              <p className="text-brand-subtle">Max</p>
+              <p className="text-brand-subtle">{t('dashboard.deposit.max')}</p>
               <p className="font-medium text-white">${selectedMethodData?.maxAmount}</p>
             </div>
             {selectedMethodData?.fee ? (
               <div>
-                <p className="text-brand-subtle">Fee</p>
+                <p className="text-brand-subtle">{t('dashboard.deposit.feeLabel')}</p>
                 <p className="font-medium text-white">{selectedMethodData.fee}</p>
               </div>
             ) : null}
@@ -1007,7 +1037,7 @@ export default function DepositPage() {
           className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-medium text-white hover:bg-white/10"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Wallet
+          {t('dashboard.deposit.backToWallet')}
         </Link>
         <button
           type="button"
@@ -1019,7 +1049,7 @@ export default function DepositPage() {
           }
           className="inline-flex items-center gap-2 rounded-xl bg-brand-accent px-8 py-3 font-semibold text-white hover:bg-brand-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Continue to Payment
+          {t('dashboard.deposit.confirmDeposit')}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
@@ -1029,42 +1059,42 @@ export default function DepositPage() {
   const renderConfirmStep = () => (
     <div className="space-y-6">
       <Panel
-        title={isCryptoMethod ? 'Complete crypto deposit' : 'Confirm Deposit'}
+        title={isCryptoMethod ? t('dashboard.deposit.completeCryptoDeposit') : t('dashboard.deposit.confirmDeposit')}
         subtitle={
           isCryptoMethod
-            ? 'Enter amount and payment proof after sending crypto'
-            : 'Review your transaction'
+            ? t('dashboard.deposit.enterAmountProof')
+            : t('dashboard.deposit.reviewTransaction')
         }
       >
         <div className="space-y-6">
           {selectedMethod !== 'crypto' ? (
           <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-            <h4 className="text-lg font-semibold text-white">Transaction Details</h4>
+            <h4 className="text-lg font-semibold text-white">{t('dashboard.deposit.transactionDetails')}</h4>
             <div className="mt-4 space-y-3">
               <div className="flex justify-between">
-                <span className="text-brand-subtle">Payment Method</span>
+                <span className="text-brand-subtle">{t('dashboard.deposit.paymentMethodLabel')}</span>
                 <div className="flex items-center gap-2">
                   <selectedMethodData.icon className="h-4 w-4 text-brand-accent" />
                   <span className="font-medium text-white">{selectedMethodData?.name}</span>
                 </div>
               </div>
               {/* <div className="flex justify-between">
-                <span className="text-brand-subtle">Token</span>
+                <span className="text-brand-subtle">{t('dashboard.deposit.tokenLabel')}</span>
                 <span className="font-medium text-white">USD</span>
               </div> */}
               <div className="flex justify-between">
-                <span className="text-brand-subtle">Amount</span>
+                <span className="text-brand-subtle">{t('dashboard.deposit.amountLabel')}</span>
                 <span className="text-xl font-bold text-white">${toFixed2(amount)}</span>
               </div>
               {selectedMethodData?.fee ? (
                 <div className="flex justify-between">
-                  <span className="text-brand-subtle">Fee</span>
+                  <span className="text-brand-subtle">{t('dashboard.deposit.feeLabel')}</span>
                   <span className="font-medium text-white">{selectedMethodData.fee}</span>
                 </div>
               ) : null}
               <div className="border-t border-white/10 pt-3">
                 <div className="flex justify-between">
-                  <span className="text-brand-subtle">You will receive</span>
+                  <span className="text-brand-subtle">{t('dashboard.deposit.youWillReceive')}</span>
                   <span className="text-xl font-bold text-brand-accent">
                     {toFixed2(tokensToReceive)} USD
                   </span>
@@ -1097,7 +1127,7 @@ export default function DepositPage() {
             <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-lg font-semibold text-white">Pay with paypal account</h4>
+                  <h4 className="text-lg font-semibold text-white">{t('dashboard.deposit.payWithPaypal')}</h4>
                   {/* <p className="text-sm text-blue-200/80">
                     Pay with card on this page or with your PayPal account. USD credits automatically.
                   </p> */}
@@ -1111,7 +1141,7 @@ export default function DepositPage() {
                   disabled={processingPayment}
                   className="mt-4 w-full rounded-xl bg-blue-600 py-4 text-lg font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {processingPayment ? 'Preparing PayPal...' : 'Continue to card payment'}
+                  {processingPayment ? t('dashboard.deposit.preparingPayPal') : t('dashboard.deposit.continueCardPayment')}
                 </button>
               ) : (
                 <>
@@ -1145,9 +1175,9 @@ export default function DepositPage() {
             <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-lg font-semibold text-white">Stripe Payment</h4>
+                  <h4 className="text-lg font-semibold text-white">{t('dashboard.deposit.stripePayment')}</h4>
                   <p className="text-sm text-violet-200/80">
-                    Complete your payment with a secure card form using Stripe.
+                    {t('dashboard.deposit.stripePaymentDesc')}
                   </p>
                 </div>
                 <CreditCard className="h-10 w-10 text-violet-300" />
@@ -1167,7 +1197,7 @@ export default function DepositPage() {
                   disabled={processingPayment}
                   className="mt-4 w-full rounded-xl bg-violet-600 py-4 text-lg font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {processingPayment ? 'Preparing secure card form...' : 'Complete Payment with Stripe'}
+                  {processingPayment ? t('dashboard.deposit.preparingStripe') : t('dashboard.deposit.completeStripePayment')}
                 </button>
               ) : (
                 <>
@@ -1183,6 +1213,7 @@ export default function DepositPage() {
                       processingPayment={processingPayment}
                       onWebhookApproved={waitForStripeWebhookApproval}
                       toast={toast}
+                      t={t}
                     />
                   </Elements>
                   {stripeStatusNote ? (
@@ -1204,7 +1235,7 @@ export default function DepositPage() {
           className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-medium text-white hover:bg-white/10"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Edit
+          {t('dashboard.common.cancel')}
         </button>
         <div className="flex gap-3">
           <Link
@@ -1212,7 +1243,7 @@ export default function DepositPage() {
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-medium text-white hover:bg-white/10"
           >
             <Wallet className="h-4 w-4" />
-            Wallet
+            {t('dashboard.wallet.eyebrow')}
           </Link>
           {/* <button
             type="button"
@@ -1243,13 +1274,13 @@ export default function DepositPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand-subtle">
-              Wallet
+              {t('dashboard.deposit.eyebrow')}
             </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-brand-heading sm:text-[1.75rem]">
-              Deposit Funds
+              {t('dashboard.deposit.title')}
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-muted">
-              Add funds via PayPal, crypto (BTC / ETH / SOL), or card
+              {t('dashboard.deposit.subtitle')}
             </p>
           </div>
         </div>
@@ -1265,56 +1296,62 @@ export default function DepositPage() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15">
               <CheckCircle className="h-7 w-7 text-emerald-400" />
             </div>
-            <h3 className="mt-4 text-center text-xl font-semibold text-white">Payment Successful</h3>
+            <h3 className="mt-4 text-center text-xl font-semibold text-white">
+              {t('dashboard.deposit.paymentSuccessTitle')}
+            </h3>
             <p className="mt-2 text-center text-sm text-emerald-100/90">
-              Stripe payment approved and webhook confirmed. USD has been credited to your wallet.
+              {t('dashboard.deposit.stripeSuccessDetail')}
             </p>
             <p className="mt-2 text-center text-xs text-brand-subtle">
-              Deposit ID: {stripeDepositId || depositResult?.id || '—'}
+              {t('dashboard.deposit.depositIdLabel')} {stripeDepositId || depositResult?.id || '—'}
             </p>
             <button
               type="button"
               onClick={resetDepositFlow}
               className="mt-6 w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
             >
-              OK
+              {t('dashboard.common.ok')}
             </button>
           </div>
         </div>
       )}
 
-      <Panel className="my-8" title="Your deposit requests" subtitle="Track your crypto and PayPal deposits by status and payment method.">
+      <Panel
+        className="my-8"
+        title={t('dashboard.deposit.yourRequests')}
+        subtitle={t('dashboard.deposit.yourRequestsSub')}
+      >
         <div className="space-y-6 ">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle">
-                  Status
+                  {t('dashboard.common.status')}
                 </span>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full min-w-[170px] rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-brand-accent/50"
                 >
-                  <option value="all">All statuses</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
+                  <option value="all">{t('dashboard.history.allTypes')}</option>
+                  <option value="pending">{t('dashboard.common.pending')}</option>
+                  <option value="approved">{t('dashboard.common.approved')}</option>
+                  <option value="rejected">{t('dashboard.common.rejected')}</option>
                 </select>
               </label>
               <label className="space-y-1">
                 <span className="block text-xs font-semibold uppercase tracking-[0.1em] text-brand-subtle">
-                  Payment Method
+                  {t('dashboard.deposit.paymentMethod')}
                 </span>
                 <select
                   value={methodFilter}
                   onChange={(e) => setMethodFilter(e.target.value)}
                   className="w-full min-w-[170px] rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-brand-accent/50"
                 >
-                  <option value="all">All methods</option>
-                  <option value="paypal">PayPal</option>
-                  <option value="crypto">Crypto</option>
-                  <option value="stripe">Stripe</option>
+                  <option value="all">{t('dashboard.deposit.allMethods')}</option>
+                  <option value="paypal">{t('dashboard.deposit.paypalMethod')}</option>
+                  <option value="crypto">{t('dashboard.deposit.cryptoMethod')}</option>
+                  <option value="stripe">{t('dashboard.deposit.stripeMethod')}</option>
                 </select>
               </label>
             </div>
@@ -1325,7 +1362,7 @@ export default function DepositPage() {
               className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg border border-brand-border-muted bg-[var(--brand-surface)] px-3 py-2 text-sm font-medium text-brand-heading transition hover:border-brand-accent/30 hover:bg-[var(--brand-surface)]/80 disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${depositsLoading ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('dashboard.common.refresh')}
             </button>
           </div>
         </div>
@@ -1338,9 +1375,9 @@ export default function DepositPage() {
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-brand-border-muted bg-black/30">
                 <Check className="h-6 w-6 text-brand-muted" />
               </div>
-              <h3 className="mt-4 text-sm font-semibold text-brand-heading">No matching deposit requests</h3>
+              <h3 className="mt-4 text-sm font-semibold text-brand-heading">{t('dashboard.history.noEntriesYet')}</h3>
               <p className="mt-2 text-xs text-brand-muted">
-                Try changing filters or submit a new deposit request to see it here.
+                {t('dashboard.deposit.emptyRequestsHint')}
               </p>
             </div>
           </div>
@@ -1351,19 +1388,19 @@ export default function DepositPage() {
                 <thead>
                   <tr className="border-b border-brand-border-muted bg-black/20">
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
-                      Amount
+                      {t('dashboard.common.amount')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
-                      Token
+                      {t('dashboard.common.token')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
-                      Method
+                      {t('dashboard.deposit.paymentMethod')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
-                      Submitted
+                      {t('dashboard.common.date')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-subtle sm:px-6">
-                      Status
+                      {t('dashboard.common.status')}
                     </th>
                   </tr>
                 </thead>
@@ -1397,12 +1434,12 @@ export default function DepositPage() {
                               onClick={() =>
                                 setRejectionInfo(
                                   getRejectionReason(row) ||
-                                    'No rejection reason was provided.'
+                                    t('dashboard.deposit.noRejectionReason')
                                 )
                               }
                               className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-200 transition hover:border-rose-500/50 hover:bg-rose-500/20"
-                              title="View rejection reason"
-                              aria-label="View rejection reason"
+                              title={t('dashboard.deposit.viewRejection')}
+                              aria-label={t('dashboard.deposit.viewRejection')}
                             >
                               <Info className="h-3.5 w-3.5" />
                             </button>
@@ -1416,8 +1453,11 @@ export default function DepositPage() {
             </div>
             <div className="flex flex-col gap-3 border-t border-brand-border-muted bg-black/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <div className="text-xs text-brand-muted">
-                Showing {filteredDeposits.length === 0 ? 0 : pageStart + 1}-
-                {Math.min(pageStart + rowsPerPage, filteredDeposits.length)} of {filteredDeposits.length}
+                {t('dashboard.deposit.showingRange', {
+                  start: filteredDeposits.length === 0 ? 0 : pageStart + 1,
+                  end: Math.min(pageStart + rowsPerPage, filteredDeposits.length),
+                  total: filteredDeposits.length,
+                })}
               </div>
               <div className="flex items-center gap-2">
                 <select
@@ -1425,9 +1465,9 @@ export default function DepositPage() {
                   onChange={(e) => setRowsPerPage(Number(e.target.value))}
                   className="rounded-lg border border-white/15 bg-black/30 px-2 py-1.5 text-xs text-white outline-none focus:border-brand-accent/50"
                 >
-                  <option value={5}>5 / page</option>
-                  <option value={10}>10 / page</option>
-                  <option value={20}>20 / page</option>
+                  <option value={5}>{t('dashboard.deposit.perPage', { count: 5 })}</option>
+                  <option value={10}>{t('dashboard.deposit.perPage', { count: 10 })}</option>
+                  <option value={20}>{t('dashboard.deposit.perPage', { count: 20 })}</option>
                 </select>
                 <button
                   type="button"
@@ -1435,10 +1475,10 @@ export default function DepositPage() {
                   disabled={currentPage === 1}
                   className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Prev
+                  {t('dashboard.common.prev')}
                 </button>
                 <span className="px-2 text-xs text-brand-subtle">
-                  Page {currentPage} / {totalPages}
+                  {t('dashboard.history.pageOf', { current: currentPage, total: totalPages })}
                 </span>
                 <button
                   type="button"
@@ -1446,7 +1486,7 @@ export default function DepositPage() {
                   disabled={currentPage >= totalPages}
                   className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Next
+                  {t('dashboard.common.next')}
                 </button>
               </div>
             </div>
@@ -1471,20 +1511,20 @@ export default function DepositPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-rose-300/80">
-                      Rejected deposit
+                      {t('dashboard.deposit.rejectedDeposit')}
                     </p>
                     <h3
                       id="rejection-reason-title"
                       className="mt-1 text-base font-semibold text-brand-heading"
                     >
-                      Rejection reason
+                      {t('dashboard.deposit.rejectionReason')}
                     </h3>
                   </div>
                   <button
                     type="button"
                     onClick={() => setRejectionInfo(null)}
                     className="rounded-lg border border-white/10 p-2 text-brand-subtle hover:bg-white/5 hover:text-white"
-                    aria-label="Close"
+                    aria-label={t('dashboard.deposit.close')}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -1497,7 +1537,7 @@ export default function DepositPage() {
                   onClick={() => setRejectionInfo(null)}
                   className="mt-5 w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-brand-heading hover:bg-white/5"
                 >
-                  Close
+                  {t('dashboard.deposit.close')}
                 </button>
               </div>
             </div>,
