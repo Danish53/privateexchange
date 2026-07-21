@@ -163,7 +163,7 @@ export default function SuperAdminDrawingsPage() {
       const json = await res.json().catch(() => ({}));
       const raw = json?.data || [];
       const withoutUsd = Array.isArray(raw)
-        ? raw.filter((t) => String(t?.slug || '').toLowerCase() !== 'usd')
+        ? raw.filter((tok) => String(tok?.slug || '').toLowerCase() !== 'usd')
         : [];
       setTokenOptions(withoutUsd);
     } catch {
@@ -482,9 +482,9 @@ export default function SuperAdminDrawingsPage() {
                     <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.rewardToken')}</span>
                     <select required name="reward_token_id" value={formData.reward_token_id} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
                       <option value="">{loadingTokens ? t('superadmin.drawings.form.loadingTokens') : t('superadmin.drawings.form.selectToken')}</option>
-                      {tokenOptions.map((t) => (
-                        <option key={t._id} value={t._id}>
-                          {t.symbol} - {t.name}
+                      {tokenOptions.map((tok) => (
+                        <option key={tok._id} value={tok._id}>
+                          {tok.symbol} - {tok.name}
                         </option>
                       ))}
                     </select>
@@ -505,9 +505,9 @@ export default function SuperAdminDrawingsPage() {
                   <span className="text-xs font-semibold uppercase tracking-[0.08em] text-brand-subtle">{t('superadmin.drawings.form.entryToken')}</span>
                   <select required name="entry_token_id" value={formData.entry_token_id} onChange={onFormField} className="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-brand-heading outline-none focus:border-brand-accent/60">
                     <option value="">{loadingTokens ? t('superadmin.drawings.form.loadingTokens') : t('superadmin.drawings.form.selectToken')}</option>
-                    {tokenOptions.map((t) => (
-                      <option key={t._id} value={t._id}>
-                        {t.symbol} - {t.name}
+                    {tokenOptions.map((tok) => (
+                      <option key={tok._id} value={tok._id}>
+                        {tok.symbol} - {tok.name}
                       </option>
                     ))}
                   </select>

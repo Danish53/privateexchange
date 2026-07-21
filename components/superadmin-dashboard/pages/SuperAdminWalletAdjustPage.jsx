@@ -91,8 +91,14 @@ export default function SuperAdminWalletAdjustPage() {
       setAdjustRow(json.wallet);
       const first = json.wallet.tokens?.[0]?.symbol;
       // Prefer USD if available in activeTokens or PLATFORM_TOKEN_SEED
-      const usdToken = (activeTokens.length > 0 ? activeTokens : PLATFORM_TOKEN_SEED).find(t => t.symbol === 'USD');
-      const defaultToken = usdToken ? usdToken.symbol : (activeTokens.length > 0 ? activeTokens[0].symbol : PLATFORM_TOKEN_SEED[0].symbol);
+      const usdToken = (activeTokens.length > 0 ? activeTokens : PLATFORM_TOKEN_SEED).find(
+        (tok) => tok.symbol === 'USD'
+      );
+      const defaultToken = usdToken
+        ? usdToken.symbol
+        : activeTokens.length > 0
+          ? activeTokens[0].symbol
+          : PLATFORM_TOKEN_SEED[0].symbol;
       setAdjustToken(String(first || defaultToken).toUpperCase());
     } catch {
       setLoadErr(t('superadmin.common.networkError'));
@@ -144,7 +150,7 @@ export default function SuperAdminWalletAdjustPage() {
           setActiveTokens(data.data);
           // Update adjustToken if not already set, prefer USD
           if (!adjustToken) {
-            const usdToken = data.data.find(t => t.symbol === 'USD');
+            const usdToken = data.data.find((tok) => tok.symbol === 'USD');
             const defaultToken = usdToken ? usdToken.symbol : data.data[0]?.symbol;
             if (defaultToken) {
               setAdjustToken(defaultToken.toUpperCase());
@@ -320,21 +326,22 @@ export default function SuperAdminWalletAdjustPage() {
                   <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
                     {(() => {
                       // Static USD token (always shown)
-                      const USD_TOKEN = PLATFORM_TOKEN_SEED.find(t => t.symbol === 'USD') || PLATFORM_TOKEN_SEED[0];
+                      const USD_TOKEN =
+                        PLATFORM_TOKEN_SEED.find((tok) => tok.symbol === 'USD') || PLATFORM_TOKEN_SEED[0];
                       // Combine USD with active tokens, removing duplicate USD
                       const displayTokens = [
                         USD_TOKEN,
                         ...(activeTokens.length > 0 ? activeTokens : PLATFORM_TOKEN_SEED).filter(
-                          t => t.symbol !== 'USD'
-                        )
+                          (tok) => tok.symbol !== 'USD'
+                        ),
                       ];
-                      return displayTokens.map((t) => {
-                        const sym = String(t.symbol).toUpperCase();
+                      return displayTokens.map((tok) => {
+                        const sym = String(tok.symbol).toUpperCase();
                         const selected = adjustToken === sym;
                         const bal = tokenBalanceFromRow(adjustRow, sym);
                         return (
                           <button
-                            key={t.slug || t._id}
+                            key={tok.slug || tok._id}
                             type="button"
                             onClick={() => {
                               setAdjustToken(sym);
@@ -351,15 +358,15 @@ export default function SuperAdminWalletAdjustPage() {
                             <span
                               // className={cn(
                               //   'pointer-events-none absolute bottom-2.5 left-2 top-2.5 w-1 rounded-full',
-                              //   t.bar || 'bg-gray-500'
+                              //   tok.bar || 'bg-gray-500'
                               // )}
                               aria-hidden
                             />
                             <span className="pl-3 text-[0.65rem] font-semibold uppercase tracking-wide text-brand-subtle">
-                              {t.symbol}
+                              {tok.symbol}
                             </span>
                             <span className="pl-3 mt-0.5 text-sm font-semibold leading-tight text-brand-heading">
-                              {t.name}
+                              {tok.name}
                             </span>
                             <span className="pl-3 mt-2 border-t border-white/[0.06] pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-brand-subtle">
                               {t('superadmin.walletAdjust.balance')}

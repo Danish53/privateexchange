@@ -208,9 +208,9 @@ export default function WalletPage() {
                   className="w-full max-w-xs rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 sm:w-auto"
                 >
                   <option value="all">{t('dashboard.common.allTokens')}</option>
-                  {tokens.filter((t) => t.isActive === true).map((t) => (
-                    <option key={t.slug} value={t.symbol}>
-                      {t.name} ({t.symbol})
+                  {tokens.filter((tok) => tok.isActive === true).map((tok) => (
+                    <option key={tok.slug} value={tok.symbol}>
+                      {tok.name} ({tok.symbol})
                     </option>
                   ))}
                 </select>

@@ -117,7 +117,7 @@ export default function SuperAdminTokensPage() {
 
       if (data.success) {
         setTokens((prev) =>
-          prev.filter((t) => t._id !== deleteModal.tokenId)
+          prev.filter((tok) => tok._id !== deleteModal.tokenId)
         );
 
         setDeleteModal({ open: false, tokenId: null });

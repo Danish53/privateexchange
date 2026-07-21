@@ -121,16 +121,16 @@ export default function HistoryPage() {
                 <span className="font-semibold uppercase tracking-[0.1em] text-brand-subtle">{t('dashboard.common.token')}</span>
                 <select
                   value={hist.tokenFilter}
-                  onChange={(e) => hist.setTokenFilter(e.target.value)}
+                  onChange={(e) => {
+                    hist.setTokenFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="w-full max-w-xs rounded-xl border border-brand-border-muted bg-black/40 px-3 py-2 text-sm text-brand-heading focus:border-brand-accent/35 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 sm:w-auto"
                 >
                   <option value="all">{t('dashboard.common.allTokens')}</option>
-                  {tokens.filter((t) => t.isActive === true).map((t) => (
-                    <option key={t.slug} value={t.symbol} onChange={(e) => {
-                      hist.setTokenFilter(e.target.value);
-                      setCurrentPage(1); // ✅ add this
-                    }}>
-                      {t.name} ({t.symbol})
+                  {tokens.filter((tok) => tok.isActive === true).map((tok) => (
+                    <option key={tok.slug} value={tok.symbol}>
+                      {tok.name} ({tok.symbol})
                     </option>
                   ))}
                 </select>

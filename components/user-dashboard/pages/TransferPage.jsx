@@ -41,7 +41,7 @@ export default function TransferPage() {
 
         if (data.success && Array.isArray(data.data)) {
           // Filter only active tokens
-          const activeTokens = data.data.filter(t => t.isActive !== false);
+          const activeTokens = data.data.filter((tok) => tok.isActive !== false);
           setTokens(activeTokens);
           if (activeTokens.length > 0) {
             setSelectedToken(activeTokens[0].symbol);
@@ -316,9 +316,9 @@ export default function TransferPage() {
                       onChange={(e) => setSelectedToken(e.target.value)}
                       disabled={tokens.length === 0}
                     >
-                      {tokens.filter(t => t.slug !== 'usd').map((t) => (
-                        <option key={t.symbol} value={t.symbol}>
-                          {t.name} ({t.symbol})
+                      {tokens.filter((tok) => tok.slug !== 'usd').map((tok) => (
+                        <option key={tok.symbol} value={tok.symbol}>
+                          {tok.name} ({tok.symbol})
                         </option>
                       ))}
                     </select>
